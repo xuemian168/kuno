@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Youtube, Plus, X } from 'lucide-react'
+import { Youtube, Plus, X, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,6 +31,7 @@ export default function VideoAdd({ onVideoAdd }: VideoAddProps) {
   const [error, setError] = useState('')
   const [preview, setPreview] = useState<OnlineVideo | null>(null)
   const [selectedPlatform, setSelectedPlatform] = useState<'youtube' | 'bilibili'>('youtube')
+  const [fetchingTitle, setFetchingTitle] = useState(false)
 
   const getYouTubeVideoId = (url: string): string | null => {
     const patterns = [
@@ -59,6 +60,60 @@ export default function VideoAdd({ onVideoAdd }: VideoAddProps) {
     return null
   }
 
+  const fetchYouTubeTitle = async (videoId: string): Promise<string | null> => {
+    try {
+      // Use YouTube's oEmbed API (no API key required)
+      const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+      if (response.ok) {
+        const data = await response.json()
+        return data.title || null
+      }
+    } catch (error) {
+      console.error('Failed to fetch YouTube title:', error)
+    }
+    return null
+  }
+
+  const fetchBilibiliTitle = async (url: string): Promise<string | null> => {
+    try {
+      const videoInfo = getBiliBiliVideoInfo(url)
+      if (videoInfo) {
+        // Try using a public API endpoint for Bilibili video info
+        // This is a simple approach - in production you might want to use a backend proxy
+        try {
+          const apiUrl = `https://api.bilibili.com/x/web-interface/view?bvid=${videoInfo.id}`
+          const response = await fetch(apiUrl)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.code === 0 && data.data && data.data.title) {
+              return data.data.title
+            }
+          }
+        } catch (apiError) {
+          console.log('Bilibili API failed, trying fallback methods:', apiError)
+        }
+        
+        // Fallback: return null so user can input manually
+        return null
+      }
+    } catch (error) {
+      console.error('Failed to fetch Bilibili title:', error)
+    }
+    return null
+  }
+
+  const fetchVideoTitle = async (url: string, platform: 'youtube' | 'bilibili'): Promise<string | null> => {
+    if (platform === 'youtube') {
+      const videoId = getYouTubeVideoId(url)
+      if (videoId) {
+        return await fetchYouTubeTitle(videoId)
+      }
+    } else if (platform === 'bilibili') {
+      return await fetchBilibiliTitle(url)
+    }
+    return null
+  }
+
 
   const handlePreview = async () => {
     if (!url.trim()) {
@@ -66,19 +121,32 @@ export default function VideoAdd({ onVideoAdd }: VideoAddProps) {
       return
     }
 
+    setFetchingTitle(true)
+    setError('')
+
     const detectedPlatform = detectPlatform(url)
     if (!detectedPlatform) {
       setError('Please enter a valid YouTube or Bilibili URL')
+      setFetchingTitle(false)
       return
     }
 
     let videoId: string | null = null
     let thumbnail = ''
+    let videoTitle = title.trim()
 
     if (detectedPlatform === 'youtube') {
       videoId = getYouTubeVideoId(url)
       if (videoId) {
         thumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+        // Auto-fetch title if not provided
+        if (!videoTitle) {
+          const fetchedTitle = await fetchVideoTitle(url, detectedPlatform)
+          if (fetchedTitle) {
+            videoTitle = fetchedTitle
+            setTitle(fetchedTitle) // Update the input field
+          }
+        }
       }
     } else if (detectedPlatform === 'bilibili') {
       const videoInfo = getBiliBiliVideoInfo(url)
@@ -86,25 +154,34 @@ export default function VideoAdd({ onVideoAdd }: VideoAddProps) {
         videoId = videoInfo.id
         // Generate Bilibili thumbnail
         thumbnail = generateBilibiliThumbnail(videoInfo.id)
+        // Auto-fetch title if not provided
+        if (!videoTitle) {
+          const fetchedTitle = await fetchVideoTitle(url, detectedPlatform)
+          if (fetchedTitle) {
+            videoTitle = fetchedTitle
+            setTitle(fetchedTitle) // Update the input field
+          }
+        }
       }
     }
 
     if (!videoId) {
       setError(`Invalid ${detectedPlatform === 'youtube' ? 'YouTube' : 'Bilibili'} URL`)
+      setFetchingTitle(false)
       return
     }
 
     const video: OnlineVideo = {
       id: videoId,
       url: url.trim(),
-      title: title.trim() || `${detectedPlatform === 'youtube' ? 'YouTube' : 'Bilibili'} Video`,
+      title: videoTitle || `${detectedPlatform === 'youtube' ? 'YouTube' : 'Bilibili'} Video`,
       thumbnail,
       platform: detectedPlatform
     }
 
     setPreview(video)
     setSelectedPlatform(detectedPlatform)
-    setError('')
+    setFetchingTitle(false)
   }
 
   const handleAdd = () => {
@@ -124,6 +201,35 @@ export default function VideoAdd({ onVideoAdd }: VideoAddProps) {
     setTitle('')
     setPreview(null)
     setError('')
+  }
+
+  const handleAutoFetchTitle = async () => {
+    if (!url.trim()) {
+      setError('Please enter a video URL first')
+      return
+    }
+
+    const detectedPlatform = detectPlatform(url)
+    if (!detectedPlatform) {
+      setError('Please enter a valid YouTube or Bilibili URL')
+      return
+    }
+
+    setFetchingTitle(true)
+    setError('')
+
+    try {
+      const fetchedTitle = await fetchVideoTitle(url, detectedPlatform)
+      if (fetchedTitle) {
+        setTitle(fetchedTitle)
+      } else {
+        setError(`Could not fetch title from ${detectedPlatform === 'youtube' ? 'YouTube' : 'Bilibili'}`)
+      }
+    } catch (error) {
+      setError('Failed to fetch video title')
+    } finally {
+      setFetchingTitle(false)
+    }
   }
 
   return (
@@ -163,20 +269,47 @@ export default function VideoAdd({ onVideoAdd }: VideoAddProps) {
 
             <div className="space-y-2">
               <Label htmlFor="video-title">Title (optional)</Label>
-              <Input
-                id="video-title"
-                placeholder="Enter a custom title for this video"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="video-title"
+                  placeholder="Enter a custom title for this video"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAutoFetchTitle}
+                  disabled={!url.trim() || fetchingTitle}
+                  className="shrink-0"
+                >
+                  {fetchingTitle ? (
+                    <div className="h-4 w-4 animate-spin border-2 border-current border-t-transparent rounded-full" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Click the button to automatically fetch the video title
+              </p>
             </div>
 
             <Button 
               onClick={handlePreview}
-              disabled={!url.trim()}
+              disabled={!url.trim() || fetchingTitle}
               className="w-full"
             >
-              Preview Video
+              {fetchingTitle ? (
+                <>
+                  <div className="h-4 w-4 animate-spin border-2 border-current border-t-transparent rounded-full mr-2" />
+                  Fetching Title...
+                </>
+              ) : (
+                'Preview Video'
+              )}
             </Button>
           </div>
         ) : (

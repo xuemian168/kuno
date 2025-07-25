@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Image as ImageIcon, Video, Trash2, Edit2, Search, Filter, Youtube } from 'lucide-react'
+import { Image as ImageIcon, Video, Trash2, Edit2, Search, Filter, Youtube, Play, ExternalLink, MoreVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import MediaUpload from '@/components/admin/media-upload'
 import VideoAdd from '@/components/admin/video-add'
@@ -40,6 +41,13 @@ export default function MediaPage({ params }: MediaPageProps) {
   const [selectedMedia, setSelectedMedia] = useState<MediaLibrary | null>(null)
   const [editingAlt, setEditingAlt] = useState('')
   const [error, setError] = useState('')
+  const [editingVideo, setEditingVideo] = useState<OnlineVideo | null>(null)
+  const [editingVideoTitle, setEditingVideoTitle] = useState('')
+  const [contextMenuOpen, setContextMenuOpen] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<'created_at' | 'file_size' | 'name'>('created_at')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [fileSizeFilter, setFileSizeFilter] = useState<'all' | 'small' | 'medium' | 'large'>('all')
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all')
 
   useEffect(() => {
     params.then(({ locale: paramLocale }) => {
@@ -95,12 +103,44 @@ export default function MediaPage({ params }: MediaPageProps) {
     localStorage.setItem('online-videos', JSON.stringify(updatedVideos))
   }
 
-  const handleDeleteOnlineVideo = (videoId: string) => {
+  const handleDeleteOnlineVideo = (videoUrl: string) => {
     if (!confirm('Are you sure you want to remove this video?')) return
     
-    const updatedVideos = onlineVideos.filter(v => v.id !== videoId)
+    const updatedVideos = onlineVideos.filter(v => v.url !== videoUrl)
     setOnlineVideos(updatedVideos)
     localStorage.setItem('online-videos', JSON.stringify(updatedVideos))
+  }
+
+  const handlePlayVideo = (video: OnlineVideo) => {
+    window.open(video.url, '_blank')
+  }
+
+  const handleOpenVideo = (video: OnlineVideo) => {
+    window.open(video.url, '_blank')
+  }
+
+  const handleEditVideo = (video: OnlineVideo) => {
+    setEditingVideo(video)
+    setEditingVideoTitle(video.title)
+  }
+
+  const handleSaveVideoEdit = () => {
+    if (!editingVideo) return
+
+    const updatedVideos = onlineVideos.map(v => 
+      v.url === editingVideo.url 
+        ? { ...v, title: editingVideoTitle.trim() || v.title }
+        : v
+    )
+    setOnlineVideos(updatedVideos)
+    localStorage.setItem('online-videos', JSON.stringify(updatedVideos))
+    setEditingVideo(null)
+    setEditingVideoTitle('')
+  }
+
+  const handleCancelVideoEdit = () => {
+    setEditingVideo(null)
+    setEditingVideoTitle('')
   }
 
   const handleDeleteMedia = async (id: number) => {
@@ -144,10 +184,68 @@ export default function MediaPage({ params }: MediaPageProps) {
     })
   }
 
-  const filteredMedia = media.filter(item =>
-    item.original_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.alt.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredMedia = media
+    .filter(item => {
+      // Text search filter
+      const matchesSearch = item.original_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.alt.toLowerCase().includes(searchTerm.toLowerCase())
+      
+      // File size filter
+      let matchesSize = true
+      if (fileSizeFilter !== 'all') {
+        const sizeInMB = item.file_size / (1024 * 1024)
+        switch (fileSizeFilter) {
+          case 'small':
+            matchesSize = sizeInMB < 1
+            break
+          case 'medium':
+            matchesSize = sizeInMB >= 1 && sizeInMB < 10
+            break
+          case 'large':
+            matchesSize = sizeInMB >= 10
+            break
+        }
+      }
+      
+      // Date filter
+      let matchesDate = true
+      if (dateFilter !== 'all') {
+        const itemDate = new Date(item.created_at)
+        const now = new Date()
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+        const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+        
+        switch (dateFilter) {
+          case 'today':
+            matchesDate = itemDate >= today
+            break
+          case 'week':
+            matchesDate = itemDate >= weekAgo
+            break
+          case 'month':
+            matchesDate = itemDate >= monthAgo
+            break
+        }
+      }
+      
+      return matchesSearch && matchesSize && matchesDate
+    })
+    .sort((a, b) => {
+      let comparison = 0
+      switch (sortBy) {
+        case 'created_at':
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          break
+        case 'file_size':
+          comparison = a.file_size - b.file_size
+          break
+        case 'name':
+          comparison = a.original_name.localeCompare(b.original_name)
+          break
+      }
+      return sortOrder === 'desc' ? -comparison : comparison
+    })
 
   const filteredOnlineVideos = onlineVideos.filter(video =>
     video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -180,24 +278,80 @@ export default function MediaPage({ params }: MediaPageProps) {
       </Tabs>
 
       {/* Search and Filter */}
-      <div className="flex gap-4 items-center">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder={t('media.searchMedia')}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      <div className="space-y-4">
+        <div className="flex gap-4 items-center">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder={t('media.searchMedia')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Tabs value={selectedType} onValueChange={(value) => setSelectedType(value as any)}>
+            <TabsList>
+              <TabsTrigger value="all">{t('media.all')}</TabsTrigger>
+              <TabsTrigger value="image">{t('media.images')}</TabsTrigger>
+              <TabsTrigger value="video">{t('media.videos')}</TabsTrigger>
+              <TabsTrigger value="online">{t('media.online')}</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
-        <Tabs value={selectedType} onValueChange={(value) => setSelectedType(value as any)}>
-          <TabsList>
-            <TabsTrigger value="all">{t('media.all')}</TabsTrigger>
-            <TabsTrigger value="image">{t('media.images')}</TabsTrigger>
-            <TabsTrigger value="video">{t('media.videos')}</TabsTrigger>
-            <TabsTrigger value="online">{t('media.online')}</TabsTrigger>
-          </TabsList>
-        </Tabs>
+
+        {/* Filter and Sort Controls */}
+        {selectedType !== 'online' && (
+          <div className="flex gap-4 items-center flex-wrap">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium">Sort by:</Label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'created_at' | 'file_size' | 'name')}
+                className="px-3 py-1 text-sm border rounded-md bg-background"
+              >
+                <option value="created_at">Date Added</option>
+                <option value="file_size">File Size</option>
+                <option value="name">Name</option>
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="px-2"
+              >
+                {sortOrder === 'desc' ? '↓' : '↑'}
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium">File Size:</Label>
+              <select
+                value={fileSizeFilter}
+                onChange={(e) => setFileSizeFilter(e.target.value as 'all' | 'small' | 'medium' | 'large')}
+                className="px-3 py-1 text-sm border rounded-md bg-background"
+              >
+                <option value="all">All Sizes</option>
+                <option value="small">Small (&lt; 1MB)</option>
+                <option value="medium">Medium (1-10MB)</option>
+                <option value="large">Large (&gt; 10MB)</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium">Date:</Label>
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month')}
+                className="px-3 py-1 text-sm border rounded-md bg-background"
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Error Alert */}
@@ -242,7 +396,13 @@ export default function MediaPage({ params }: MediaPageProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
             >
-              <Card className="group hover:shadow-lg transition-shadow cursor-pointer">
+              <Card 
+                className="group hover:shadow-lg transition-shadow cursor-pointer"
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  setContextMenuOpen(`media-${item.id}`)
+                }}
+              >
                 <div 
                   className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-t-lg overflow-hidden relative"
                   onClick={() => {
@@ -277,30 +437,89 @@ export default function MediaPage({ params }: MediaPageProps) {
                     <h3 className="font-medium truncate text-sm">
                       {item.original_name}
                     </h3>
-                    <div className="flex gap-1 ml-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedMedia(item)
-                          setEditingAlt(item.alt)
-                        }}
-                      >
-                        <Edit2 className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteMedia(item.id)
-                        }}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
+                    <DropdownMenu 
+                      open={contextMenuOpen === `media-${item.id}`}
+                      onOpenChange={(open) => {
+                        if (!open) setContextMenuOpen(null)
+                      }}
+                    >
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="ml-2 h-6 w-6 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setContextMenuOpen(contextMenuOpen === `media-${item.id}` ? null : `media-${item.id}`)
+                          }}
+                        >
+                          <MoreVertical className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setContextMenuOpen(null)
+                            setSelectedMedia(item)
+                            setEditingAlt(item.alt)
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Edit2 className="h-4 w-4 mr-2" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setContextMenuOpen(null)
+                            const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${item.url}`
+                            navigator.clipboard.writeText(url)
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Copy URL
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setContextMenuOpen(null)
+                            const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${item.url}`
+                            window.open(url, '_blank')
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Open in New Tab
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setContextMenuOpen(null)
+                            setSelectedMedia(item)
+                            setEditingAlt(item.alt)
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Edit2 className="h-4 w-4 mr-2" />
+                          Edit Alt Text
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setContextMenuOpen(null)
+                            handleDeleteMedia(item.id)
+                          }}
+                          className="cursor-pointer text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Media
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   <div className="space-y-1 text-xs text-muted-foreground">
                     <p>{formatFileSize(item.file_size)}</p>
@@ -314,12 +533,19 @@ export default function MediaPage({ params }: MediaPageProps) {
           {/* Online Videos */}
           {(selectedType === 'online' || selectedType === 'all') && filteredOnlineVideos.map((video, index) => (
             <motion.div
-              key={`youtube-${video.id}`}
+              key={`${video.platform}-${video.id}-${video.url}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
             >
-              <Card className="group hover:shadow-lg transition-shadow">
+              <Card 
+                className="group hover:shadow-lg transition-shadow cursor-pointer"
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  setContextMenuOpen(video.url)
+                }}
+                onDoubleClick={() => handlePlayVideo(video)}
+              >
                 <div className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-t-lg overflow-hidden relative">
                   <img
                     src={video.thumbnail}
@@ -342,17 +568,74 @@ export default function MediaPage({ params }: MediaPageProps) {
                     <h3 className="font-medium truncate text-sm">
                       {video.title}
                     </h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteOnlineVideo(video.id)
+                    <DropdownMenu 
+                      open={contextMenuOpen === video.url}
+                      onOpenChange={(open) => {
+                        if (!open) setContextMenuOpen(null)
                       }}
-                      className="text-destructive hover:text-destructive ml-2"
                     >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="ml-2 h-6 w-6 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setContextMenuOpen(contextMenuOpen === video.url ? null : video.url)
+                          }}
+                        >
+                          <MoreVertical className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setContextMenuOpen(null)
+                            handlePlayVideo(video)
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Play className="h-4 w-4 mr-2" />
+                          Play Video
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setContextMenuOpen(null)
+                            handleOpenVideo(video)
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Open in New Tab
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setContextMenuOpen(null)
+                            handleEditVideo(video)
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Edit2 className="h-4 w-4 mr-2" />
+                          Edit Title
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setContextMenuOpen(null)
+                            handleDeleteOnlineVideo(video.url)
+                          }}
+                          className="cursor-pointer text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Video
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   <div className="space-y-1 text-xs text-muted-foreground">
                     <p className="truncate">{video.url}</p>
@@ -433,6 +716,44 @@ export default function MediaPage({ params }: MediaPageProps) {
                     </Button>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Video Dialog */}
+      <Dialog open={!!editingVideo} onOpenChange={() => setEditingVideo(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Video Title</DialogTitle>
+          </DialogHeader>
+          {editingVideo && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-video-title">Video Title</Label>
+                <Input
+                  id="edit-video-title"
+                  value={editingVideoTitle}
+                  onChange={(e) => setEditingVideoTitle(e.target.value)}
+                  placeholder="Enter video title"
+                />
+              </div>
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant={editingVideo.platform === 'youtube' ? 'destructive' : 'default'}>
+                    {editingVideo.platform === 'youtube' ? 'YouTube' : 'Bilibili'}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground truncate">{editingVideo.url}</p>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={handleCancelVideoEdit}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveVideoEdit}>
+                  Save Changes
+                </Button>
               </div>
             </div>
           )}
