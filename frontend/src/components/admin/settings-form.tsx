@@ -33,7 +33,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
   const [formData, setFormData] = useState({
     site_title: "",
     site_subtitle: "",
-    footer_text: ""
+    footer_text: "",
+    show_view_count: true
   })
   const [translations, setTranslations] = useState<SiteSettingsTranslation[]>([])
   const [activeTab, setActiveTab] = useState('general')
@@ -61,7 +62,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         setFormData({
           site_title: settingsData.site_title,
           site_subtitle: settingsData.site_subtitle,
-          footer_text: settingsData.footer_text
+          footer_text: settingsData.footer_text,
+          show_view_count: settingsData.show_view_count ?? true
         })
         setTranslations(settingsData.translations || [])
       } catch (error) {
@@ -175,6 +177,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         site_title: formData.site_title,
         site_subtitle: formData.site_subtitle,
         footer_text: formData.footer_text,
+        show_view_count: formData.show_view_count,
         translations: allTranslations
       }
 
@@ -362,6 +365,20 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                   />
                   <p className="text-sm text-muted-foreground">
                     Custom footer text (GitHub author info will always be displayed)
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="show_view_count"
+                      checked={formData.show_view_count}
+                      onCheckedChange={(checked) => handleChange('show_view_count', checked)}
+                    />
+                    <Label htmlFor="show_view_count">Show Article View Count</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Display the number of unique visitors for each article
                   </p>
                 </div>
               </CardContent>

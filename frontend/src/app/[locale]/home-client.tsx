@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Calendar, ArrowRight } from 'lucide-react'
+import { Calendar, ArrowRight, Eye } from 'lucide-react'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import { apiClient, Article, Category } from '@/lib/api'
@@ -24,7 +24,7 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
   const [categories, setCategories] = useState<Category[]>([])
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
-  const [siteSettings, setSiteSettings] = useState<{ site_title: string; site_subtitle: string } | null>(null)
+  const [siteSettings, setSiteSettings] = useState<{ site_title: string; site_subtitle: string; show_view_count?: boolean } | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -148,9 +148,17 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
                     <CardHeader>
                       <div className="flex items-center justify-between mb-2">
                         <Badge variant="secondary">{article.category.name}</Badge>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {formatDate(article.created_at)}
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            {formatDate(article.created_at)}
+                          </div>
+                          {article.view_count !== undefined && siteSettings?.show_view_count !== false && (
+                            <div className="flex items-center">
+                              <Eye className="h-4 w-4 mr-1" />
+                              {article.view_count}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <CardTitle className="group-hover:text-primary transition-colors">

@@ -23,6 +23,7 @@
     "logout": "Logout"
   },
   "article": {
+    "views": "Views",
     "title": "Title",
     "content": "Content",
     "summary": "Summary",
@@ -206,6 +207,28 @@
     "googleAPIItem": "Google Translate (API): Reliable, supports 100+ languages",
     "deeplItem": "DeepL: Best quality for European and Asian languages",
     "openaiItem": "OpenAI: Context-aware, best for technical content"
+  },
+  "analytics": {
+    "title": "Analytics",
+    "description": "View insights about your blog's performance",
+    "totalViews": "Total Views",
+    "allTimeViews": "All time views",
+    "thisMonth": "This Month",
+    "viewsThisMonth": "Views this month",
+    "thisWeek": "This Week",
+    "viewsThisWeek": "Views this week",
+    "today": "Today",
+    "viewsToday": "Views today",
+    "topPerformingArticles": "Top Performing Articles",
+    "articlesRankedByViews": "Articles ranked by total views",
+    "published": "Published",
+    "categoryPerformance": "Category Performance",
+    "viewsByCategory": "Views by category",
+    "article": "article",
+    "articles": "articles",
+    "mostViewedArticle": "Most Viewed Article",
+    "topPerformingContent": "Your top performing content",
+    "noArticlesFound": "No articles found"
   },
   "site": {
     "title": "Minimalist Blog",

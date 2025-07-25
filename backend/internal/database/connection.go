@@ -20,7 +20,7 @@ func InitDatabase() {
 		log.Fatal("Failed to connect database:", err)
 	}
 
-	err = DB.AutoMigrate(&models.Article{}, &models.Category{}, &models.SiteSettings{}, &models.User{}, &models.MediaLibrary{}, &models.ArticleTranslation{}, &models.CategoryTranslation{}, &models.SiteSettingsTranslation{})
+	err = DB.AutoMigrate(&models.Article{}, &models.Category{}, &models.SiteSettings{}, &models.User{}, &models.MediaLibrary{}, &models.ArticleTranslation{}, &models.CategoryTranslation{}, &models.SiteSettingsTranslation{}, &models.ArticleView{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}

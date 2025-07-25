@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { Plus, Edit, Trash2, Settings } from "lucide-react"
+import { Plus, Edit, Trash2, Settings, Eye, BarChart3 } from "lucide-react"
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import { Button } from "@/components/ui/button"
@@ -117,11 +117,12 @@ export default function AdminPage({ params }: AdminPageProps) {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
+                <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+                <Eye className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {articles.length > 0 ? new Date(Math.max(...articles.map(a => new Date(a.updated_at).getTime()))).toLocaleDateString() : 'N/A'}
+                  {articles.reduce((total, article) => total + (article.view_count || 0), 0)}
                 </div>
               </CardContent>
             </Card>
@@ -131,12 +132,20 @@ export default function AdminPage({ params }: AdminPageProps) {
           <div className="mb-12">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">{t('admin.articles')}</h2>
-              <Link href="/admin/articles/new">
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('article.createArticle')}
-                </Button>
-              </Link>
+              <div className="flex gap-2">
+                <Link href="/admin/analytics">
+                  <Button variant="outline">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    {t('analytics.title')}
+                  </Button>
+                </Link>
+                <Link href="/admin/articles/new">
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('article.createArticle')}
+                  </Button>
+                </Link>
+              </div>
             </div>
 
             {loading ? (
@@ -166,6 +175,12 @@ export default function AdminPage({ params }: AdminPageProps) {
                             <span className="text-sm text-muted-foreground">
                               {new Date(article.created_at).toLocaleDateString()}
                             </span>
+                            {article.view_count !== undefined && (
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Eye className="h-3 w-3" />
+                                {article.view_count}
+                              </div>
+                            )}
                           </div>
                           <div className="flex gap-2">
                             <Link href={`/admin/articles/${article.id}`}>

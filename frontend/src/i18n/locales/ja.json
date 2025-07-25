@@ -23,6 +23,7 @@
     "logout": "ログアウト"
   },
   "article": {
+    "views": "閲覧数",
     "title": "タイトル",
     "content": "内容",
     "summary": "概要",
@@ -206,6 +207,28 @@
     "googleAPIItem": "Google翻訳（API）：信頼性があり、100以上の言語をサポート",
     "deeplItem": "DeepL：ヨーロッパとアジア言語で最高の品質",
     "openaiItem": "OpenAI：コンテキスト認識、技術コンテンツに最適"
+  },
+  "analytics": {
+    "title": "アナリティクス",
+    "description": "ブログのパフォーマンスに関する洞察を表示",
+    "totalViews": "総ビュー数",
+    "allTimeViews": "全期間のビュー数",
+    "thisMonth": "今月",
+    "viewsThisMonth": "今月のビュー数",
+    "thisWeek": "今週",
+    "viewsThisWeek": "今週のビュー数",
+    "today": "今日",
+    "viewsToday": "今日のビュー数",
+    "topPerformingArticles": "人気記事",
+    "articlesRankedByViews": "ビュー数順の記事",
+    "published": "公開日",
+    "categoryPerformance": "カテゴリーパフォーマンス",
+    "viewsByCategory": "カテゴリー別ビュー数",
+    "article": "記事",
+    "articles": "記事",
+    "mostViewedArticle": "最も閲覧された記事",
+    "topPerformingContent": "最もパフォーマンスの良いコンテンツ",
+    "noArticlesFound": "記事が見つかりません"
   },
   "site": {
     "title": "ミニマリストブログ",

@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import AuthGuard from '@/components/auth-guard'
 import Header from '@/components/layout/header'
+import Footer from '@/components/layout/footer'
 
 export default function AdminLayout({
   children,
@@ -18,11 +19,12 @@ export default function AdminLayout({
 
   return (
     <AuthGuard requireAdmin={true}>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex flex-col">
         <Header />
-        <main className="container mx-auto py-6 px-4 max-w-7xl">
+        <main className="container mx-auto py-6 px-4 max-w-7xl flex-1">
           {children}
         </main>
+        <Footer />
       </div>
     </AuthGuard>
   )

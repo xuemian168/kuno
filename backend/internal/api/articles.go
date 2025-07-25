@@ -1,8 +1,11 @@
 package api
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"blog-backend/internal/database"
 	"blog-backend/internal/models"
 	"github.com/gin-gonic/gin"
@@ -44,6 +47,11 @@ func GetArticle(c *gin.Context) {
 	if err := database.DB.Preload("Category").Preload("Translations").First(&article, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
 		return
+	}
+	
+	// Track unique visitor if not an admin request and IP fingerprint is provided
+	if !isAdminRequest(c) {
+		go trackArticleView(uint(id), c)
 	}
 	
 	// Clean up any invalid translations for default language (data consistency fix)
@@ -276,4 +284,63 @@ func applyTranslation(article *models.Article, lang string) {
 			break
 		}
 	}
+}
+
+// Helper function to check if request is from admin
+func isAdminRequest(c *gin.Context) bool {
+	// Simple check - if request has Authorization header, assume it's admin
+	return c.GetHeader("Authorization") != ""
+}
+
+// Helper function to get client IP
+func getClientIP(c *gin.Context) string {
+	// Check X-Forwarded-For header first (for proxy/load balancer)
+	if xff := c.GetHeader("X-Forwarded-For"); xff != "" {
+		ips := strings.Split(xff, ",")
+		return strings.TrimSpace(ips[0])
+	}
+	
+	// Check X-Real-IP header
+	if xri := c.GetHeader("X-Real-IP"); xri != "" {
+		return xri
+	}
+	
+	// Fall back to RemoteAddr
+	return c.ClientIP()
+}
+
+// Helper function to generate fingerprint from request
+func generateFingerprint(c *gin.Context) string {
+	ip := getClientIP(c)
+	userAgent := c.GetHeader("User-Agent")
+	
+	// Create a simple fingerprint from IP + User-Agent
+	fingerprint := fmt.Sprintf("%s|%s", ip, userAgent)
+	hash := sha256.Sum256([]byte(fingerprint))
+	return fmt.Sprintf("%x", hash)
+}
+
+// Track article view asynchronously
+func trackArticleView(articleID uint, c *gin.Context) {
+	ip := getClientIP(c)
+	userAgent := c.GetHeader("User-Agent")
+	fingerprint := generateFingerprint(c)
+	
+	// Check if this fingerprint has already viewed this article
+	var existingView models.ArticleView
+	if err := database.DB.Where("article_id = ? AND fingerprint = ?", articleID, fingerprint).First(&existingView).Error; err != nil {
+		// No existing view found, create new one
+		view := models.ArticleView{
+			ArticleID:   articleID,
+			IPAddress:   ip,
+			UserAgent:   userAgent,
+			Fingerprint: fingerprint,
+		}
+		
+		if err := database.DB.Create(&view).Error; err == nil {
+			// Increment article view count
+			database.DB.Model(&models.Article{}).Where("id = ?", articleID).UpdateColumn("view_count", database.DB.Raw("view_count + 1"))
+		}
+	}
+	// If view already exists, do nothing (unique visitor already counted)
 }

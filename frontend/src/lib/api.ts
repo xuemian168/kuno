@@ -48,6 +48,7 @@ export interface SiteSettings {
   site_title: string
   site_subtitle: string
   footer_text: string
+  show_view_count?: boolean
   translations?: SiteSettingsTranslation[]
   created_at: string
   updated_at: string
@@ -83,6 +84,48 @@ export interface MediaLibrary {
   alt: string
   created_at: string
   updated_at: string
+}
+
+export interface ArticleViewStats {
+  id: number
+  title: string
+  view_count: number
+  category: string
+  created_at: string
+}
+
+export interface DailyViewStats {
+  date: string
+  views: number
+}
+
+export interface CategoryViewStats {
+  category: string
+  view_count: number
+  article_count: number
+}
+
+export interface AnalyticsData {
+  total_views: number
+  total_articles: number
+  views_today: number
+  views_this_week: number
+  views_this_month: number
+  top_articles: ArticleViewStats[]
+  recent_views: DailyViewStats[]
+  category_stats: CategoryViewStats[]
+}
+
+export interface ArticleAnalytics {
+  article: Article
+  unique_visitors: number
+  total_views: number
+  daily_views: DailyViewStats[]
+  recent_visitors: Array<{
+    ip_address: string
+    user_agent: string
+    created_at: string
+  }>
 }
 
 export interface MediaListResponse {
@@ -328,6 +371,25 @@ class ApiClient {
     return this.request(`/media/${id}`, {
       method: 'DELETE',
     })
+  }
+
+  // Analytics endpoints
+  async getAnalytics(params?: { lang?: string }): Promise<AnalyticsData> {
+    const queryParams = new URLSearchParams()
+    if (params?.lang) {
+      queryParams.append('lang', params.lang)
+    }
+    const url = queryParams.toString() ? `/analytics?${queryParams}` : '/analytics'
+    return this.request<AnalyticsData>(url)
+  }
+
+  async getArticleAnalytics(id: number, params?: { lang?: string }): Promise<ArticleAnalytics> {
+    const queryParams = new URLSearchParams()
+    if (params?.lang) {
+      queryParams.append('lang', params.lang)
+    }
+    const url = queryParams.toString() ? `/analytics/articles/${id}?${queryParams}` : `/analytics/articles/${id}`
+    return this.request<ArticleAnalytics>(url)
   }
 }
 

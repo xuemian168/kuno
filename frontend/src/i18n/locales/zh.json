@@ -23,6 +23,7 @@
     "logout": "退出登录"
   },
   "article": {
+    "views": "浏览量",
     "title": "标题",
     "content": "内容",
     "summary": "摘要",
@@ -206,6 +207,28 @@
     "googleAPIItem": "Google翻译（API）：可靠，支持100+种语言",
     "deeplItem": "DeepL：欧洲和亚洲语言的最佳质量",
     "openaiItem": "OpenAI：上下文感知，最适合技术内容"
+  },
+  "analytics": {
+    "title": "数据分析",
+    "description": "查看您博客的性能洞察",
+    "totalViews": "总浏览量",
+    "allTimeViews": "全部浏览量",
+    "thisMonth": "本月",
+    "viewsThisMonth": "本月浏览量",
+    "thisWeek": "本周",
+    "viewsThisWeek": "本周浏览量",
+    "today": "今日",
+    "viewsToday": "今日浏览量",
+    "topPerformingArticles": "热门文章",
+    "articlesRankedByViews": "按浏览量排序的文章",
+    "published": "发布于",
+    "categoryPerformance": "分类表现",
+    "viewsByCategory": "各分类浏览量",
+    "article": "篇文章",
+    "articles": "篇文章",
+    "mostViewedArticle": "最热门文章",
+    "topPerformingContent": "您表现最佳的内容",
+    "noArticlesFound": "未找到文章"
   },
   "site": {
     "title": "极简博客",

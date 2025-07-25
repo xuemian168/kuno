@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Calendar, Tag } from 'lucide-react'
+import { ArrowLeft, Calendar, Tag, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { MarkdownRenderer } from '@/components/markdown/markdown-renderer'
@@ -24,7 +24,7 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [siteSettings, setSiteSettings] = useState<{ site_title: string; site_subtitle: string } | null>(null)
+  const [siteSettings, setSiteSettings] = useState<{ site_title: string; site_subtitle: string; show_view_count?: boolean } | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -130,6 +130,12 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
                 <Calendar className="h-4 w-4" />
                 {formatDate(article.created_at)}
               </div>
+              {article.view_count !== undefined && siteSettings?.show_view_count !== false && (
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  {article.view_count} {t('article.views')}
+                </div>
+              )}
               <Badge variant="secondary">{article.category.name}</Badge>
             </div>
             
