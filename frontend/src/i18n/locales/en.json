@@ -237,7 +237,11 @@
     "passwordMismatch": "Passwords do not match",
     "passwordChangeSuccess": "Password changed successfully",
     "passwordChangeFailed": "Password change failed",
-    "changingPassword": "Changing..."
+    "changingPassword": "Changing...",
+    "recoveryMode": "Password Recovery Mode",
+    "recoveryModeActive": "Recovery Mode Active",
+    "recoveryModeWarning": "System is currently in password recovery mode, please follow the instructions to complete the recovery",
+    "disableRecoveryMode": "Please disable recovery mode and restart the application"
   },
   "analytics": {
     "title": "Analytics",

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Lock, User } from 'lucide-react'
+import { Lock, User, Shield, AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
+import { apiClient } from '@/lib/api'
 
 interface LoginPageProps {
   params: Promise<{ locale: string }>
@@ -22,8 +23,27 @@ export default function LoginPage({ params }: LoginPageProps) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false)
+  const [recoveryMessage, setRecoveryMessage] = useState('')
+  const [checkingRecovery, setCheckingRecovery] = useState(true)
   const { login } = useAuth()
   const router = useRouter()
+
+  useEffect(() => {
+    const checkRecoveryStatus = async () => {
+      try {
+        const status = await apiClient.getRecoveryStatus()
+        setIsRecoveryMode(status.is_recovery_mode)
+        setRecoveryMessage(status.message || '')
+      } catch (error) {
+        console.error('Failed to check recovery status:', error)
+      } finally {
+        setCheckingRecovery(false)
+      }
+    }
+
+    checkRecoveryStatus()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,6 +78,33 @@ export default function LoginPage({ params }: LoginPageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {checkingRecovery ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                <p className="text-sm text-muted-foreground mt-2">Checking system status...</p>
+              </div>
+            ) : isRecoveryMode ? (
+              <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/20">
+                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                <AlertDescription className="text-orange-800 dark:text-orange-200">
+                  <div className="space-y-2">
+                    <div className="font-semibold flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      {t('settings.recoveryModeActive')}
+                    </div>
+                    <p className="text-sm">{t('settings.recoveryModeWarning')}</p>
+                    <div className="text-sm font-mono bg-orange-100 dark:bg-orange-900/30 p-2 rounded border border-orange-200 dark:border-orange-800">
+                      <p><strong>Username:</strong> admin</p>
+                      <p><strong>Password:</strong> xuemian168</p>
+                    </div>
+                    <p className="text-sm font-medium text-orange-700 dark:text-orange-300">
+                      {t('settings.disableRecoveryMode')}
+                    </p>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+            
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username">{t('admin.username')}</Label>

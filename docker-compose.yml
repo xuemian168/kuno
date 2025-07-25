@@ -11,6 +11,7 @@ services:
     environment:
       - DB_PATH=/root/data/blog.db
       - GIN_MODE=release
+      - RECOVERY_MODE=${RECOVERY_MODE:-false}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/api/categories"]

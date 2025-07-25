@@ -140,6 +140,74 @@ docker-compose down -v
 docker system prune -f
 ```
 
+## Password Recovery
+
+### When Admin Password is Forgotten
+
+If you forget the admin password, follow these steps to reset it safely:
+
+#### Step 1: Stop the Application
+```bash
+./stop.sh
+```
+
+#### Step 2: Enable Recovery Mode
+Edit your `.env` file and set:
+```bash
+RECOVERY_MODE=true
+```
+
+#### Step 3: Attempt to Start (Password Reset)
+```bash
+./start.sh
+```
+
+The system will:
+- Reset the admin password to `xuemian168`
+- Display the reset credentials in the logs
+- **Refuse to start** for security reasons
+
+#### Step 4: Disable Recovery Mode
+Edit your `.env` file and set:
+```bash
+RECOVERY_MODE=false
+```
+
+#### Step 5: Start Application and Login
+```bash
+./start.sh
+```
+
+Now you can login with:
+- **Username**: `admin`
+- **Password**: `xuemian168`
+
+#### Step 6: Change Password Immediately
+1. Login to the admin panel at `http://localhost:3000/admin`
+2. Go to **Settings** → **Security Settings**
+3. Change your password to a secure one
+
+### Security Notes
+
+⚠️ **Important Security Considerations:**
+
+- Recovery mode requires **physical access** to the server to modify environment variables
+- The system **will not start** when recovery mode is active - this prevents unauthorized access
+- Always **disable recovery mode** immediately after password reset
+- **Change the default password** immediately after recovery
+- Recovery mode is designed for emergency use only
+
+### Troubleshooting Recovery Issues
+
+**Problem**: System won't start after enabling recovery mode
+**Solution**: This is intentional. Check the logs to confirm password was reset, then disable recovery mode.
+
+**Problem**: Can't find the `.env` file
+**Solution**: Copy `.env.example` to `.env` first, then modify the `RECOVERY_MODE` setting.
+
+**Problem**: Recovery mode doesn't reset password
+**Solution**: Ensure the environment variable is set correctly (`RECOVERY_MODE=true`) and check Docker logs for error messages.
+
 ## Development
 
 ### Local Development (without Docker)

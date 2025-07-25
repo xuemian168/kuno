@@ -104,3 +104,22 @@ func ChangePassword(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Password updated successfully"})
 }
+
+type RecoveryStatusResponse struct {
+	IsRecoveryMode bool   `json:"is_recovery_mode"`
+	Message        string `json:"message,omitempty"`
+}
+
+func GetRecoveryStatus(c *gin.Context) {
+	isRecoveryMode := database.IsRecoveryMode()
+	
+	response := RecoveryStatusResponse{
+		IsRecoveryMode: isRecoveryMode,
+	}
+	
+	if isRecoveryMode {
+		response.Message = "Recovery mode is active. Please disable recovery mode to continue."
+	}
+	
+	c.JSON(http.StatusOK, response)
+}

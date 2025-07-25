@@ -237,7 +237,11 @@
     "passwordMismatch": "两次输入的密码不一致",
     "passwordChangeSuccess": "密码修改成功",
     "passwordChangeFailed": "密码修改失败",
-    "changingPassword": "修改中..."
+    "changingPassword": "修改中...",
+    "recoveryMode": "密码恢复模式",
+    "recoveryModeActive": "恢复模式已激活",
+    "recoveryModeWarning": "系统当前处于密码恢复模式，请按照说明完成恢复操作",
+    "disableRecoveryMode": "请禁用恢复模式后重新启动应用"
   },
   "analytics": {
     "title": "数据分析",

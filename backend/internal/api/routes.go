@@ -19,6 +19,7 @@ func SetupRoutes() *gin.Engine {
 	{
 		// Public routes
 		api.POST("/login", Login)
+		api.GET("/recovery-status", GetRecoveryStatus)
 		
 		// Public read-only routes
 		articles := api.Group("/articles")

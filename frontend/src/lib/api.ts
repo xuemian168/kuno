@@ -72,6 +72,11 @@ export interface LoginResponse {
   user: User
 }
 
+export interface RecoveryStatusResponse {
+  is_recovery_mode: boolean
+  message?: string
+}
+
 export interface MediaLibrary {
   id: number
   file_name: string
@@ -311,6 +316,12 @@ class ApiClient {
     return this.request('/change-password', {
       method: 'PUT',
       body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+    })
+  }
+
+  async getRecoveryStatus(): Promise<RecoveryStatusResponse> {
+    return this.request('/recovery-status', {
+      method: 'GET',
     })
   }
 

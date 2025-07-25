@@ -1,9 +1,11 @@
 package database
 
 import (
+	"blog-backend/internal/models"
 	"log"
 	"os"
-	"blog-backend/internal/models"
+	"strings"
+
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -45,7 +47,7 @@ func InitDatabase() {
 		if err != nil {
 			log.Fatal("Failed to hash password:", err)
 		}
-		
+
 		defaultUser := models.User{
 			Username: "admin",
 			Password: string(hashedPassword),
@@ -56,6 +58,57 @@ func InitDatabase() {
 	}
 
 	log.Println("Database connected and migrated successfully")
+
+	// Check recovery mode
+	checkRecoveryMode()
+}
+
+// checkRecoveryMode handles password recovery functionality
+func checkRecoveryMode() {
+	recoveryMode := strings.ToLower(getEnv("RECOVERY_MODE", "false"))
+
+	if recoveryMode == "true" {
+		log.Println("⚠️  RECOVERY MODE ACTIVATED ⚠️")
+		log.Println("🔑 Resetting admin password to default...")
+
+		// Reset admin password to default
+		var adminUser models.User
+		result := DB.Where("username = ?", "admin").First(&adminUser)
+		if result.Error != nil {
+			log.Fatal("❌ Recovery failed: Admin user not found")
+		}
+
+		// Hash the default password
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("xuemian168"), bcrypt.DefaultCost)
+		if err != nil {
+			log.Fatal("❌ Recovery failed: Unable to hash password")
+		}
+
+		// Update admin password
+		adminUser.Password = string(hashedPassword)
+		if err := DB.Save(&adminUser).Error; err != nil {
+			log.Fatal("❌ Recovery failed: Unable to update password")
+		}
+
+		log.Println("✅ Admin password has been reset to: xuemian168")
+		log.Println("📋 Username: admin")
+		log.Println("🔒 Password: xuemian168")
+		log.Println("")
+		log.Println("⚠️  SECURITY WARNING ⚠️")
+		log.Println("🛑 Recovery mode is still ENABLED!")
+		log.Println("🔧 You MUST disable recovery mode to start the server:")
+		log.Println("   1. Set RECOVERY_MODE=false in your .env file")
+		log.Println("   2. Restart the application")
+		log.Println("   3. Login with the reset credentials")
+		log.Println("   4. Change your password immediately")
+		log.Println("")
+		log.Fatal("🚫 Server startup blocked due to active recovery mode")
+	}
+}
+
+// IsRecoveryMode returns true if recovery mode is currently enabled
+func IsRecoveryMode() bool {
+	return strings.ToLower(getEnv("RECOVERY_MODE", "false")) == "true"
 }
 
 func getEnv(key, fallback string) string {
