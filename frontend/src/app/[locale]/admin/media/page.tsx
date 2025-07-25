@@ -51,6 +51,14 @@ export default function MediaPage({ params }: MediaPageProps) {
     fetchMedia()
   }, [selectedType])
 
+  // Load online videos on component mount
+  useEffect(() => {
+    const savedOnlineVideos = localStorage.getItem('online-videos')
+    if (savedOnlineVideos) {
+      setOnlineVideos(JSON.parse(savedOnlineVideos))
+    }
+  }, [])
+
   const fetchMedia = async () => {
     try {
       setLoading(true)
@@ -212,7 +220,7 @@ export default function MediaPage({ params }: MediaPageProps) {
             </Card>
           ))}
         </div>
-      ) : (selectedType === 'online' ? filteredOnlineVideos.length === 0 : filteredMedia.length === 0) ? (
+      ) : (selectedType === 'online' ? filteredOnlineVideos.length === 0 : (selectedType === 'all' ? (filteredMedia.length === 0 && filteredOnlineVideos.length === 0) : filteredMedia.length === 0)) ? (
         <div className="text-center py-12">
           <div className="mx-auto h-24 w-24 text-gray-400 mb-4">
             {selectedType === 'online' ? <Youtube className="h-full w-full" /> : <ImageIcon className="h-full w-full" />}

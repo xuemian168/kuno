@@ -13,7 +13,7 @@ export default function Footer() {
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-            <span>{settings?.footer_text || t('footer.copyright')}</span>
+            <span>{settings?.footer_text || '© 2025 xuemian168'}</span>
           </div>
           
           <div className="flex items-center space-x-2">
