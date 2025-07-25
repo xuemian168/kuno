@@ -1,0 +1,247 @@
+'use client'
+
+import { useState } from 'react'
+import { motion } from 'framer-motion'
+import { Youtube, Plus, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import YouTubeEmbed from '@/components/youtube-embed'
+import BiliBiliEmbed from '@/components/bilibili-embed'
+import { generateBilibiliThumbnail, getBiliBiliVideoInfo } from '@/lib/bilibili-utils'
+
+interface OnlineVideo {
+  id: string
+  url: string
+  title: string
+  thumbnail: string
+  platform: 'youtube' | 'bilibili'
+}
+
+interface VideoAddProps {
+  onVideoAdd?: (video: OnlineVideo) => void
+}
+
+export default function VideoAdd({ onVideoAdd }: VideoAddProps) {
+  const [url, setUrl] = useState('')
+  const [title, setTitle] = useState('')
+  const [error, setError] = useState('')
+  const [preview, setPreview] = useState<OnlineVideo | null>(null)
+  const [selectedPlatform, setSelectedPlatform] = useState<'youtube' | 'bilibili'>('youtube')
+
+  const getYouTubeVideoId = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /youtube\.com\/v\/([^&\n?#]+)/,
+      /youtube\.com\/embed\/([^&\n?#]+)/
+    ]
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern)
+      if (match && match[1]) {
+        return match[1]
+      }
+    }
+    return null
+  }
+
+
+  const detectPlatform = (url: string): 'youtube' | 'bilibili' | null => {
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      return 'youtube'
+    }
+    if (url.includes('bilibili.com') || url.includes('b23.tv')) {
+      return 'bilibili'
+    }
+    return null
+  }
+
+
+  const handlePreview = async () => {
+    if (!url.trim()) {
+      setError('Please enter a video URL')
+      return
+    }
+
+    const detectedPlatform = detectPlatform(url)
+    if (!detectedPlatform) {
+      setError('Please enter a valid YouTube or Bilibili URL')
+      return
+    }
+
+    let videoId: string | null = null
+    let thumbnail = ''
+
+    if (detectedPlatform === 'youtube') {
+      videoId = getYouTubeVideoId(url)
+      if (videoId) {
+        thumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+      }
+    } else if (detectedPlatform === 'bilibili') {
+      const videoInfo = getBiliBiliVideoInfo(url)
+      if (videoInfo) {
+        videoId = videoInfo.id
+        // Generate Bilibili thumbnail
+        thumbnail = generateBilibiliThumbnail(videoInfo.id)
+      }
+    }
+
+    if (!videoId) {
+      setError(`Invalid ${detectedPlatform === 'youtube' ? 'YouTube' : 'Bilibili'} URL`)
+      return
+    }
+
+    const video: OnlineVideo = {
+      id: videoId,
+      url: url.trim(),
+      title: title.trim() || `${detectedPlatform === 'youtube' ? 'YouTube' : 'Bilibili'} Video`,
+      thumbnail,
+      platform: detectedPlatform
+    }
+
+    setPreview(video)
+    setSelectedPlatform(detectedPlatform)
+    setError('')
+  }
+
+  const handleAdd = () => {
+    if (!preview) return
+
+    onVideoAdd?.(preview)
+    
+    // Reset form
+    setUrl('')
+    setTitle('')
+    setPreview(null)
+    setError('')
+  }
+
+  const handleReset = () => {
+    setUrl('')
+    setTitle('')
+    setPreview(null)
+    setError('')
+  }
+
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Youtube className="h-5 w-5 text-red-500" />
+          Add Online Video
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!preview ? (
+          <div className="space-y-4">
+            <Tabs value={selectedPlatform} onValueChange={(value) => setSelectedPlatform(value as any)}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="youtube">YouTube</TabsTrigger>
+                <TabsTrigger value="bilibili">Bilibili</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="space-y-2">
+              <Label htmlFor="video-url">
+                {selectedPlatform === 'youtube' ? 'YouTube' : 'Bilibili'} URL
+              </Label>
+              <Input
+                id="video-url"
+                placeholder={
+                  selectedPlatform === 'youtube' 
+                    ? 'https://www.youtube.com/watch?v=...' 
+                    : 'https://www.bilibili.com/video/BV...'
+                }
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handlePreview()}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="video-title">Title (optional)</Label>
+              <Input
+                id="video-title"
+                placeholder="Enter a custom title for this video"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+
+            <Button 
+              onClick={handlePreview}
+              disabled={!url.trim()}
+              className="w-full"
+            >
+              Preview Video
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Preview</Label>
+              {preview.platform === 'youtube' ? (
+                <YouTubeEmbed url={preview.url} title={preview.title} />
+              ) : (
+                <BiliBiliEmbed url={preview.url} title={preview.title} />
+              )}
+            </div>
+
+            <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <div className={`px-2 py-1 rounded text-xs font-medium ${
+                  preview.platform === 'youtube' 
+                    ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                    : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                }`}>
+                  {preview.platform === 'youtube' ? 'YouTube' : 'Bilibili'}
+                </div>
+              </div>
+              <p className="font-medium">{preview.title}</p>
+              <p className="text-sm text-gray-500 truncate">{preview.url}</p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={handleAdd} className="flex-1">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Video
+              </Button>
+              <Button variant="outline" onClick={handleReset}>
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="text-xs text-gray-500 space-y-2">
+          <div>
+            <p className="font-medium">YouTube formats:</p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li>https://www.youtube.com/watch?v=VIDEO_ID</li>
+              <li>https://youtu.be/VIDEO_ID</li>
+              <li>https://www.youtube.com/embed/VIDEO_ID</li>
+            </ul>
+          </div>
+          <div>
+            <p className="font-medium">Bilibili formats:</p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li>https://www.bilibili.com/video/BV1234567890</li>
+              <li>https://www.bilibili.com/video/av123456</li>
+              <li>https://b23.tv/BV1234567890</li>
+            </ul>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}

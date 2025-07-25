@@ -1,0 +1,110 @@
+/* Markdown content styles */
+.prose {
+  max-width: none;
+  color: inherit;
+}
+
+/* Code blocks */
+.prose pre {
+  @apply bg-muted border rounded-lg p-4 overflow-x-auto;
+}
+
+.prose pre code {
+  @apply bg-transparent p-0 text-sm;
+  border: none;
+  border-radius: 0;
+}
+
+/* Inline code */
+.prose code:not(pre code) {
+  @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+  color: inherit;
+}
+
+/* Tables */
+.prose table {
+  @apply w-full border-collapse;
+}
+
+.prose th,
+.prose td {
+  @apply border border-border px-3 py-2 text-left;
+}
+
+.prose th {
+  @apply bg-muted font-semibold;
+}
+
+/* Blockquotes */
+.prose blockquote {
+  @apply border-l-4 border-primary pl-4 italic;
+  margin: 1.5rem 0;
+}
+
+/* Links */
+.prose a {
+  @apply text-primary underline-offset-4 hover:underline;
+  text-decoration: none;
+}
+
+.prose a:hover {
+  text-decoration: underline;
+}
+
+/* Headings */
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  @apply font-semibold;
+  color: inherit;
+}
+
+.prose h1 {
+  @apply text-3xl mt-8 mb-4 first:mt-0;
+}
+
+.prose h2 {
+  @apply text-2xl mt-6 mb-3;
+}
+
+.prose h3 {
+  @apply text-xl mt-5 mb-2;
+}
+
+.prose h4 {
+  @apply text-lg mt-4 mb-2;
+}
+
+/* Lists */
+.prose ul,
+.prose ol {
+  @apply pl-6 space-y-1;
+}
+
+.prose li {
+  @apply leading-relaxed;
+}
+
+/* Paragraphs */
+.prose p {
+  @apply leading-relaxed mb-4;
+}
+
+/* Images */
+.prose img {
+  @apply rounded-lg shadow-sm max-w-full h-auto;
+}
+
+/* Horizontal rules */
+.prose hr {
+  @apply border-border my-8;
+}
+
+/* Dark mode adjustments for syntax highlighting */
+.dark .hljs {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
