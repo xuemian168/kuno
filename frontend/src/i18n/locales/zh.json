@@ -98,6 +98,7 @@
   "common": {
     "save": "保存",
     "saving": "保存中...",
+    "saved": "保存成功",
     "cancel": "取消",
     "delete": "删除",
     "edit": "编辑",

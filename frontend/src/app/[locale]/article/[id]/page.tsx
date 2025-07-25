@@ -38,7 +38,16 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       languages[loc] = articleUrl
     })
     
-    const articleTitle = `${article.title} - ${siteTitle}`
+    // Use SEO title if available, otherwise fall back to regular title
+    const seoTitle = article.seo_title || article.title
+    const articleTitle = article.seo_title ? seoTitle : `${article.title} - ${siteTitle}`
+    
+    // Use SEO description if available, otherwise fall back to summary or site description
+    const seoDescription = article.seo_description || article.summary || t('site.description')
+    
+    // SEO keywords
+    const seoKeywords = article.seo_keywords
+    
     const articleUrl = locale === routing.defaultLocale 
       ? `${baseUrl}/article/${id}` 
       : `${baseUrl}/${locale}/article/${id}`
@@ -79,9 +88,9 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     
     const { images } = extractMediaFromContent(article.content)
     
-    return {
+    const metadata: Metadata = {
       title: articleTitle,
-      description: article.summary || t('site.description'),
+      description: seoDescription,
       metadataBase: new URL(baseUrl),
       alternates: {
         canonical: locale === routing.defaultLocale ? `/article/${id}` : `/${locale}/article/${id}`,
@@ -89,7 +98,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       },
       openGraph: {
         title: articleTitle,
-        description: article.summary || t('site.description'),
+        description: seoDescription,
         url: articleUrl,
         siteName: siteTitle,
         locale: locale,
@@ -102,7 +111,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       twitter: {
         card: images.length > 0 ? 'summary_large_image' : 'summary',
         title: articleTitle,
-        description: article.summary || t('site.description'),
+        description: seoDescription,
         ...(images.length > 0 && { images: images[0] }),
       },
       robots: {
@@ -110,6 +119,13 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         follow: true,
       },
     }
+
+    // Add keywords if available
+    if (seoKeywords) {
+      metadata.keywords = seoKeywords.split(',').map(k => k.trim())
+    }
+
+    return metadata
   } catch (error) {
     const fallbackTitle = t('site.articleTitle')
     const fallbackUrl = locale === routing.defaultLocale 

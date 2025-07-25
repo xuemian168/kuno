@@ -16,9 +16,14 @@ type Article struct {
 	DefaultLang  string               `gorm:"default:'zh'" json:"default_lang"`
 	Translations []ArticleTranslation `gorm:"foreignKey:ArticleID" json:"translations,omitempty"`
 	ViewCount    uint                 `gorm:"default:0" json:"view_count"`
-	CreatedAt    time.Time            `json:"created_at"`
-	UpdatedAt    time.Time            `json:"updated_at"`
-	DeletedAt    gorm.DeletedAt       `gorm:"index" json:"-"`
+	// SEO Fields
+	SEOTitle       string             `gorm:"size:255" json:"seo_title"`
+	SEODescription string             `gorm:"size:500" json:"seo_description"`
+	SEOKeywords    string             `gorm:"size:255" json:"seo_keywords"`
+	SEOSlug        string             `gorm:"size:255;index" json:"seo_slug"`
+	CreatedAt      time.Time          `json:"created_at"`
+	UpdatedAt      time.Time          `json:"updated_at"`
+	DeletedAt      gorm.DeletedAt     `gorm:"index" json:"-"`
 }
 
 type Category struct {
@@ -39,6 +44,8 @@ type SiteSettings struct {
 	SiteSubtitle string                   `gorm:"default:'A minimalist space for thoughts and ideas'" json:"site_subtitle"`
 	FooterText  string                    `gorm:"default:'© 2025 xuemian168'" json:"footer_text"`
 	ShowViewCount bool                    `gorm:"default:true" json:"show_view_count"`
+	LogoURL     string                    `gorm:"size:255" json:"logo_url"`
+	FaviconURL  string                    `gorm:"size:255" json:"favicon_url"`
 	Translations []SiteSettingsTranslation `gorm:"foreignKey:SettingsID" json:"translations,omitempty"`
 	CreatedAt   time.Time                 `json:"created_at"`
 	UpdatedAt   time.Time                 `json:"updated_at"`

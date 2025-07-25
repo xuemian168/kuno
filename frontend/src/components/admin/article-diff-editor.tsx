@@ -9,6 +9,12 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { 
   Dialog,
   DialogContent,
@@ -33,12 +39,16 @@ import {
   Keyboard,
   HelpCircle,
   Wand2,
-  Loader2
+  Loader2,
+  Check,
+  X,
+  ChevronDown
 } from "lucide-react"
 import { translationService, initializeTranslationService } from "@/services/translation"
 import { languageManager } from "@/services/translation/language-manager"
 import { cn } from "@/lib/utils"
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer"
+import { ArticleSEOForm } from "@/components/admin/article-seo-form"
 import MediaPicker from "./media-picker"
 import { MediaLibrary } from "@/lib/api"
 
@@ -70,7 +80,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const [sourceLanguage, setSourceLanguage] = useState(locale)
   const [targetLanguage, setTargetLanguage] = useState(locale === 'zh' ? 'en' : 'zh')
   const [leftPanelWidth, setLeftPanelWidth] = useState(50)
-  const [activeField, setActiveField] = useState<'title' | 'summary' | 'content'>('content')
+  const [activeField, setActiveField] = useState<'basic' | 'content' | 'seo'>('content')
   const [showPreview, setShowPreview] = useState<'none' | 'left' | 'right' | 'both'>('none')
   const [activeLine, setActiveLine] = useState<number | null>(null)
   const [sourceScrollTop, setSourceScrollTop] = useState(0)
@@ -84,6 +94,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const [isTranslating, setIsTranslating] = useState(false)
   const [hasTranslationProvider, setHasTranslationProvider] = useState(false)
   const [availableLanguages, setAvailableLanguages] = useState(adminInterfaceLanguages)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   
   const sourceTextareaRef = useRef<HTMLTextAreaElement>(null)
   const targetTextareaRef = useRef<HTMLTextAreaElement>(null)
@@ -93,7 +104,12 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     content: article?.content || "",
     content_type: article?.content_type || "markdown",
     summary: article?.summary || "",
-    category_id: article?.category_id || 0
+    category_id: article?.category_id || 0,
+    // SEO Fields
+    seo_title: article?.seo_title || "",
+    seo_description: article?.seo_description || "",
+    seo_keywords: article?.seo_keywords || "",
+    seo_slug: article?.seo_slug || ""
   })
   
   const [translations, setTranslations] = useState<Translation[]>(() => {
@@ -319,8 +335,17 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }
   }
 
-  const handleSubmit = async () => {
+  const handleSEOChange = (seoData: { seo_title?: string, seo_description?: string, seo_keywords?: string, seo_slug?: string }) => {
+    // Update main formData with global SEO data
+    setFormData(prev => ({
+      ...prev,
+      ...seoData
+    }))
+  }
+
+  const handleSubmit = async (exitAfterSave = false) => {
     setLoading(true)
+    setSaveStatus('saving')
 
     try {
       // Collect only non-default language translations
@@ -342,13 +367,27 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
 
       if (isEditing && article) {
         await apiClient.updateArticle(article.id, articleData)
+        setSaveStatus('saved')
+        if (exitAfterSave) {
+          router.push('/admin')
+        } else {
+          // Reset save status after a delay
+          setTimeout(() => setSaveStatus('idle'), 3000)
+        }
       } else {
-        await apiClient.createArticle(articleData)
+        const newArticle = await apiClient.createArticle(articleData)
+        if (exitAfterSave) {
+          router.push('/admin')
+        } else {
+          // After creating, switch to edit mode with the new article
+          router.replace(`/admin/articles/${newArticle.id}/edit`)
+        }
       }
-      router.push('/admin')
     } catch (error) {
       console.error('Failed to save article:', error)
-      alert('Failed to save article')
+      setSaveStatus('error')
+      // Reset error status after a delay
+      setTimeout(() => setSaveStatus('idle'), 5000)
     } finally {
       setLoading(false)
     }
@@ -385,7 +424,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           case 's': // Save - Ctrl/Cmd+S
             e.preventDefault()
             if (!loading) {
-              handleSubmit()
+              handleSubmit(e.shiftKey) // Shift+Ctrl/Cmd+S to save and exit
             }
             break
           
@@ -422,24 +461,24 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             }
             break
           
-          case '1': // Switch to title field - Ctrl/Cmd+1
+          case '1': // Switch to basic field - Ctrl/Cmd+1
             e.preventDefault()
             if (editMode === 'translation') {
-              setActiveField('title')
+              setActiveField('basic')
             }
             break
           
-          case '2': // Switch to summary field - Ctrl/Cmd+2
-            e.preventDefault()
-            if (editMode === 'translation') {
-              setActiveField('summary')
-            }
-            break
-          
-          case '3': // Switch to content field - Ctrl/Cmd+3
+          case '2': // Switch to content field - Ctrl/Cmd+2
             e.preventDefault()
             if (editMode === 'translation') {
               setActiveField('content')
+            }
+            break
+          
+          case '3': // Switch to SEO field - Ctrl/Cmd+3
+            e.preventDefault()
+            if (editMode === 'translation') {
+              setActiveField('seo')
             }
             break
           
@@ -832,6 +871,26 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     const defaultLang = article?.default_lang || 'zh'
     const currentTranslation = getTranslation(defaultLang)
     
+    // If we're showing SEO, render it directly
+    if (activeField === 'seo') {
+      return (
+        <div className="flex-1 overflow-auto">
+          <div className="p-4 max-w-4xl mx-auto">
+            <ArticleSEOForm
+              article={{
+                ...article,
+                ...formData
+              }}
+              translations={translations}
+              activeLanguage={defaultLang}
+              locale={locale}
+              onSEOChange={handleSEOChange}
+            />
+          </div>
+        </div>
+      )
+    }
+    
     return (
       <div className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         <div className="space-y-6">
@@ -891,35 +950,34 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     const isSource = language === sourceLanguage
     
     switch (activeField) {
-      case 'title':
+      case 'basic':
         return isPreview ? (
-          <div className="p-4">
+          <div className="p-4 space-y-4">
             <h1 className="text-2xl font-bold">{translation.title || 'Untitled'}</h1>
-          </div>
-        ) : (
-          <div className="p-4">
-            <Input
-              value={translation.title}
-              onChange={(e) => updateTranslation(language, 'title', e.target.value)}
-              placeholder={t('article.enterTitle')}
-              className="text-lg font-semibold border-0 shadow-none focus-visible:ring-0 px-0"
-            />
-          </div>
-        )
-      
-      case 'summary':
-        return isPreview ? (
-          <div className="p-4">
             <p className="text-muted-foreground leading-relaxed">{translation.summary || 'No summary'}</p>
           </div>
         ) : (
-          <div className="p-4">
-            <Textarea
-              value={translation.summary}
-              onChange={(e) => updateTranslation(language, 'summary', e.target.value)}
-              placeholder={t('article.enterSummary')}
-              className="min-h-[200px] border-0 shadow-none focus-visible:ring-0 px-0 resize-none"
-            />
+          <div className="p-4 space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor={`title-${side}`}>{t('article.title')}</Label>
+              <Input
+                id={`title-${side}`}
+                value={translation.title}
+                onChange={(e) => updateTranslation(language, 'title', e.target.value)}
+                placeholder={t('article.enterTitle')}
+                className="text-lg font-semibold"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`summary-${side}`}>{t('article.summary')}</Label>
+              <Textarea
+                id={`summary-${side}`}
+                value={translation.summary}
+                onChange={(e) => updateTranslation(language, 'summary', e.target.value)}
+                placeholder={t('article.enterSummary')}
+                className="min-h-[100px] resize-none"
+              />
+            </div>
           </div>
         )
       
@@ -1074,22 +1132,55 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           </>
         )}
 
-        <Button
-          onClick={handleSubmit}
-          disabled={loading}
-          size="sm"
-          className="h-8"
-        >
-          <Save className="h-4 w-4 mr-2" />
-          {loading ? t('common.saving') : t('common.save')}
-        </Button>
+        <div className="flex">
+          <Button
+            onClick={() => handleSubmit(false)}
+            disabled={loading || saveStatus === 'saving'}
+            size="sm"
+            className={cn(
+              "h-8 rounded-r-none transition-colors",
+              saveStatus === 'saved' && "bg-green-600 hover:bg-green-700",
+              saveStatus === 'error' && "bg-red-600 hover:bg-red-700"
+            )}
+          >
+            {saveStatus === 'saving' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {saveStatus === 'saved' && <Check className="h-4 w-4 mr-2" />}
+            {saveStatus === 'error' && <X className="h-4 w-4 mr-2" />}
+            {saveStatus === 'idle' && <Save className="h-4 w-4 mr-2" />}
+            {saveStatus === 'saving' ? t('common.saving') : 
+             saveStatus === 'saved' ? t('common.saved') || 'Saved' :
+             saveStatus === 'error' ? t('common.saveFailed') || 'Save Failed' :
+             t('common.save')}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                className={cn(
+                  "h-8 px-2 rounded-l-none border-l",
+                  saveStatus === 'saved' && "bg-green-600 hover:bg-green-700 border-green-700",
+                  saveStatus === 'error' && "bg-red-600 hover:bg-red-700 border-red-700"
+                )}
+                disabled={loading || saveStatus === 'saving'}
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleSubmit(true)}>
+                <Save className="h-4 w-4 mr-2" />
+                {locale === 'zh' ? '保存并退出' : 'Save and Exit'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Field Tabs - Only show in translation mode */}
       {editMode === 'translation' && (
         <div className="h-10 border-b flex items-center bg-muted/30">
           <div className="flex">
-            {(['title', 'summary', 'content'] as const).map((field) => (
+            {(['basic', 'content', 'seo'] as const).map((field) => (
               <button
                 key={field}
                 onClick={() => setActiveField(field)}
@@ -1100,7 +1191,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
-                {t(`article.${field}`)}
+                {field === 'seo' ? t('seo.seoSettings') : 
+                 field === 'basic' ? `${t('article.title')} & ${t('article.summary')}` : 
+                 t(`article.${field}`)}
               </button>
             ))}
           </div>
@@ -1138,22 +1231,24 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             </div>
           )}
           
-          {/* Preview Toggle */}
-          <div className="flex items-center gap-1 mr-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowPreview(showPreview === 'none' ? 'both' : 'none')}
-              className="h-7 px-2"
-            >
-              {showPreview !== 'none' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
-          </div>
+          {/* Preview Toggle - Hide for SEO */}
+          {activeField !== 'seo' && (
+            <div className="flex items-center gap-1 mr-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowPreview(showPreview === 'none' ? 'both' : 'none')}
+                className="h-7 px-2"
+              >
+                {showPreview !== 'none' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
       {/* Main Editor Area */}
-      {editMode === 'single' ? (
+      {editMode === 'single' || activeField === 'seo' ? (
         renderSingleEditor()
       ) : (
         <div className="flex-1 flex overflow-hidden">
@@ -1343,6 +1438,12 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
+                  <span>{locale === 'zh' ? '保存并退出' : 'Save and Exit'}</span>
+                  <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
+                    Shift + {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + S
+                  </kbd>
+                </div>
+                <div className="flex justify-between items-center">
                   <span>{locale === 'zh' ? '切换预览' : 'Toggle Preview'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + P
@@ -1382,19 +1483,19 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '切换到标题字段' : 'Switch to Title Field'}</span>
+                  <span>{locale === 'zh' ? '切换到基本信息（标题&摘要）' : 'Switch to Basic Info (Title & Summary)'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + 1
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '切换到摘要字段' : 'Switch to Summary Field'}</span>
+                  <span>{locale === 'zh' ? '切换到内容字段' : 'Switch to Content Field'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + 2
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '切换到内容字段' : 'Switch to Content Field'}</span>
+                  <span>{locale === 'zh' ? '切换到SEO设置' : 'Switch to SEO Settings'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + 3
                   </kbd>

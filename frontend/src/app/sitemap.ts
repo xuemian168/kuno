@@ -65,27 +65,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         
         const images = extractMediaFromContent(article.content)
         
+        // Use SEO-friendly URL if seo_slug is available
+        const seoSlug = article.seo_slug
+        const baseArticleUrl = seoSlug
+          ? (locale === routing.defaultLocale 
+              ? `${baseUrl}/article/${seoSlug}` 
+              : `${baseUrl}/${locale}/article/${seoSlug}`)
+          : url
+
         routes.push({
-          url,
+          url: baseArticleUrl,
           lastModified: new Date(article.updated_at || article.created_at),
           changeFreq: 'weekly',
           priority: 0.8,
           alternates: {
             languages: Object.fromEntries(
-              routing.locales.map(loc => [
-                loc,
-                loc === routing.defaultLocale 
-                  ? `${baseUrl}/article/${article.id}` 
-                  : `${baseUrl}/${loc}/article/${article.id}`
-              ])
+              routing.locales.map(loc => {
+                const localeUrl = seoSlug
+                  ? (loc === routing.defaultLocale 
+                      ? `${baseUrl}/article/${seoSlug}` 
+                      : `${baseUrl}/${loc}/article/${seoSlug}`)
+                  : (loc === routing.defaultLocale 
+                      ? `${baseUrl}/article/${article.id}` 
+                      : `${baseUrl}/${loc}/article/${article.id}`)
+                return [loc, localeUrl]
+              })
             )
           },
           // Add images to sitemap for better SEO
           ...(images.length > 0 && {
             images: images.map(img => ({
               url: img,
-              title: article.title,
-              caption: article.summary || article.title
+              title: article.seo_title || article.title,
+              caption: article.seo_description || article.summary || article.title
             }))
           })
         })

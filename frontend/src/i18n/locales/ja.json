@@ -98,6 +98,7 @@
   "common": {
     "save": "保存",
     "saving": "保存中...",
+    "saved": "保存しました",
     "cancel": "キャンセル",
     "delete": "削除",
     "edit": "編集",

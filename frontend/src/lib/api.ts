@@ -21,6 +21,12 @@ export interface Article {
   category: Category
   default_lang: string
   translations: ArticleTranslation[]
+  view_count?: number
+  // SEO Fields
+  seo_title?: string
+  seo_description?: string
+  seo_keywords?: string
+  seo_slug?: string
   created_at: string
   updated_at: string
 }
