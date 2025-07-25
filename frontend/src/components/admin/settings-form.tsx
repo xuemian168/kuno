@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, SiteSettings, SiteSettingsTranslation } from "@/lib/api"
 import { useSettings } from "@/contexts/settings-context"
-import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff } from "lucide-react"
+import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { translationService, TranslationConfig, SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation"
@@ -53,6 +53,14 @@ export function SettingsForm({ locale }: SettingsFormProps) {
   const [availableLanguages, setAvailableLanguages] = useState<{ code: string, name: string }[]>([])
   const [hasTranslationProvider, setHasTranslationProvider] = useState(false)
   const [translatingLanguage, setTranslatingLanguage] = useState<string | null>(null)
+  
+  // Password change state
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+  const [passwordChanging, setPasswordChanging] = useState(false)
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -263,6 +271,37 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     }
   }
 
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // Validation
+    if (passwordForm.newPassword.length < 6) {
+      alert(t('settings.passwordMinLength'))
+      return
+    }
+    
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      alert(t('settings.passwordMismatch'))
+      return
+    }
+    
+    setPasswordChanging(true)
+    try {
+      await apiClient.changePassword(passwordForm.currentPassword, passwordForm.newPassword)
+      alert(t('settings.passwordChangeSuccess'))
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+    } catch (error: any) {
+      console.error('Password change failed:', error)
+      alert(error.message || t('settings.passwordChangeFailed'))
+    } finally {
+      setPasswordChanging(false)
+    }
+  }
+
+  const handlePasswordFormChange = (field: string, value: string) => {
+    setPasswordForm(prev => ({ ...prev, [field]: value }))
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -316,7 +355,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-5 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
             <TabsTrigger 
               value="general" 
               className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200 gap-2"
@@ -344,6 +383,13 @@ export function SettingsForm({ locale }: SettingsFormProps) {
             >
               <Key className="h-4 w-4" />
               {t('settings.translationAPI')}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="security" 
+              className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
+            >
+              <Shield className="h-4 w-4" />
+              {t('settings.security')}
             </TabsTrigger>
           </TabsList>
 
@@ -859,6 +905,97 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     </ul>
                   </AlertDescription>
                 </Alert>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="security" className="space-y-6">
+            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <CardHeader className="bg-gradient-to-r from-red-100 to-orange-100 dark:from-red-900/50 dark:to-orange-900/50 border-b border-red-200 dark:border-red-700 p-4 rounded-t-lg">
+                <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
+                  <Lock className="h-5 w-5" />
+                  {t('settings.changePassword')}
+                </CardTitle>
+                <CardDescription className="text-red-700 dark:text-red-300">
+                  {t('settings.changePasswordDesc')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <form onSubmit={handlePasswordChange} className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="current_password" className="text-base font-medium text-gray-700 dark:text-gray-300">
+                      {t('settings.currentPassword')}
+                    </Label>
+                    <Input
+                      id="current_password"
+                      type="password"
+                      value={passwordForm.currentPassword}
+                      onChange={(e) => handlePasswordFormChange('currentPassword', e.target.value)}
+                      placeholder={t('settings.enterCurrentPassword')}
+                      required
+                      className="h-11 border-2 border-gray-200 dark:border-gray-700 focus:border-red-500 dark:focus:border-red-400 rounded-lg transition-colors"
+                    />
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <Label htmlFor="new_password" className="text-base font-medium text-gray-700 dark:text-gray-300">
+                      {t('settings.newPassword')}
+                    </Label>
+                    <Input
+                      id="new_password"
+                      type="password"
+                      value={passwordForm.newPassword}
+                      onChange={(e) => handlePasswordFormChange('newPassword', e.target.value)}
+                      placeholder={t('settings.enterNewPassword')}
+                      required
+                      minLength={6}
+                      className="h-11 border-2 border-gray-200 dark:border-gray-700 focus:border-red-500 dark:focus:border-red-400 rounded-lg transition-colors"
+                    />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {t('settings.passwordMinLength')}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <Label htmlFor="confirm_password" className="text-base font-medium text-gray-700 dark:text-gray-300">
+                      {t('settings.confirmPassword')}
+                    </Label>
+                    <Input
+                      id="confirm_password"
+                      type="password"
+                      value={passwordForm.confirmPassword}
+                      onChange={(e) => handlePasswordFormChange('confirmPassword', e.target.value)}
+                      placeholder={t('settings.confirmNewPassword')}
+                      required
+                      className="h-11 border-2 border-gray-200 dark:border-gray-700 focus:border-red-500 dark:focus:border-red-400 rounded-lg transition-colors"
+                    />
+                    {passwordForm.newPassword && passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword && (
+                      <p className="text-sm text-red-500">
+                        {t('settings.passwordMismatch')}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="flex justify-end pt-4">
+                    <Button 
+                      type="submit" 
+                      disabled={passwordChanging || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword || passwordForm.newPassword !== passwordForm.confirmPassword}
+                      className="gap-2 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-3"
+                    >
+                      {passwordChanging ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          {t('settings.changingPassword')}
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="h-4 w-4" />
+                          {t('settings.changePassword')}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
               </CardContent>
             </Card>
           </TabsContent>
