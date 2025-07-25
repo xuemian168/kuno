@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, SiteSettings, SiteSettingsTranslation } from "@/lib/api"
 import { useSettings } from "@/contexts/settings-context"
-import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star } from "lucide-react"
+import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { translationService, TranslationConfig, SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation"
@@ -20,6 +20,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { SocialMediaManager } from "@/components/admin/social-media-manager"
 import { getFullApiUrl } from "@/lib/utils"
+import { setSoundEnabled } from "@/lib/sound"
+import { NotificationDialog, useNotificationDialog } from "@/components/ui/notification-dialog"
 
 // Dynamic languages based on user configuration - will be set in component
 
@@ -37,7 +39,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     site_title: "",
     site_subtitle: "",
     footer_text: "",
-    show_view_count: true
+    show_view_count: true,
+    enable_sound_effects: true
   })
   const [translations, setTranslations] = useState<SiteSettingsTranslation[]>([])
   const [activeTab, setActiveTab] = useState('general')
@@ -67,6 +70,9 @@ export function SettingsForm({ locale }: SettingsFormProps) {
   // File upload state
   const [logoUploading, setLogoUploading] = useState(false)
   const [faviconUploading, setFaviconUploading] = useState(false)
+  
+  // Notification dialog
+  const notification = useNotificationDialog()
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -78,9 +84,13 @@ export function SettingsForm({ locale }: SettingsFormProps) {
           site_title: settingsData.site_title,
           site_subtitle: settingsData.site_subtitle,
           footer_text: settingsData.footer_text,
-          show_view_count: settingsData.show_view_count ?? true
+          show_view_count: settingsData.show_view_count ?? true,
+          enable_sound_effects: settingsData.enable_sound_effects ?? true
         })
         setTranslations(settingsData.translations || [])
+        
+        // Sync sound settings to localStorage
+        setSoundEnabled(settingsData.enable_sound_effects ?? true)
       } catch (error) {
         console.error('Failed to fetch settings:', error)
       } finally {
@@ -193,12 +203,18 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         site_subtitle: formData.site_subtitle,
         footer_text: formData.footer_text,
         show_view_count: formData.show_view_count,
+        enable_sound_effects: formData.enable_sound_effects,
+        logo_url: settings?.logo_url || '',
+        favicon_url: settings?.favicon_url || '',
         translations: allTranslations
       }
 
       const updatedSettings = await apiClient.updateSettings(settingsData)
       setSettings(updatedSettings)
       updateSettings(updatedSettings) // Update global settings
+      
+      // Update localStorage for sound effects
+      setSoundEnabled(updatedSettings.enable_sound_effects ?? true)
 
       // Save translation settings to localStorage
       const configWithLanguages = {
@@ -218,10 +234,16 @@ export function SettingsForm({ locale }: SettingsFormProps) {
       translationService.configureFromSettings(configWithLanguages)
       setHasTranslationProvider(translationService.isConfigured())
 
-      alert('Settings updated successfully!')
+      notification.showSuccess(
+        locale === 'zh' ? '设置保存成功！' : 'Settings Updated Successfully!',
+        locale === 'zh' ? '您的设置已成功保存并应用。' : 'Your settings have been saved and applied successfully.'
+      )
     } catch (error) {
       console.error('Failed to update settings:', error)
-      alert('Failed to update settings')
+      notification.showError(
+        locale === 'zh' ? '保存失败' : 'Save Failed',
+        locale === 'zh' ? '设置保存失败，请稍后重试。' : 'Failed to save settings. Please try again later.'
+      )
     } finally {
       setSaving(false)
     }
@@ -232,6 +254,11 @@ export function SettingsForm({ locale }: SettingsFormProps) {
       ...prev,
       [field]: value
     }))
+    
+    // Update sound settings immediately when changed
+    if (field === 'enable_sound_effects') {
+      setSoundEnabled(value as boolean)
+    }
   }
 
   const handleReset = () => {
@@ -240,7 +267,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         site_title: settings.site_title,
         site_subtitle: settings.site_subtitle,
         footer_text: settings.footer_text,
-        show_view_count: settings.show_view_count ?? true
+        show_view_count: settings.show_view_count ?? true,
+        enable_sound_effects: settings.enable_sound_effects ?? true
       })
     }
   }
@@ -271,7 +299,10 @@ export function SettingsForm({ locale }: SettingsFormProps) {
       }
     } catch (error) {
       console.error('Translation failed:', error)
-      alert('Translation failed. Please check your translation service configuration.')
+      notification.showError(
+        locale === 'zh' ? '翻译失败' : 'Translation Failed',
+        locale === 'zh' ? '自动翻译失败，请检查翻译服务配置。' : 'Translation failed. Please check your translation service configuration.'
+      )
     } finally {
       setTranslatingLanguage(null)
     }
@@ -294,11 +325,17 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     setPasswordChanging(true)
     try {
       await apiClient.changePassword(passwordForm.currentPassword, passwordForm.newPassword)
-      alert(t('settings.passwordChangeSuccess'))
+      notification.showSuccess(
+        locale === 'zh' ? '密码修改成功！' : 'Password Changed Successfully!',
+        locale === 'zh' ? '您的密码已成功修改。' : 'Your password has been changed successfully.'
+      )
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
     } catch (error: any) {
       console.error('Password change failed:', error)
-      alert(error.message || t('settings.passwordChangeFailed'))
+      notification.showError(
+        locale === 'zh' ? '密码修改失败' : 'Password Change Failed',
+        locale === 'zh' ? '密码修改失败，请检查当前密码是否正确。' : 'Password change failed. Please check if your current password is correct.'
+      )
     } finally {
       setPasswordChanging(false)
     }
@@ -320,10 +357,16 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         setSettings(updatedSettings)
         updateSettings(updatedSettings)
       }
-      alert(response.message)
+      notification.showSuccess(
+        locale === 'zh' ? 'Logo上传成功！' : 'Logo Uploaded Successfully!',
+        locale === 'zh' ? '您的Logo已成功上传并应用。' : 'Your logo has been uploaded and applied successfully.'
+      )
     } catch (error: any) {
       console.error('Logo upload failed:', error)
-      alert(error.message || 'Logo upload failed')
+      notification.showError(
+        locale === 'zh' ? 'Logo上传失败' : 'Logo Upload Failed',
+        locale === 'zh' ? 'Logo上传失败，请检查文件格式和大小。' : 'Logo upload failed. Please check file format and size.'
+      )
     } finally {
       setLogoUploading(false)
       // Reset file input
@@ -343,10 +386,16 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         setSettings(updatedSettings)
         updateSettings(updatedSettings)
       }
-      alert(response.message)
+      notification.showSuccess(
+        locale === 'zh' ? 'Favicon上传成功！' : 'Favicon Uploaded Successfully!',
+        locale === 'zh' ? '您的Favicon已成功上传并应用。' : 'Your favicon has been uploaded and applied successfully.'
+      )
     } catch (error: any) {
       console.error('Favicon upload failed:', error)
-      alert(error.message || 'Favicon upload failed')
+      notification.showError(
+        locale === 'zh' ? 'Favicon上传失败' : 'Favicon Upload Failed',
+        locale === 'zh' ? 'Favicon上传失败，请检查文件格式和大小。' : 'Favicon upload failed. Please check file format and size.'
+      )
     } finally {
       setFaviconUploading(false)
       // Reset file input
@@ -529,6 +578,35 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         id="show_view_count"
                         checked={formData.show_view_count}
                         onCheckedChange={(checked: boolean) => handleChange('show_view_count', checked)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-2 rounded-lg ${formData.enable_sound_effects ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-800'} transition-colors`}>
+                          {formData.enable_sound_effects ? (
+                            <Volume2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                          ) : (
+                            <VolumeX className="h-5 w-5 text-gray-400" />
+                          )}
+                        </div>
+                        <div>
+                          <Label htmlFor="enable_sound_effects" className="text-base font-medium cursor-pointer">
+                            {locale === 'zh' ? '启用音效' : 'Enable Sound Effects'}
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {locale === 'zh' ? '保存成功时播放提示音' : 'Play notification sound when saving successfully'}
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        id="enable_sound_effects"
+                        checked={formData.enable_sound_effects}
+                        onCheckedChange={(checked: boolean) => handleChange('enable_sound_effects', checked)}
                       />
                     </div>
                   </CardContent>
@@ -1180,6 +1258,15 @@ export function SettingsForm({ locale }: SettingsFormProps) {
           </TabsContent>
         </Tabs>
       </motion.div>
+      
+      {/* Notification Dialog */}
+      <NotificationDialog
+        open={notification.open}
+        onOpenChange={notification.hideNotification}
+        type={notification.type}
+        title={notification.title}
+        description={notification.description}
+      />
     </div>
   )
 }

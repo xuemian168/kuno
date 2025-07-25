@@ -44,6 +44,7 @@ type SiteSettings struct {
 	SiteSubtitle string                   `gorm:"default:'A minimalist space for thoughts and ideas'" json:"site_subtitle"`
 	FooterText  string                    `gorm:"default:'© 2025 xuemian168'" json:"footer_text"`
 	ShowViewCount bool                    `gorm:"default:true" json:"show_view_count"`
+	EnableSoundEffects bool               `gorm:"default:true" json:"enable_sound_effects"`
 	LogoURL     string                    `gorm:"size:255" json:"logo_url"`
 	FaviconURL  string                    `gorm:"size:255" json:"favicon_url"`
 	Translations []SiteSettingsTranslation `gorm:"foreignKey:SettingsID" json:"translations,omitempty"`

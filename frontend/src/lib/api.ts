@@ -55,6 +55,9 @@ export interface SiteSettings {
   site_subtitle: string
   footer_text: string
   show_view_count?: boolean
+  enable_sound_effects?: boolean
+  logo_url?: string
+  favicon_url?: string
   translations?: SiteSettingsTranslation[]
   created_at: string
   updated_at: string
@@ -301,6 +304,58 @@ class ApiClient {
       method: 'PUT',
       body: JSON.stringify(settings),
     })
+  }
+
+  // Upload logo file
+  async uploadLogo(file: File): Promise<{ url: string; message: string }> {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch(`${this.baseUrl}/settings/upload-logo`, {
+      method: 'POST',
+      headers: {
+        'Authorization': this.token ? `Bearer ${this.token}` : '',
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        this.clearToken()
+        if (typeof window !== 'undefined') {
+          window.location.href = '/admin/login'
+        }
+      }
+      throw new Error(`Upload failed: ${response.status} ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  // Upload favicon file
+  async uploadFavicon(file: File): Promise<{ url: string; message: string }> {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch(`${this.baseUrl}/settings/upload-favicon`, {
+      method: 'POST',
+      headers: {
+        'Authorization': this.token ? `Bearer ${this.token}` : '',
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        this.clearToken()
+        if (typeof window !== 'undefined') {
+          window.location.href = '/admin/login'
+        }
+      }
+      throw new Error(`Upload failed: ${response.status} ${response.statusText}`)
+    }
+
+    return response.json()
   }
 
   // Authentication

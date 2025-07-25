@@ -32,11 +32,31 @@ func InitDatabase() {
 	DB.Model(&models.SiteSettings{}).Count(&settingsCount)
 	if settingsCount == 0 {
 		defaultSettings := models.SiteSettings{
-			SiteTitle:    "Blog",
-			SiteSubtitle: "A minimalist space for thoughts and ideas",
+			SiteTitle:          "Blog",
+			SiteSubtitle:       "A minimalist space for thoughts and ideas",
+			FooterText:        "© 2025 xuemian168",
+			ShowViewCount:     true,
+			EnableSoundEffects: true,
+			LogoURL:           "",
+			FaviconURL:        "",
 		}
 		DB.Create(&defaultSettings)
 		log.Println("Default site settings created")
+	} else {
+		// Update existing settings to ensure all fields have proper defaults
+		var existingSettings models.SiteSettings
+		if err := DB.First(&existingSettings).Error; err == nil {
+			// Only update if the field is missing/empty and we haven't set it before
+			updated := false
+			if existingSettings.FooterText == "" {
+				existingSettings.FooterText = "© 2025 xuemian168"
+				updated = true
+			}
+			if updated {
+				DB.Save(&existingSettings)
+				log.Println("Site settings updated with missing defaults")
+			}
+		}
 	}
 
 	// Initialize default admin user if none exist

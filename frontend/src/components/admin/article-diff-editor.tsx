@@ -51,6 +51,8 @@ import { MarkdownRenderer } from "@/components/markdown/markdown-renderer"
 import { ArticleSEOForm } from "@/components/admin/article-seo-form"
 import MediaPicker from "./media-picker"
 import { MediaLibrary } from "@/lib/api"
+import { playSuccessSound, initializeSoundSettings } from "@/lib/sound"
+import { NotificationDialog, useNotificationDialog } from "@/components/ui/notification-dialog"
 
 interface Translation {
   language: string
@@ -95,6 +97,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const [hasTranslationProvider, setHasTranslationProvider] = useState(false)
   const [availableLanguages, setAvailableLanguages] = useState(adminInterfaceLanguages)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  
+  // Notification dialog
+  const notification = useNotificationDialog()
   
   const sourceTextareaRef = useRef<HTMLTextAreaElement>(null)
   const targetTextareaRef = useRef<HTMLTextAreaElement>(null)
@@ -241,6 +246,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   }, [sourceLanguage, targetLanguage, activeField, getTranslation])
 
   useEffect(() => {
+    // Initialize sound settings
+    initializeSoundSettings();
+    
     const fetchCategories = async () => {
       try {
         const categoriesData = await apiClient.getCategories({ lang: locale })
@@ -368,6 +376,14 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       if (isEditing && article) {
         await apiClient.updateArticle(article.id, articleData)
         setSaveStatus('saved')
+        playSuccessSound() // Play success sound
+        
+        // Show success notification
+        notification.showSuccess(
+          locale === 'zh' ? '文章保存成功！' : 'Article Saved Successfully!',
+          locale === 'zh' ? '您的文章已成功保存。' : 'Your article has been saved successfully.'
+        )
+        
         if (exitAfterSave) {
           router.push('/admin')
         } else {
@@ -376,6 +392,15 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         }
       } else {
         const newArticle = await apiClient.createArticle(articleData)
+        setSaveStatus('saved')
+        playSuccessSound() // Play success sound
+        
+        // Show success notification
+        notification.showSuccess(
+          locale === 'zh' ? '文章创建成功！' : 'Article Created Successfully!',
+          locale === 'zh' ? '您的文章已成功创建。' : 'Your article has been created successfully.'
+        )
+        
         if (exitAfterSave) {
           router.push('/admin')
         } else {
@@ -386,6 +411,13 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     } catch (error) {
       console.error('Failed to save article:', error)
       setSaveStatus('error')
+      
+      // Show error notification
+      notification.showError(
+        locale === 'zh' ? '保存失败' : 'Save Failed',
+        locale === 'zh' ? '文章保存失败，请稍后重试。' : 'Failed to save article. Please try again later.'
+      )
+      
       // Reset error status after a delay
       setTimeout(() => setSaveStatus('idle'), 5000)
     } finally {
@@ -1568,6 +1600,15 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Notification Dialog */}
+      <NotificationDialog
+        open={notification.open}
+        onOpenChange={notification.hideNotification}
+        type={notification.type}
+        title={notification.title}
+        description={notification.description}
+      />
     </div>
   )
 }

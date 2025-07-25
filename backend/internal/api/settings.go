@@ -61,13 +61,14 @@ func UpdateSettings(c *gin.Context) {
 	}
 
 	var input struct {
-		SiteTitle     string                           `json:"site_title"`
-		SiteSubtitle  string                           `json:"site_subtitle"`
-		FooterText    string                           `json:"footer_text"`
-		ShowViewCount *bool                            `json:"show_view_count"`
-		LogoURL       string                           `json:"logo_url"`
-		FaviconURL    string                           `json:"favicon_url"`
-		Translations  []models.SiteSettingsTranslation `json:"translations"`
+		SiteTitle          string                           `json:"site_title"`
+		SiteSubtitle       string                           `json:"site_subtitle"`
+		FooterText         string                           `json:"footer_text"`
+		ShowViewCount      *bool                            `json:"show_view_count"`
+		EnableSoundEffects *bool                            `json:"enable_sound_effects"`
+		LogoURL            string                           `json:"logo_url"`
+		FaviconURL         string                           `json:"favicon_url"`
+		Translations       []models.SiteSettingsTranslation `json:"translations"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -81,6 +82,9 @@ func UpdateSettings(c *gin.Context) {
 	settings.FooterText = input.FooterText
 	if input.ShowViewCount != nil {
 		settings.ShowViewCount = *input.ShowViewCount
+	}
+	if input.EnableSoundEffects != nil {
+		settings.EnableSoundEffects = *input.EnableSoundEffects
 	}
 	settings.LogoURL = input.LogoURL
 	settings.FaviconURL = input.FaviconURL
