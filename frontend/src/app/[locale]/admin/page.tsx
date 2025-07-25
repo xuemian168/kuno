@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { Plus, Edit, Trash2, Settings, Eye, BarChart3 } from "lucide-react"
+import { Plus, Edit, Trash2, Settings, Eye, BarChart3, Download } from "lucide-react"
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,7 @@ export default function AdminPage({ params }: AdminPageProps) {
   const [articles, setArticles] = useState<Article[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     // Get locale from params
@@ -72,6 +73,27 @@ export default function AdminPage({ params }: AdminPageProps) {
     }
   }
 
+  const handleExportAll = async () => {
+    try {
+      setExporting(true)
+      await apiClient.exportAllArticles({ lang: locale })
+    } catch (error) {
+      console.error('Failed to export articles:', error)
+      alert('Failed to export articles')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleExportArticle = async (articleId: number) => {
+    try {
+      await apiClient.exportArticle(articleId, { lang: locale })
+    } catch (error) {
+      console.error('Failed to export article:', error)
+      alert('Failed to export article')
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -117,7 +139,7 @@ export default function AdminPage({ params }: AdminPageProps) {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('analytics.totalViews')}</CardTitle>
                 <Eye className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -139,6 +161,14 @@ export default function AdminPage({ params }: AdminPageProps) {
                     {t('analytics.title')}
                   </Button>
                 </Link>
+                <Button 
+                  variant="outline" 
+                  onClick={handleExportAll}
+                  disabled={exporting}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  {exporting ? t('export.exporting') : t('export.exportAll')}
+                </Button>
                 <Link href="/admin/articles/new">
                   <Button>
                     <Plus className="mr-2 h-4 w-4" />
@@ -183,6 +213,14 @@ export default function AdminPage({ params }: AdminPageProps) {
                             )}
                           </div>
                           <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleExportArticle(article.id)}
+                              title={t('export.exportAsMarkdown')}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
                             <Link href={`/admin/articles/${article.id}`}>
                               <Button variant="outline" size="sm">
                                 <Edit className="h-4 w-4" />

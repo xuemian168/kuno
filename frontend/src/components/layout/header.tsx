@@ -36,6 +36,12 @@ export default function Header() {
             >
               {t('nav.home')}
             </Link>
+            <Link
+              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              href="/rss"
+            >
+              {t('rss.rssFeeds')}
+            </Link>
             {isAuthenticated && user && (
               <>
                 <Link

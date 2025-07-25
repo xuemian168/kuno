@@ -149,6 +149,7 @@
     "leaveEmptyForDefault": "デフォルト言語のコンテンツを使用する場合は空のままにしてください"
   },
   "settings": {
+    "showArticleViewCountDesc": "各記事の閲覧数を表示",
     "siteTranslations": "サイト翻訳",
     "languages": "言語設定",
     "translationAPI": "翻訳API",
@@ -229,6 +230,16 @@
     "mostViewedArticle": "最も閲覧された記事",
     "topPerformingContent": "最もパフォーマンスの良いコンテンツ",
     "noArticlesFound": "記事が見つかりません"
+  },
+  "export": {
+    "exportAll": "すべてエクスポート",
+    "exporting": "エクスポート中...",
+    "exportAsMarkdown": "Markdownとしてエクスポート",
+    "exportSelected": "選択をエクスポート",
+    "exportCategory": "カテゴリーをエクスポート",
+    "selectArticles": "記事を選択",
+    "exportSuccess": "エクスポート成功",  
+    "exportFailed": "エクスポート失敗"
   },
   "site": {
     "title": "ミニマリストブログ",

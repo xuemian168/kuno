@@ -55,6 +55,14 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     alternates: {
       canonical: locale === routing.defaultLocale ? '/' : `/${locale}/`,
       languages,
+      types: {
+        'application/rss+xml': [
+          {
+            url: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/rss?lang=${locale}`,
+            title: `${siteTitle} RSS Feed`,
+          },
+        ],
+      },
     },
     openGraph: {
       title: siteTitle,

@@ -391,6 +391,133 @@ class ApiClient {
     const url = queryParams.toString() ? `/analytics/articles/${id}?${queryParams}` : `/analytics/articles/${id}`
     return this.request<ArticleAnalytics>(url)
   }
+
+  // Export endpoints
+  async exportArticle(id: number, params?: { lang?: string }): Promise<void> {
+    const queryParams = new URLSearchParams()
+    if (params?.lang) {
+      queryParams.append('lang', params.lang)
+    }
+    const url = queryParams.toString() ? `/export/article/${id}?${queryParams}` : `/export/article/${id}`
+    
+    // Direct download via window.open
+    const fullUrl = `${this.baseUrl}${url}`
+    const token = localStorage.getItem('auth_token')
+    if (token) {
+      // Use fetch to handle authentication
+      const response = await fetch(fullUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (response.ok) {
+        const blob = await response.blob()
+        const downloadUrl = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        
+        // Extract filename from Content-Disposition header
+        const contentDisposition = response.headers.get('Content-Disposition')
+        const filename = contentDisposition?.match(/filename="(.+)"/)?.[1] || `article-${id}.md`
+        link.download = filename
+        
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(downloadUrl)
+      } else {
+        const errorText = await response.text()
+        throw new Error(`Export failed: ${response.status} ${response.statusText} - ${errorText}`)
+      }
+    }
+  }
+
+  async exportArticles(params?: { 
+    lang?: string
+    categoryId?: number
+    articleIds?: number[]
+  }): Promise<void> {
+    const queryParams = new URLSearchParams()
+    if (params?.lang) {
+      queryParams.append('lang', params.lang)
+    }
+    if (params?.categoryId) {
+      queryParams.append('category_id', params.categoryId.toString())
+    }
+    if (params?.articleIds && params.articleIds.length > 0) {
+      queryParams.append('article_ids', params.articleIds.join(','))
+    }
+    
+    const url = queryParams.toString() ? `/export/articles?${queryParams}` : '/export/articles'
+    const fullUrl = `${this.baseUrl}${url}`
+    const token = localStorage.getItem('auth_token')
+    
+    if (token) {
+      const response = await fetch(fullUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (response.ok) {
+        const blob = await response.blob()
+        const downloadUrl = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        
+        const contentDisposition = response.headers.get('Content-Disposition')
+        const filename = contentDisposition?.match(/filename="(.+)"/)?.[1] || 'articles-export.zip'
+        link.download = filename
+        
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(downloadUrl)
+      } else {
+        const errorText = await response.text()
+        throw new Error(`Export failed: ${response.status} ${response.statusText} - ${errorText}`)
+      }
+    }
+  }
+
+  async exportAllArticles(params?: { lang?: string }): Promise<void> {
+    const queryParams = new URLSearchParams()
+    if (params?.lang) {
+      queryParams.append('lang', params.lang)
+    }
+    
+    const url = queryParams.toString() ? `/export/all?${queryParams}` : '/export/all'
+    const fullUrl = `${this.baseUrl}${url}`
+    const token = localStorage.getItem('auth_token')
+    
+    if (token) {
+      const response = await fetch(fullUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (response.ok) {
+        const blob = await response.blob()
+        const downloadUrl = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        
+        const contentDisposition = response.headers.get('Content-Disposition')
+        const filename = contentDisposition?.match(/filename="(.+)"/)?.[1] || 'blog-export.zip'
+        link.download = filename
+        
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(downloadUrl)
+      } else {
+        const errorText = await response.text()
+        throw new Error(`Export failed: ${response.status} ${response.statusText} - ${errorText}`)
+      }
+    }
+  }
 }
 
 export const apiClient = new ApiClient(API_BASE_URL)

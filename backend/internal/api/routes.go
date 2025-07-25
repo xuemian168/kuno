@@ -38,6 +38,13 @@ func SetupRoutes() *gin.Engine {
 			settings.GET("", GetSettings)
 		}
 
+		// RSS feeds - public access
+		rss := api.Group("/rss")
+		{
+			rss.GET("", GetRSSFeed)
+			rss.GET("/category/:id", GetRSSFeedByCategory)
+		}
+
 		// Media serving - public access
 		api.Static("/uploads", "./uploads")
 
@@ -89,6 +96,11 @@ func SetupRoutes() *gin.Engine {
 				// Analytics
 				admin.GET("/analytics", GetAnalytics)
 				admin.GET("/analytics/articles/:id", GetArticleAnalytics)
+
+				// Export functions
+				admin.GET("/export/article/:id", ExportArticle)
+				admin.GET("/export/articles", ExportArticles)
+				admin.GET("/export/all", ExportAllArticles)
 			}
 		}
 	}

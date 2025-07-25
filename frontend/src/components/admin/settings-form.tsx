@@ -11,12 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, SiteSettings, SiteSettingsTranslation } from "@/lib/api"
 import { useSettings } from "@/contexts/settings-context"
-import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2 } from "lucide-react"
+import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { translationService, TranslationConfig, SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation"
 import { languageManager } from "@/services/translation/language-manager"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
 
 // Dynamic languages based on user configuration - will be set in component
 
@@ -212,7 +213,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     }
   }
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -224,7 +225,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
       setFormData({
         site_title: settings.site_title,
         site_subtitle: settings.site_subtitle,
-        footer_text: settings.footer_text
+        footer_text: settings.footer_text,
+        show_view_count: settings.show_view_count ?? true
       })
     }
   }
@@ -279,121 +281,180 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         className="space-y-8"
       >
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Settings className="h-8 w-8" />
-              {t('admin.settings')}
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              {t('settings.manageSettings')}
-            </p>
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-violet-50 via-blue-50 to-cyan-50 dark:from-violet-950/30 dark:via-blue-950/30 dark:to-cyan-950/30 border border-violet-200 dark:border-violet-800">
+          <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 via-blue-500/10 to-cyan-500/10 opacity-60"></div>
+          <div className="relative p-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold flex items-center gap-3 bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 shadow-lg">
+                  <Settings className="h-8 w-8 text-white" />
+                </div>
+{t('settings.systemSettings')}
+              </h1>
+              <p className="text-muted-foreground mt-3 text-lg">
+                {t('settings.configureBlogSystem')}
+              </p>
+            </div>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={saving} 
+              className="gap-2 bg-gradient-to-r from-violet-500 to-blue-500 hover:from-violet-600 hover:to-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-3 text-base"
+            >
+              {saving ? (
+                <>
+                  <RefreshCw className="h-5 w-5 animate-spin" />
+                  {t('common.saving')}
+                </>
+              ) : (
+                <>
+                  <Save className="h-5 w-5" />
+                  {t('settings.saveSettings')}
+                </>
+              )}
+            </Button>
           </div>
-          <Button onClick={handleSubmit} disabled={saving} className="gap-2">
-            {saving ? (
-              <>
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                {t('settings.savingSettings')}
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                {t('common.save')}
-              </>
-            )}
-          </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="general">{t('settings.generalSettings')}</TabsTrigger>
-            <TabsTrigger value="translations" className="gap-2">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+            <TabsTrigger 
+              value="general" 
+              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200 gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              {t('settings.basicSettings')}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="translations" 
+              className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
+            >
               <Globe className="h-4 w-4" />
               {t('settings.siteTranslations')}
             </TabsTrigger>
-            <TabsTrigger value="languages" className="gap-2">
+            <TabsTrigger 
+              value="languages" 
+              className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
+            >
               <Languages className="h-4 w-4" />
-              {t('settings.languages')}
+              {t('settings.languageConfig')}
             </TabsTrigger>
-            <TabsTrigger value="translation-api" className="gap-2">
+            <TabsTrigger 
+              value="translation-api" 
+              className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
+            >
               <Key className="h-4 w-4" />
               {t('settings.translationAPI')}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="general" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('settings.siteInformation')}</CardTitle>
-                <CardDescription>
-                  {t('settings.siteInformationDesc')}
+            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <CardHeader className="bg-gradient-to-r from-emerald-100 to-teal-100 dark:from-emerald-900/50 dark:to-teal-900/50 border-b border-emerald-200 dark:border-emerald-700 p-4 rounded-t-lg">
+                <CardTitle className="flex items-center gap-2 text-emerald-900 dark:text-emerald-100">
+                  <Info className="h-5 w-5" />
+                  {t('settings.siteInfoSettings')}
+                </CardTitle>
+                <CardDescription className="text-emerald-700 dark:text-emerald-300">
+                  {t('settings.configureSiteInfo')}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="site_title">{t('settings.siteTitle')}</Label>
+              <CardContent className="space-y-6 p-6">
+                <div className="space-y-3">
+                  <Label htmlFor="site_title" className="text-base font-medium text-gray-700 dark:text-gray-300">{t('settings.siteTitle')}</Label>
                   <Input
                     id="site_title"
                     value={formData.site_title}
                     onChange={(e) => handleChange('site_title', e.target.value)}
-                    placeholder={t('settings.siteTitlePlaceholder')}
+                    placeholder={t('settings.enterSiteTitle')}
                     required
+                    className="h-11 border-2 border-gray-200 dark:border-gray-700 focus:border-emerald-500 dark:focus:border-emerald-400 rounded-lg transition-colors"
                   />
-                  <p className="text-sm text-muted-foreground">
-                    {t('settings.siteTitleDesc')}
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('settings.titleDescription')}
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="site_subtitle">{t('settings.siteSubtitle')}</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="site_subtitle" className="text-base font-medium text-gray-700 dark:text-gray-300">{t('settings.siteSubtitle')}</Label>
                   <Input
                     id="site_subtitle"
                     value={formData.site_subtitle}
                     onChange={(e) => handleChange('site_subtitle', e.target.value)}
-                    placeholder={t('settings.siteSubtitlePlaceholder')}
+                    placeholder={t('settings.enterSiteSubtitle')}
+                    className="h-11 border-2 border-gray-200 dark:border-gray-700 focus:border-emerald-500 dark:focus:border-emerald-400 rounded-lg transition-colors"
                   />
-                  <p className="text-sm text-muted-foreground">
-                    {t('settings.siteSubtitleDesc')}
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('settings.subtitleDescription')}
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="footer_text">Footer Text</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="footer_text" className="text-base font-medium text-gray-700 dark:text-gray-300">{t('settings.footerText')}</Label>
                   <Input
                     id="footer_text"
                     value={formData.footer_text}
                     onChange={(e) => handleChange('footer_text', e.target.value)}
                     placeholder="© 2025 xuemian168"
+                    className="h-11 border-2 border-gray-200 dark:border-gray-700 focus:border-emerald-500 dark:focus:border-emerald-400 rounded-lg transition-colors"
                   />
-                  <p className="text-sm text-muted-foreground">
-                    Custom footer text (GitHub author info will always be displayed)
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('settings.footerDescription')}
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="show_view_count"
-                      checked={formData.show_view_count}
-                      onCheckedChange={(checked) => handleChange('show_view_count', checked)}
-                    />
-                    <Label htmlFor="show_view_count">Show Article View Count</Label>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Display the number of unique visitors for each article
-                  </p>
-                </div>
+                <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-2 rounded-lg ${formData.show_view_count ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-800'} transition-colors`}>
+                          {formData.show_view_count ? (
+                            <Eye className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          ) : (
+                            <EyeOff className="h-5 w-5 text-gray-400" />
+                          )}
+                        </div>
+                        <div>
+                          <Label htmlFor="show_view_count" className="text-base font-medium cursor-pointer">
+                            {t('settings.showViewCount')}
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t('settings.viewCountDescription')}
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        id="show_view_count"
+                        checked={formData.show_view_count}
+                        onCheckedChange={(checked: boolean) => handleChange('show_view_count', checked)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
               </CardContent>
             </Card>
 
             {settings && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t('settings.preview')}</CardTitle>
-                  <CardDescription>{t('settings.previewDesc')}</CardDescription>
+              <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <CardHeader className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 border-b border-purple-200 dark:border-purple-700 p-4 rounded-t-lg">
+                  <CardTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100 text-lg">
+                    <Eye className="h-5 w-5" />
+                    {t('settings.realTimePreview')}
+                  </CardTitle>
+                  <CardDescription className="text-purple-700 dark:text-purple-300 text-sm">
+                    {t('settings.previewDescription')}
+                  </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="p-4 bg-muted rounded-lg space-y-1">
-                    <div className="font-bold text-lg">{formData.site_title || "Blog"}</div>
-                    <div className="text-muted-foreground">{formData.site_subtitle || "A minimalist space for thoughts and ideas"}</div>
+                <CardContent className="p-4">
+                  <div className="p-4 bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 space-y-3">
+                    <div className="font-bold text-xl text-gray-900 dark:text-white">
+                      {formData.site_title || t('settings.myBlog')}
+                    </div>
+                    <div className="text-gray-600 dark:text-gray-300">
+                      {formData.site_subtitle || t('settings.blogSubtitle')}
+                    </div>
+                    {formData.footer_text && (
+                      <div className="text-sm text-gray-500 dark:text-gray-400 pt-2 mt-2 border-t border-gray-200 dark:border-gray-600">
+                        {t('settings.footerPrefix')}{formData.footer_text}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

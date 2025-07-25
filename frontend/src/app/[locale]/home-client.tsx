@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Calendar, ArrowRight, Eye } from 'lucide-react'
+import { Calendar, ArrowRight, Eye, Rss } from 'lucide-react'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import { apiClient, Article, Category } from '@/lib/api'
@@ -106,26 +106,36 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
           </motion.div>
         </section>
 
-        {/* Category Filter */}
+        {/* Category Filter and RSS */}
         <section className="mb-8">
-          <div className="flex flex-wrap gap-2 justify-center">
-            <Badge
-              variant={selectedCategory === null ? "default" : "secondary"}
-              className="cursor-pointer"
-              onClick={() => handleCategoryFilter(null)}
-            >
-              {t('media.all')}
-            </Badge>
-            {categories.map((category) => (
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-wrap gap-2 justify-center">
               <Badge
-                key={category.id}
-                variant={selectedCategory === category.id ? "default" : "secondary"}
+                variant={selectedCategory === null ? "default" : "secondary"}
                 className="cursor-pointer"
-                onClick={() => handleCategoryFilter(category.id)}
+                onClick={() => handleCategoryFilter(null)}
               >
-                {category.name}
+                {t('media.all')}
               </Badge>
-            ))}
+              {categories.map((category) => (
+                <Badge
+                  key={category.id}
+                  variant={selectedCategory === category.id ? "default" : "secondary"}
+                  className="cursor-pointer"
+                  onClick={() => handleCategoryFilter(category.id)}
+                >
+                  {category.name}
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <NextLink href="/rss">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Rss className="h-4 w-4" />
+                  {t('rss.subscribeToRSS')}
+                </Button>
+              </NextLink>
+            </div>
           </div>
         </section>
 
