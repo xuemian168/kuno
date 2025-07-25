@@ -11,6 +11,9 @@ RUN npm ci && npm cache clean --force
 FROM node:18-alpine AS builder
 WORKDIR /app
 
+# Install Git for build info
+RUN apk add --no-cache git
+
 # Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -18,6 +21,20 @@ COPY . .
 # Set environment variable for build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+
+# Build arguments for version info
+ARG APP_VERSION=1.0.0
+ARG BUILD_NUMBER
+ARG BUILD_DATE
+ARG GIT_COMMIT
+ARG GIT_BRANCH
+
+# Set build-time environment variables
+ENV NEXT_PUBLIC_APP_VERSION=$APP_VERSION
+ENV NEXT_PUBLIC_BUILD_NUMBER=$BUILD_NUMBER
+ENV NEXT_PUBLIC_BUILD_DATE=$BUILD_DATE
+ENV NEXT_PUBLIC_GIT_COMMIT=$GIT_COMMIT
+ENV NEXT_PUBLIC_GIT_BRANCH=$GIT_BRANCH
 
 # Build the application
 RUN npm run build

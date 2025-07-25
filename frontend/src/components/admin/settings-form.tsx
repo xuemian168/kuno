@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, SiteSettings, SiteSettingsTranslation } from "@/lib/api"
 import { useSettings } from "@/contexts/settings-context"
-import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX } from "lucide-react"
+import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { translationService, TranslationConfig, SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation"
@@ -22,6 +22,7 @@ import { SocialMediaManager } from "@/components/admin/social-media-manager"
 import { getFullApiUrl } from "@/lib/utils"
 import { setSoundEnabled } from "@/lib/sound"
 import { NotificationDialog, useNotificationDialog } from "@/components/ui/notification-dialog"
+import { AboutDialog } from "@/components/admin/about-dialog"
 
 // Dynamic languages based on user configuration - will be set in component
 
@@ -73,6 +74,9 @@ export function SettingsForm({ locale }: SettingsFormProps) {
   
   // Notification dialog
   const notification = useNotificationDialog()
+  
+  // About dialog state
+  const [showAboutDialog, setShowAboutDialog] = useState(false)
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -425,12 +429,22 @@ export function SettingsForm({ locale }: SettingsFormProps) {
           <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 via-blue-500/10 to-cyan-500/10 opacity-60"></div>
           <div className="relative p-8 flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold flex items-center gap-3 bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 shadow-lg">
-                  <Settings className="h-8 w-8 text-white" />
-                </div>
+              <div className="flex items-center justify-between mb-2">
+                <h1 className="text-4xl font-bold flex items-center gap-3 bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 shadow-lg">
+                    <Settings className="h-8 w-8 text-white" />
+                  </div>
 {t('settings.systemSettings')}
-              </h1>
+                </h1>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowAboutDialog(true)}
+                  className="gap-2 text-violet-600 hover:text-violet-700 hover:bg-violet-100 dark:text-violet-400 dark:hover:text-violet-300 dark:hover:bg-violet-950/30"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                  {locale === 'zh' ? '关于' : 'About'}
+                </Button>
+              </div>
               <p className="text-muted-foreground mt-3 text-lg">
                 {t('settings.configureBlogSystem')}
               </p>
@@ -456,7 +470,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
             <TabsTrigger 
               value="general" 
               className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200 gap-2"
@@ -469,21 +483,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
               className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
             >
               <Globe className="h-4 w-4" />
-              {t('settings.siteTranslations')}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="languages" 
-              className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
-            >
-              <Languages className="h-4 w-4" />
-              {t('settings.languageConfig')}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="translation-api" 
-              className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
-            >
-              <Key className="h-4 w-4" />
-              {t('settings.translationAPI')}
+              {locale === 'zh' ? '翻译设置' : 'Translation'}
             </TabsTrigger>
             <TabsTrigger 
               value="security" 
@@ -757,89 +757,13 @@ export function SettingsForm({ locale }: SettingsFormProps) {
           </TabsContent>
 
           <TabsContent value="translations" className="space-y-6">
-            <div className="grid gap-6">
-              {availableLanguages.map((lang) => {
-                const translation = getTranslation(lang.code)
-                const progress = getProgress(lang.code)
-                
-                return (
-                  <Card key={lang.code}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <CardTitle>{lang.name}</CardTitle>
-                          {lang.code === 'zh' && (
-                            <Badge variant="secondary">{t('settings.defaultBadge')}</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 h-2 bg-secondary rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full transition-all ${
-                                progress === 100 ? 'bg-green-500' : 
-                                progress > 0 ? 'bg-yellow-500' : 'bg-muted'
-                              }`}
-                              style={{ width: `${progress}%` }}
-                            />
-                          </div>
-                          <span className="text-sm text-muted-foreground">
-                            {progress}%
-                          </span>
-                          {progress === 100 && (
-                            <Check className="h-4 w-4 text-green-500" />
-                          )}
-                          {lang.code !== 'zh' && hasTranslationProvider && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleAutoTranslate(lang.code)}
-                              disabled={translatingLanguage === lang.code || !formData.site_title.trim()}
-                              className="gap-1"
-                            >
-                              {translatingLanguage === lang.code ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Wand2 className="h-3 w-3" />
-                              )}
-                              {t('article.autoTranslate')}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      <CardDescription>
-                        {t('settings.configureSiteInfo', { language: lang.name })}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>{t('settings.siteTitle')} ({lang.name})</Label>
-                        <Input
-                          value={translation.site_title}
-                          onChange={(e) => updateTranslation(lang.code, 'site_title', e.target.value)}
-                          placeholder={t('settings.enterSiteTitleIn', { language: lang.name })}
-                          disabled={lang.code === 'zh'}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>{t('settings.siteSubtitle')} ({lang.name})</Label>
-                        <Input
-                          value={translation.site_subtitle}
-                          onChange={(e) => updateTranslation(lang.code, 'site_subtitle', e.target.value)}
-                          placeholder={t('settings.enterSiteSubtitleIn', { language: lang.name })}
-                          disabled={lang.code === 'zh'}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="languages" className="space-y-6">
+            {/* Language Configuration Section */}
             <Card>
               <CardHeader>
-                <CardTitle>{t('settings.languageConfiguration')}</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Languages className="h-5 w-5" />
+                  {t('settings.languageConfiguration')}
+                </CardTitle>
                 <CardDescription>
                   {t('settings.languageConfigurationDesc')}
                 </CardDescription>
@@ -924,33 +848,19 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                       >
                         {t('settings.european')}
                       </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setEnabledLanguages(['zh', 'en', 'hi', 'bn', 'ta', 'te', 'ml', 'kn', 'gu', 'pa', 'mr'])}
-                      >
-                        {t('settings.indian')}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setEnabledLanguages(['zh', 'en', 'ar', 'fa', 'ur', 'he', 'tr'])}
-                      >
-                        {t('settings.middleEast')}
-                      </Button>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
 
-          <TabsContent value="translation-api" className="space-y-6">
+            {/* Translation API Configuration Section */}
             <Card>
               <CardHeader>
-                <CardTitle>{t('settings.translationAPIConfiguration')}</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Key className="h-5 w-5" />
+                  {t('settings.translationAPIConfiguration')}
+                </CardTitle>
                 <CardDescription>
                   {t('settings.translationAPIDesc')}
                 </CardDescription>
@@ -991,14 +901,6 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                       <SelectItem value="openai">OpenAI ChatGPT (API Key)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-sm text-muted-foreground">
-                    {translationConfig.provider === 'google-free' && t('settings.googleFreeDesc')}
-                    {translationConfig.provider === 'libretranslate' && t('settings.libretranslateDesc')}
-                    {translationConfig.provider === 'mymemory' && t('settings.mymemoryDesc')}
-                    {translationConfig.provider === 'google' && t('settings.googleDesc')}
-                    {translationConfig.provider === 'deepl' && t('settings.deeplDesc')}
-                    {translationConfig.provider === 'openai' && t('settings.openaiDesc')}
-                  </p>
                 </div>
 
                 {/* API Key field - only show for providers that need it */}
@@ -1026,100 +928,6 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         'API key for higher rate limits (optional)'
                       }
                     />
-                    <p className="text-sm text-muted-foreground">
-                      {translationConfig.provider === 'google' && (
-                        <>Get your API key from <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-primary underline">Google Cloud Console</a></>
-                      )}
-                      {translationConfig.provider === 'deepl' && (
-                        <>Get your API key from <a href="https://www.deepl.com/pro-api" target="_blank" rel="noopener noreferrer" className="text-primary underline">DeepL Pro</a></>
-                      )}
-                      {translationConfig.provider === 'openai' && (
-                        <>Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary underline">OpenAI Platform</a></>
-                      )}
-                      {translationConfig.provider === 'libretranslate' && 'Some LibreTranslate instances require an API key'}
-                      {translationConfig.provider === 'mymemory' && 'Optional - provides higher rate limits'}
-                    </p>
-                  </div>
-                )}
-
-                {/* LibreTranslate API URL */}
-                {translationConfig.provider === 'libretranslate' && (
-                  <div className="space-y-2">
-                    <Label>{t('settings.apiURL')}</Label>
-                    <Input
-                      type="url"
-                      value={translationConfig.apiUrl || ''}
-                      onChange={(e) => {
-                        const newConfig = { ...translationConfig, apiUrl: e.target.value }
-                        setTranslationConfig(newConfig)
-                        try {
-                          translationService.configureFromSettings(newConfig)
-                          setHasTranslationProvider(translationService.isConfigured())
-                        } catch (error) {
-                          console.error('Failed to configure translation service:', error)
-                        }
-                      }}
-                      placeholder="https://libretranslate.com/translate"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Leave empty to use the public instance, or enter your self-hosted instance URL
-                    </p>
-                  </div>
-                )}
-
-                {/* MyMemory Email */}
-                {translationConfig.provider === 'mymemory' && (
-                  <div className="space-y-2">
-                    <Label>{t('settings.email')}</Label>
-                    <Input
-                      type="email"
-                      value={translationConfig.email || ''}
-                      onChange={(e) => {
-                        const newConfig = { ...translationConfig, email: e.target.value }
-                        setTranslationConfig(newConfig)
-                        try {
-                          translationService.configureFromSettings(newConfig)
-                          setHasTranslationProvider(translationService.isConfigured())
-                        } catch (error) {
-                          console.error('Failed to configure translation service:', error)
-                        }
-                      }}
-                      placeholder="your-email@example.com"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Used for better rate limits and usage tracking
-                    </p>
-                  </div>
-                )}
-
-                {translationConfig.provider === 'openai' && (
-                  <div className="space-y-2">
-                    <Label>{t('settings.model')}</Label>
-                    <Select
-                      value={translationConfig.model || 'gpt-3.5-turbo'}
-                      onValueChange={(value) => {
-                        const newConfig = { ...translationConfig, model: value }
-                        setTranslationConfig(newConfig)
-                        try {
-                          translationService.configureFromSettings(newConfig)
-                          setHasTranslationProvider(translationService.isConfigured())
-                        } catch (error) {
-                          console.error('Failed to configure translation service:', error)
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo (Fast & Economical)</SelectItem>
-                        <SelectItem value="gpt-4">GPT-4 (High Quality)</SelectItem>
-                        <SelectItem value="gpt-4-turbo-preview">GPT-4 Turbo (Balanced)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-sm text-muted-foreground">
-                      Choose the AI model for translation quality vs cost trade-off
-                    </p>
                   </div>
                 )}
 
@@ -1139,24 +947,99 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     <Badge variant="secondary">{t('settings.apiKeyRequired')}</Badge>
                   )}
                 </div>
+              </CardContent>
+            </Card>
 
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription className="space-y-2">
-                    <p className="font-medium">{t('settings.providerComparison')}</p>
-                    <ul className="list-disc list-inside space-y-1 text-sm">
-                      <li>{t('settings.googleFreeItem')}</li>
-                      <li>{t('settings.libretranslateItem')}</li>
-                      <li>{t('settings.mymemoryItem')}</li>
-                      <li>{t('settings.googleAPIItem')}</li>
-                      <li>{t('settings.deeplItem')}</li>
-                      <li>{t('settings.openaiItem')}</li>
-                    </ul>
-                  </AlertDescription>
-                </Alert>
+            {/* Site Translations Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  {t('settings.siteTranslations')}
+                </CardTitle>
+                <CardDescription>
+                  {locale === 'zh' ? '为不同语言配置网站标题和副标题' : 'Configure site title and subtitle for different languages'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-6">
+                  {availableLanguages.map((lang) => {
+                    const translation = getTranslation(lang.code)
+                    const progress = getProgress(lang.code)
+                    
+                    return (
+                      <Card key={lang.code} className="border border-gray-200 dark:border-gray-700">
+                        <CardHeader className="pb-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <CardTitle className="text-lg">{lang.name}</CardTitle>
+                              {lang.code === 'zh' && (
+                                <Badge variant="secondary">{t('settings.defaultBadge')}</Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-20 h-2 bg-secondary rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full transition-all ${
+                                    progress === 100 ? 'bg-green-500' : 
+                                    progress > 0 ? 'bg-yellow-500' : 'bg-muted'
+                                  }`}
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                              <span className="text-sm text-muted-foreground">
+                                {progress}%
+                              </span>
+                              {progress === 100 && (
+                                <Check className="h-4 w-4 text-green-500" />
+                              )}
+                              {lang.code !== 'zh' && hasTranslationProvider && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleAutoTranslate(lang.code)}
+                                  disabled={translatingLanguage === lang.code || !formData.site_title.trim()}
+                                  className="gap-1"
+                                >
+                                  {translatingLanguage === lang.code ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Wand2 className="h-3 w-3" />
+                                  )}
+                                  {t('article.autoTranslate')}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>{t('settings.siteTitle')} ({lang.name})</Label>
+                            <Input
+                              value={translation.site_title}
+                              onChange={(e) => updateTranslation(lang.code, 'site_title', e.target.value)}
+                              placeholder={t('settings.enterSiteTitleIn', { language: lang.name })}
+                              disabled={lang.code === 'zh'}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>{t('settings.siteSubtitle')} ({lang.name})</Label>
+                            <Input
+                              value={translation.site_subtitle}
+                              onChange={(e) => updateTranslation(lang.code, 'site_subtitle', e.target.value)}
+                              placeholder={t('settings.enterSiteSubtitleIn', { language: lang.name })}
+                              disabled={lang.code === 'zh'}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
+
 
           <TabsContent value="security" className="space-y-6">
             <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
@@ -1266,6 +1149,13 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         type={notification.type}
         title={notification.title}
         description={notification.description}
+      />
+      
+      {/* About Dialog */}
+      <AboutDialog
+        open={showAboutDialog}
+        onOpenChange={setShowAboutDialog}
+        locale={locale}
       />
     </div>
   )
