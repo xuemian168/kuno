@@ -26,8 +26,12 @@ import {
   SplitSquareHorizontal,
   Eye,
   EyeOff,
-  Sparkles
+  Sparkles,
+  Loader2,
+  Wand2,
+  Info
 } from "lucide-react"
+import { translationService, initializeTranslationService } from "@/services/translation"
 
 interface Translation {
   language: string
@@ -42,7 +46,10 @@ interface ArticleTranslationFormProps {
   locale?: string
 }
 
-const availableLanguages = [
+import { languageManager } from "@/services/translation/language-manager"
+
+// Admin interface languages (hardcoded)
+const adminInterfaceLanguages = [
   { code: 'zh', name: '中文' },
   { code: 'en', name: 'English' }
 ]
@@ -56,6 +63,10 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
   const [showPreview, setShowPreview] = useState(false)
   const [sourceLanguage, setSourceLanguage] = useState(locale)
   const [targetLanguage, setTargetLanguage] = useState(locale === 'zh' ? 'en' : 'zh')
+  const [isTranslating, setIsTranslating] = useState(false)
+  const [translationError, setTranslationError] = useState<string | null>(null)
+  const [hasTranslationProvider, setHasTranslationProvider] = useState(false)
+  const [availableLanguages, setAvailableLanguages] = useState(adminInterfaceLanguages)
   
   const [formData, setFormData] = useState({
     title: article?.title || "",
@@ -119,6 +130,26 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
     }
 
     fetchCategories()
+    
+    // Initialize translation service
+    initializeTranslationService()
+    
+    // Load available languages from language manager
+    const enabledLanguages = languageManager.getEnabledLanguageOptions()
+    setAvailableLanguages(enabledLanguages)
+    
+    // Check if translation provider is configured
+    const checkProvider = () => {
+      const provider = translationService.getActiveProvider()
+      console.log('Translation provider:', provider)
+      setHasTranslationProvider(!!provider)
+    }
+    
+    checkProvider()
+    
+    // Check again after a short delay to ensure initialization is complete
+    const timer = setTimeout(checkProvider, 500)
+    return () => clearTimeout(timer)
   }, [locale])
 
   const getTranslation = (language: string) => {
@@ -211,6 +242,71 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
     }
   }
 
+  const handleAutoTranslate = async (field: 'title' | 'content' | 'summary' | 'all') => {
+    if (!translationService.getActiveProvider()) {
+      setTranslationError('Please configure a translation API in settings first')
+      return
+    }
+
+    setIsTranslating(true)
+    setTranslationError(null)
+
+    try {
+      const sourceTranslation = sourceLanguage === locale 
+        ? formData 
+        : getTranslation(sourceLanguage)
+
+      if (field === 'all') {
+        // Translate all fields at once
+        const result = await translationService.translateArticle(
+          {
+            title: sourceTranslation.title,
+            content: sourceTranslation.content,
+            summary: sourceTranslation.summary
+          },
+          sourceLanguage,
+          targetLanguage
+        )
+
+        if (targetLanguage === locale) {
+          setFormData(prev => ({
+            ...prev,
+            title: result.title,
+            content: result.content,
+            summary: result.summary
+          }))
+        } else {
+          updateTranslation(targetLanguage, 'title', result.title)
+          updateTranslation(targetLanguage, 'content', result.content)
+          updateTranslation(targetLanguage, 'summary', result.summary)
+        }
+      } else {
+        // Translate single field
+        const sourceText = sourceTranslation[field]
+        const translatedText = await translationService.translate(
+          sourceText,
+          sourceLanguage,
+          targetLanguage
+        )
+
+        if (targetLanguage === locale) {
+          setFormData(prev => ({ ...prev, [field]: translatedText }))
+        } else {
+          updateTranslation(targetLanguage, field, translatedText)
+        }
+      }
+    } catch (error) {
+      console.error('Translation error:', error)
+      setTranslationError(
+        error instanceof Error 
+          ? error.message 
+          : 'Translation failed. Please check your API configuration.'
+      )
+    } finally {
+      setIsTranslating(false)
+    }
+  }
+
   const sourceTranslation = sourceLanguage === locale ? formData : getTranslation(sourceLanguage)
   const targetTranslation = targetLanguage === locale ? formData : getTranslation(targetLanguage)
 
@@ -237,6 +333,22 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
                   <Progress value={overallProgress} className="w-[100px]" />
                   <span className="text-sm font-medium">{overallProgress}%</span>
                 </div>
+                
+                {/* Auto Translate All Button */}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleAutoTranslate('all')}
+                  disabled={isTranslating || showPreview || !hasTranslationProvider}
+                >
+                  {isTranslating ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-4 w-4 mr-1" />
+                  )}
+                  {t('article.autoTranslateAll') || 'Translate All'}
+                </Button>
               </div>
               
               {/* View Mode Toggle */}
@@ -321,6 +433,24 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
             </div>
 
             <Separator />
+
+            {/* Translation Error Alert */}
+            {translationError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{translationError}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Translation Service Info */}
+            {!hasTranslationProvider && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  {t('article.translationServiceNotConfigured') || 'Auto translation is available! Go to Settings → Translation API to configure your preferred translation service (free options available).'}
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Translation Editor */}
             {viewMode === 'split' ? (
@@ -424,16 +554,32 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>{t('article.title')}</Label>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => copyFromSource('title')}
-                          disabled={showPreview}
-                        >
-                          <Copy className="h-3 w-3 mr-1" />
-                          {t('article.copyFromSource')}
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => copyFromSource('title')}
+                            disabled={showPreview || isTranslating}
+                          >
+                            <Copy className="h-3 w-3 mr-1" />
+                            {t('article.copyFromSource')}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleAutoTranslate('title')}
+                            disabled={showPreview || isTranslating || !hasTranslationProvider}
+                          >
+                            {isTranslating ? (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            ) : (
+                              <Wand2 className="h-3 w-3 mr-1" />
+                            )}
+                            {t('article.autoTranslate') || 'Auto Translate'}
+                          </Button>
+                        </div>
                       </div>
                       <Input
                         value={targetTranslation.title}
@@ -452,13 +598,13 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>{t('article.summary')}</Label>
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-1">
                           <Button
                             type="button"
                             size="sm"
                             variant="ghost"
                             onClick={() => copyFromSource('summary')}
-                            disabled={showPreview}
+                            disabled={showPreview || isTranslating}
                           >
                             <Copy className="h-3 w-3 mr-1" />
                             {t('article.copyFromSource')}
@@ -468,10 +614,24 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
                             size="sm"
                             variant="ghost"
                             onClick={() => generateSummary(targetLanguage)}
-                            disabled={!targetTranslation.content || showPreview}
+                            disabled={!targetTranslation.content || showPreview || isTranslating}
                           >
                             <Sparkles className="h-3 w-3 mr-1" />
                             {t('article.autoGenerate')}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleAutoTranslate('summary')}
+                            disabled={showPreview || isTranslating || !hasTranslationProvider}
+                          >
+                            {isTranslating ? (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            ) : (
+                              <Wand2 className="h-3 w-3 mr-1" />
+                            )}
+                            {t('article.autoTranslate') || 'Auto Translate'}
                           </Button>
                         </div>
                       </div>
@@ -493,16 +653,32 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>{t('article.content')}</Label>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => copyFromSource('content')}
-                          disabled={showPreview}
-                        >
-                          <Copy className="h-3 w-3 mr-1" />
-                          {t('article.copyFromSource')}
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => copyFromSource('content')}
+                            disabled={showPreview || isTranslating}
+                          >
+                            <Copy className="h-3 w-3 mr-1" />
+                            {t('article.copyFromSource')}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleAutoTranslate('content')}
+                            disabled={showPreview || isTranslating || !hasTranslationProvider}
+                          >
+                            {isTranslating ? (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            ) : (
+                              <Wand2 className="h-3 w-3 mr-1" />
+                            )}
+                            {t('article.autoTranslate') || 'Auto Translate'}
+                          </Button>
+                        </div>
                       </div>
                       {showPreview ? (
                         <Card className="p-4 min-h-[500px] overflow-auto">

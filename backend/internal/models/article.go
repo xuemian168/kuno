@@ -36,6 +36,7 @@ type SiteSettings struct {
 	ID          uint                      `gorm:"primaryKey" json:"id"`
 	SiteTitle   string                    `gorm:"default:'Blog'" json:"site_title"`
 	SiteSubtitle string                   `gorm:"default:'A minimalist space for thoughts and ideas'" json:"site_subtitle"`
+	FooterText  string                    `gorm:"default:'© 2025 xuemian168'" json:"footer_text"`
 	Translations []SiteSettingsTranslation `gorm:"foreignKey:SettingsID" json:"translations,omitempty"`
 	CreatedAt   time.Time                 `json:"created_at"`
 	UpdatedAt   time.Time                 `json:"updated_at"`

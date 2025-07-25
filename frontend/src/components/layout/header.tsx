@@ -26,7 +26,7 @@ export default function Header() {
         <div className="mr-4 hidden md:flex">
           <Link className="mr-6 flex items-center space-x-2" href="/">
             <span className="hidden font-bold sm:inline-block">
-              {settings?.site_title || 'Blog'}
+              {settings?.site_title || t('site.title')}
             </span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
@@ -58,7 +58,7 @@ export default function Header() {
           <div className="w-full flex-1 md:w-auto md:flex-none">
             <Link className="flex items-center space-x-2 md:hidden" href="/">
               <span className="font-bold">
-                {settings?.site_title || 'Blog'}
+                {settings?.site_title || t('site.title')}
               </span>
             </Link>
           </div>

@@ -47,6 +47,7 @@ export interface SiteSettings {
   id: number
   site_title: string
   site_subtitle: string
+  footer_text: string
   translations?: SiteSettingsTranslation[]
   created_at: string
   updated_at: string

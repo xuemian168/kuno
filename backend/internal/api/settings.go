@@ -26,11 +26,25 @@ func GetSettings(c *gin.Context) {
 func applySettingsTranslation(settings *models.SiteSettings, lang string) {
 	for _, translation := range settings.Translations {
 		if translation.Language == lang {
-			settings.SiteTitle = translation.SiteTitle
-			settings.SiteSubtitle = translation.SiteSubtitle
-			break
+			if translation.SiteTitle != "" {
+				settings.SiteTitle = translation.SiteTitle
+			} else {
+				// Clear the site title so frontend uses the fallback from translation files
+				settings.SiteTitle = ""
+			}
+			if translation.SiteSubtitle != "" {
+				settings.SiteSubtitle = translation.SiteSubtitle
+			} else {
+				// Clear the site subtitle so frontend uses the fallback from translation files
+				settings.SiteSubtitle = ""
+			}
+			return
 		}
 	}
+	// If no translation found for this language, clear the values
+	// so frontend uses the fallback from translation files
+	settings.SiteTitle = ""
+	settings.SiteSubtitle = ""
 }
 
 func UpdateSettings(c *gin.Context) {
@@ -43,6 +57,7 @@ func UpdateSettings(c *gin.Context) {
 	var input struct {
 		SiteTitle    string                          `json:"site_title"`
 		SiteSubtitle string                          `json:"site_subtitle"`
+		FooterText   string                          `json:"footer_text"`
 		Translations []models.SiteSettingsTranslation `json:"translations"`
 	}
 	
@@ -54,6 +69,7 @@ func UpdateSettings(c *gin.Context) {
 	// Update main settings
 	settings.SiteTitle = input.SiteTitle
 	settings.SiteSubtitle = input.SiteSubtitle
+	settings.FooterText = input.FooterText
 	
 	if err := database.DB.Save(&settings).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

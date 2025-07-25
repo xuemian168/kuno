@@ -31,8 +31,12 @@ import {
   Image,
   Video,
   Keyboard,
-  HelpCircle
+  HelpCircle,
+  Wand2,
+  Loader2
 } from "lucide-react"
+import { translationService, initializeTranslationService } from "@/services/translation"
+import { languageManager } from "@/services/translation/language-manager"
 import { cn } from "@/lib/utils"
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer"
 import MediaPicker from "./media-picker"
@@ -51,7 +55,8 @@ interface ArticleDiffEditorProps {
   locale?: string
 }
 
-const availableLanguages = [
+// Admin interface languages (hardcoded for admin interface)
+const adminInterfaceLanguages = [
   { code: 'zh', name: '中文' },
   { code: 'en', name: 'English' }
 ]
@@ -76,6 +81,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const [showMediaPicker, setShowMediaPicker] = useState(false)
   const [activeTextarea, setActiveTextarea] = useState<'source' | 'target' | 'single'>('source')
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
+  const [isTranslating, setIsTranslating] = useState(false)
+  const [hasTranslationProvider, setHasTranslationProvider] = useState(false)
+  const [availableLanguages, setAvailableLanguages] = useState(adminInterfaceLanguages)
   
   const sourceTextareaRef = useRef<HTMLTextAreaElement>(null)
   const targetTextareaRef = useRef<HTMLTextAreaElement>(null)
@@ -227,7 +235,89 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }
 
     fetchCategories()
+    
+    // Initialize translation service
+    initializeTranslationService()
+    
+    // Load available languages from language manager
+    const enabledLanguages = languageManager.getEnabledLanguageOptions()
+    setAvailableLanguages(enabledLanguages)
+    
+    // Check if translation provider is configured
+    const checkProvider = () => {
+      const provider = translationService.getActiveProvider()
+      setHasTranslationProvider(!!provider)
+    }
+    
+    checkProvider()
+    
+    // Check again after a short delay to ensure initialization is complete
+    const timer = setTimeout(checkProvider, 500)
+    return () => clearTimeout(timer)
   }, [locale])
+
+  const handleAutoTranslate = async (field: 'title' | 'content' | 'summary' | 'all') => {
+    if (!translationService.getActiveProvider()) {
+      alert('Please configure a translation API in settings first')
+      return
+    }
+
+    setIsTranslating(true)
+
+    try {
+      const sourceTranslation = getTranslation(sourceLanguage)
+      const defaultLang = article?.default_lang || 'zh'
+
+      if (field === 'all') {
+        // Translate all fields at once
+        const result = await translationService.translateArticle(
+          {
+            title: sourceTranslation.title,
+            content: sourceTranslation.content,
+            summary: sourceTranslation.summary
+          },
+          sourceLanguage,
+          targetLanguage
+        )
+
+        if (targetLanguage === defaultLang) {
+          setFormData(prev => ({
+            ...prev,
+            title: result.title,
+            content: result.content,
+            summary: result.summary
+          }))
+        } else {
+          updateTranslation(targetLanguage, 'title', result.title)
+          updateTranslation(targetLanguage, 'content', result.content)
+          updateTranslation(targetLanguage, 'summary', result.summary)
+        }
+      } else {
+        // Translate single field
+        const sourceText = sourceTranslation[field]
+        const translatedText = await translationService.translate(
+          sourceText,
+          sourceLanguage,
+          targetLanguage
+        )
+
+        if (targetLanguage === defaultLang) {
+          setFormData(prev => ({ ...prev, [field]: translatedText }))
+        } else {
+          updateTranslation(targetLanguage, field, translatedText)
+        }
+      }
+    } catch (error) {
+      console.error('Translation error:', error)
+      alert(
+        error instanceof Error 
+          ? error.message 
+          : 'Translation failed. Please check your API configuration.'
+      )
+    } finally {
+      setIsTranslating(false)
+    }
+  }
 
   const handleSubmit = async () => {
     setLoading(true)
@@ -962,6 +1052,28 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
 
         <div className="mx-2 h-4 w-px bg-border" />
 
+        {/* Auto Translate All Button - only show in translation mode */}
+        {editMode === 'translation' && (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleAutoTranslate('all')}
+              disabled={isTranslating || !hasTranslationProvider}
+              className="h-8 gap-2"
+              title="Auto translate all fields"
+            >
+              {isTranslating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Wand2 className="h-4 w-4" />
+              )}
+              <span className="text-xs">Translate All</span>
+            </Button>
+            <div className="mx-2 h-4 w-px bg-border" />
+          </>
+        )}
+
         <Button
           onClick={handleSubmit}
           disabled={loading}
@@ -1145,8 +1257,23 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 size="sm"
                 onClick={copyToTarget}
                 className="h-6 px-2 ml-1"
+                title="Copy from source"
               >
                 <Copy className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleAutoTranslate(activeField)}
+                disabled={isTranslating || !hasTranslationProvider}
+                className="h-6 px-2"
+                title="Auto translate this field"
+              >
+                {isTranslating ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Wand2 className="h-3 w-3" />
+                )}
               </Button>
             </div>
           </div>

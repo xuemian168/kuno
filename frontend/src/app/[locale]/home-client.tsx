@@ -11,6 +11,7 @@ import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import { apiClient, Article, Category } from '@/lib/api'
 import { Link } from '@/i18n/routing'
+import NextLink from 'next/link'
 import { WebsiteStructuredData } from '@/components/seo/structured-data'
 
 interface HomePageClientProps {
@@ -97,10 +98,10 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
             transition={{ duration: 0.6 }}
           >
             <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              {siteSettings?.site_title || t('nav.home')}
+              {siteSettings?.site_title || t('site.title')}
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              {siteSettings?.site_subtitle || "A minimalist space for thoughts and ideas"}
+              {siteSettings?.site_subtitle || t('site.description')}
             </p>
           </motion.div>
         </section>
@@ -160,12 +161,12 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
                       <CardDescription className="mb-4">
                         {article.summary}
                       </CardDescription>
-                      <Link href={`/article/${article.id}`}>
+                      <NextLink href={`/${locale}/article/${article.id}`}>
                         <Button variant="ghost" className="w-full group-hover:bg-primary/10">
                           Read More
                           <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
                         </Button>
-                      </Link>
+                      </NextLink>
                     </CardContent>
                   </Card>
                 </motion.div>
