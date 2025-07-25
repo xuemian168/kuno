@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, SiteSettings, SiteSettingsTranslation } from "@/lib/api"
 import { useSettings } from "@/contexts/settings-context"
-import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2 } from "lucide-react"
+import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { translationService, TranslationConfig, SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation"
@@ -19,6 +19,7 @@ import { languageManager } from "@/services/translation/language-manager"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { SocialMediaManager } from "@/components/admin/social-media-manager"
+import { getFullApiUrl } from "@/lib/utils"
 
 // Dynamic languages based on user configuration - will be set in component
 
@@ -62,6 +63,10 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     confirmPassword: ''
   })
   const [passwordChanging, setPasswordChanging] = useState(false)
+
+  // File upload state
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [faviconUploading, setFaviconUploading] = useState(false)
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -303,6 +308,52 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     setPasswordForm(prev => ({ ...prev, [field]: value }))
   }
 
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setLogoUploading(true)
+    try {
+      const response = await apiClient.uploadLogo(file)
+      if (settings) {
+        const updatedSettings = { ...settings, logo_url: response.url }
+        setSettings(updatedSettings)
+        updateSettings(updatedSettings)
+      }
+      alert(response.message)
+    } catch (error: any) {
+      console.error('Logo upload failed:', error)
+      alert(error.message || 'Logo upload failed')
+    } finally {
+      setLogoUploading(false)
+      // Reset file input
+      event.target.value = ''
+    }
+  }
+
+  const handleFaviconUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setFaviconUploading(true)
+    try {
+      const response = await apiClient.uploadFavicon(file)
+      if (settings) {
+        const updatedSettings = { ...settings, favicon_url: response.url }
+        setSettings(updatedSettings)
+        updateSettings(updatedSettings)
+      }
+      alert(response.message)
+    } catch (error: any) {
+      console.error('Favicon upload failed:', error)
+      alert(error.message || 'Favicon upload failed')
+    } finally {
+      setFaviconUploading(false)
+      // Reset file input
+      event.target.value = ''
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -482,6 +533,118 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     </div>
                   </CardContent>
                 </Card>
+              </CardContent>
+            </Card>
+
+            {/* Branding Section */}
+            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <CardHeader className="bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-900/50 dark:to-red-900/50 border-b border-orange-200 dark:border-orange-700 p-4 rounded-t-lg">
+                <CardTitle className="flex items-center gap-2 text-orange-900 dark:text-orange-100">
+                  <Star className="h-5 w-5" />
+                  {t('settings.branding')}
+                </CardTitle>
+                <CardDescription className="text-orange-700 dark:text-orange-300">
+                  {t('settings.brandingDescription')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 p-6">
+                {/* Logo Upload */}
+                <div className="space-y-3">
+                  <Label className="text-base font-medium text-gray-700 dark:text-gray-300">{t('settings.logo')}</Label>
+                  <div className="flex items-center gap-4">
+                    {settings?.logo_url && (
+                      <div className="flex items-center gap-2">
+                        <img 
+                          src={getFullApiUrl(settings.logo_url)} 
+                          alt="Current Logo" 
+                          className="h-12 w-auto object-contain rounded border bg-white"
+                        />
+                        <span className="text-sm text-muted-foreground">{t('settings.currentLogo')}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        id="logo-upload"
+                        accept=".png,.jpg,.jpeg,.svg,.webp"
+                        onChange={handleLogoUpload}
+                        disabled={logoUploading}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={logoUploading}
+                        onClick={() => document.getElementById('logo-upload')?.click()}
+                        className="gap-2"
+                      >
+                        {logoUploading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            {t('settings.logoUploading')}
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4" />
+                            {t('settings.uploadLogo')}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('settings.logoFormats')}
+                  </p>
+                </div>
+
+                {/* Favicon Upload */}
+                <div className="space-y-3">
+                  <Label className="text-base font-medium text-gray-700 dark:text-gray-300">{t('settings.favicon')}</Label>
+                  <div className="flex items-center gap-4">
+                    {settings?.favicon_url && (
+                      <div className="flex items-center gap-2">
+                        <img 
+                          src={getFullApiUrl(settings.favicon_url)} 
+                          alt="Current Favicon" 
+                          className="h-8 w-8 object-contain rounded border bg-white"
+                        />
+                        <span className="text-sm text-muted-foreground">{t('settings.currentFavicon')}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        id="favicon-upload"
+                        accept=".ico,.png,.svg"
+                        onChange={handleFaviconUpload}
+                        disabled={faviconUploading}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={faviconUploading}
+                        onClick={() => document.getElementById('favicon-upload')?.click()}
+                        className="gap-2"
+                      >
+                        {faviconUploading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            {t('settings.faviconUploading')}
+                          </>
+                        ) : (
+                          <>
+                            <Image className="h-4 w-4" />
+                            {t('settings.uploadFavicon')}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('settings.faviconFormats')}
+                  </p>
+                </div>
               </CardContent>
             </Card>
 

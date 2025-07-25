@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { useSettings } from "@/contexts/settings-context"
 import { useAuth } from "@/contexts/auth-context"
 import { Link } from '@/i18n/routing'
+import { getFullApiUrl } from "@/lib/utils"
 
 export default function Header() {
   const t = useTranslations()
@@ -25,6 +26,13 @@ export default function Header() {
       <div className="container mx-auto px-4 flex h-14 items-center max-w-7xl">
         <div className="mr-4 hidden md:flex">
           <Link className="mr-6 flex items-center space-x-2" href="/">
+            {settings?.logo_url && (
+              <img 
+                src={getFullApiUrl(settings.logo_url)} 
+                alt="Logo" 
+                className="h-8 w-auto object-contain"
+              />
+            )}
             <span className="hidden font-bold sm:inline-block">
               {settings?.site_title || t('site.title')}
             </span>
@@ -63,6 +71,13 @@ export default function Header() {
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
           <div className="w-full flex-1 md:w-auto md:flex-none">
             <Link className="flex items-center space-x-2 md:hidden" href="/">
+              {settings?.logo_url && (
+                <img 
+                  src={getFullApiUrl(settings.logo_url)} 
+                  alt="Logo" 
+                  className="h-7 w-auto object-contain"
+                />
+              )}
               <span className="font-bold">
                 {settings?.site_title || t('site.title')}
               </span>

@@ -85,6 +85,8 @@ func SetupRoutes() *gin.Engine {
 				adminSettings := admin.Group("/settings")
 				{
 					adminSettings.PUT("", UpdateSettings)
+					adminSettings.POST("/upload-logo", UploadLogo)
+					adminSettings.POST("/upload-favicon", UploadFavicon)
 				}
 
 				// Media management

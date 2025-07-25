@@ -27,14 +27,24 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   
   let siteTitle = t('site.title')
   let siteDescription = t('site.description')
+  let faviconUrl: string | undefined
   
   try {
     // Try to fetch site settings
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/settings?lang=${locale}`)
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
+    const baseApiUrl = apiUrl.replace('/api', '')
+    const response = await fetch(`${apiUrl}/settings?lang=${locale}`)
     if (response.ok) {
       const settings = await response.json()
       siteTitle = settings.site_title || siteTitle
       siteDescription = settings.site_subtitle || siteDescription
+      
+      // Handle favicon URL
+      if (settings.favicon_url) {
+        faviconUrl = settings.favicon_url.startsWith('http') 
+          ? settings.favicon_url 
+          : `${baseApiUrl}${settings.favicon_url}`
+      }
     }
   } catch (error) {
     console.error('Failed to fetch site settings:', error)
@@ -48,7 +58,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       : `${baseUrl}/${loc}/`
   })
   
-  return {
+  const metadata: Metadata = {
     title: siteTitle,
     description: siteDescription,
     metadataBase: new URL(baseUrl),
@@ -88,6 +98,17 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       },
     },
   }
+
+  // Add favicon if available
+  if (faviconUrl) {
+    metadata.icons = {
+      icon: faviconUrl,
+      shortcut: faviconUrl,
+      apple: faviconUrl,
+    }
+  }
+
+  return metadata
 }
 
 interface LocaleLayoutProps {
