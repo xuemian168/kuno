@@ -119,7 +119,8 @@
     "completed": "完成",
     "uploaded": "上传时间",
     "altText": "替代文本",
-    "updateAltText": "更新替代文本"
+    "updateAltText": "更新替代文本",
+    "disabled": "已禁用"
   },
   "status": {
     "fetchFailed": "获取失败",
@@ -241,7 +242,37 @@
     "recoveryMode": "密码恢复模式",
     "recoveryModeActive": "恢复模式已激活",
     "recoveryModeWarning": "系统当前处于密码恢复模式，请按照说明完成恢复操作",
-    "disableRecoveryMode": "请禁用恢复模式后重新启动应用"
+    "disableRecoveryMode": "请禁用恢复模式后重新启动应用",
+    "socialMedia": "社交媒体",
+    "socialMediaDesc": "管理您的社交媒体链接",
+    "addSocialMedia": "添加社交媒体",
+    "editSocialMedia": "编辑社交媒体",
+    "platform": "平台",
+    "platformName": "平台名称",
+    "url": "链接地址",
+    "icon": "图标",
+    "displayOrder": "显示顺序",
+    "isActive": "启用",
+    "selectPlatform": "选择平台",
+    "enterUrl": "输入链接地址",
+    "socialMediaAdded": "社交媒体添加成功",
+    "socialMediaUpdated": "社交媒体更新成功",
+    "socialMediaDeleted": "社交媒体删除成功",
+    "confirmDeleteSocialMedia": "确定要删除这个社交媒体链接吗？",
+    "noSocialMedia": "暂无社交媒体链接",
+    "dragToReorder": "拖拽排序",
+    "commonPlatforms": "常用平台",
+    "github": "GitHub",
+    "twitter": "Twitter/X",
+    "facebook": "Facebook",
+    "instagram": "Instagram",
+    "linkedin": "LinkedIn",
+    "youtube": "YouTube",
+    "discord": "Discord",
+    "telegram": "Telegram",
+    "wechat": "微信",
+    "emailPlatform": "邮箱",
+    "custom": "自定义"
   },
   "analytics": {
     "title": "数据分析",
@@ -276,7 +307,7 @@
     "exportFailed": "导出失败"
   },
   "rss": {
-    "rssFeeds": "RSS 订阅",
+    "rssFeeds": "RSS",
     "subscribeToRSS": "订阅 RSS",
     "allArticles": "全部文章",
     "categoryArticles": "分类文章",

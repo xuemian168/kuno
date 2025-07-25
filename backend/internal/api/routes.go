@@ -49,6 +49,9 @@ func SetupRoutes() *gin.Engine {
 		// Media serving - public access
 		api.Static("/uploads", "./uploads")
 
+		// Social media links - public access
+		api.GET("/social-media", GetSocialMediaList)
+
 		// Protected routes - require authentication
 		protected := api.Group("/")
 		protected.Use(auth.AuthMiddleware())
@@ -102,6 +105,17 @@ func SetupRoutes() *gin.Engine {
 				admin.GET("/export/article/:id", ExportArticle)
 				admin.GET("/export/articles", ExportArticles)
 				admin.GET("/export/all", ExportAllArticles)
+
+				// Social media management
+				adminSocialMedia := admin.Group("/social-media")
+				{
+					adminSocialMedia.GET("/all", GetAllSocialMedia)
+					adminSocialMedia.GET("/:id", GetSocialMedia)
+					adminSocialMedia.POST("", CreateSocialMedia)
+					adminSocialMedia.PUT("/:id", UpdateSocialMedia)
+					adminSocialMedia.DELETE("/:id", DeleteSocialMedia)
+					adminSocialMedia.PUT("/order", UpdateSocialMediaOrder)
+				}
 			}
 		}
 	}

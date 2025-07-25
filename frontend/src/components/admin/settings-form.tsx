@@ -11,13 +11,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, SiteSettings, SiteSettingsTranslation } from "@/lib/api"
 import { useSettings } from "@/contexts/settings-context"
-import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock } from "lucide-react"
+import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { translationService, TranslationConfig, SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation"
 import { languageManager } from "@/services/translation/language-manager"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
+import { SocialMediaManager } from "@/components/admin/social-media-manager"
 
 // Dynamic languages based on user configuration - will be set in component
 
@@ -355,7 +356,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
             <TabsTrigger 
               value="general" 
               className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200 gap-2"
@@ -390,6 +391,13 @@ export function SettingsForm({ locale }: SettingsFormProps) {
             >
               <Shield className="h-4 w-4" />
               {t('settings.security')}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="social" 
+              className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
+            >
+              <Share2 className="h-4 w-4" />
+              {t('settings.socialMedia')}
             </TabsTrigger>
           </TabsList>
 
@@ -996,6 +1004,14 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     </Button>
                   </div>
                 </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="social" className="space-y-6">
+            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <CardContent className="p-6">
+                <SocialMediaManager />
               </CardContent>
             </Card>
           </TabsContent>

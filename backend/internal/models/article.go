@@ -94,3 +94,16 @@ type ArticleView struct {
 	Fingerprint string   `gorm:"size:64;index" json:"fingerprint"`
 	CreatedAt  time.Time `json:"created_at"`
 }
+
+// SocialMedia represents social media links
+type SocialMedia struct {
+	ID           uint           `gorm:"primaryKey" json:"id"`
+	Platform     string         `gorm:"not null;size:50" json:"platform"`
+	URL          string         `gorm:"not null" json:"url"`
+	IconName     string         `gorm:"size:50" json:"icon_name"`
+	DisplayOrder int            `gorm:"default:0" json:"display_order"`
+	IsActive     bool           `gorm:"default:true" json:"is_active"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+}

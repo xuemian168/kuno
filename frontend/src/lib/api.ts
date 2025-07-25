@@ -77,6 +77,17 @@ export interface RecoveryStatusResponse {
   message?: string
 }
 
+export interface SocialMedia {
+  id: number
+  platform: string
+  url: string
+  icon_name: string
+  display_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface MediaLibrary {
   id: number
   file_name: string
@@ -322,6 +333,48 @@ class ApiClient {
   async getRecoveryStatus(): Promise<RecoveryStatusResponse> {
     return this.request('/recovery-status', {
       method: 'GET',
+    })
+  }
+
+  // Social Media
+  async getSocialMediaList(): Promise<SocialMedia[]> {
+    return this.request('/social-media')
+  }
+
+  async getAllSocialMedia(): Promise<SocialMedia[]> {
+    return this.request('/social-media/all', {
+      method: 'GET',
+    })
+  }
+
+  async getSocialMedia(id: number): Promise<SocialMedia> {
+    return this.request(`/social-media/${id}`)
+  }
+
+  async createSocialMedia(data: Omit<SocialMedia, 'id' | 'created_at' | 'updated_at'>): Promise<SocialMedia> {
+    return this.request('/social-media', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateSocialMedia(id: number, data: Partial<SocialMedia>): Promise<SocialMedia> {
+    return this.request(`/social-media/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteSocialMedia(id: number): Promise<{ message: string }> {
+    return this.request(`/social-media/${id}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async updateSocialMediaOrder(order: { id: number; order: number }[]): Promise<{ message: string }> {
+    return this.request('/social-media/order', {
+      method: 'PUT',
+      body: JSON.stringify(order),
     })
   }
 
