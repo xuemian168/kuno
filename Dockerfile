@@ -56,7 +56,9 @@ RUN mkdir -p /app/backend /app/frontend /var/log/supervisor /run/nginx
 
 # Copy backend binary
 COPY --from=backend-builder /app/backend/main /app/backend/
-COPY --from=backend-builder /app/backend/uploads /app/backend/uploads
+
+# Create uploads directory
+RUN mkdir -p /app/backend/uploads
 
 # Copy frontend build
 COPY --from=frontend-builder /app/frontend/.next/standalone /app/frontend/
