@@ -12,6 +12,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   const t = await getTranslations({ locale })
   
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const { routing } = await import('@/i18n/routing')
   
   try {
     const article = await apiClient.getArticle(parseInt(id), locale)
@@ -30,7 +31,6 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     
     // Generate alternate language links for article
     const languages: Record<string, string> = {}
-    const { routing } = await import('@/i18n/routing')
     routing.locales.forEach(loc => {
       const articleUrl = loc === routing.defaultLocale 
         ? `${baseUrl}/article/${id}` 

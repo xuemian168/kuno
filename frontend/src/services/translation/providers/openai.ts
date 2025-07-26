@@ -120,8 +120,8 @@ export class OpenAIProvider extends BaseTranslationProvider {
       // Parse the numbered response
       const translations = translatedText
         .split(/\n+/)
-        .filter(line => line.match(/^\d+\./))
-        .map(line => line.replace(/^\d+\.\s*/, ''))
+        .filter((line: string) => line.match(/^\d+\./))
+        .map((line: string) => line.replace(/^\d+\.\s*/, ''))
 
       if (translations.length !== texts.length) {
         // Fallback to individual translations if parsing fails

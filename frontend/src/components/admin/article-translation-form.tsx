@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MarkdownEditor } from "@/components/markdown/markdown-editor"
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer"
-import { apiClient, Article, Category } from "@/lib/api"
+import { apiClient, Article, Category, ArticleTranslation } from "@/lib/api"
 import { 
   Languages, 
   Copy, 
@@ -33,12 +33,6 @@ import {
 } from "lucide-react"
 import { translationService, initializeTranslationService } from "@/services/translation"
 
-interface Translation {
-  language: string
-  title: string
-  content: string
-  summary: string
-}
 
 interface ArticleTranslationFormProps {
   article?: Article
@@ -76,13 +70,17 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
     category_id: article?.category_id || 0
   })
   
-  const [translations, setTranslations] = useState<Translation[]>(() => {
+  const [translations, setTranslations] = useState<ArticleTranslation[]>(() => {
     if (article?.translations && Array.isArray(article.translations)) {
       return article.translations.map((t: any) => ({
+        id: t.id || 0,
+        article_id: t.article_id || 0,
         language: t.language,
         title: t.title || '',
         content: t.content || '',
-        summary: t.summary || ''
+        summary: t.summary || '',
+        created_at: t.created_at || new Date().toISOString(),
+        updated_at: t.updated_at || new Date().toISOString()
       }))
     }
     return []
@@ -100,7 +98,7 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
       }
       
       let completed = 0
-      let total = 3 // title, content, summary
+      const total = 3 // title, content, summary
       
       if (translation.title.trim()) completed++
       if (translation.content.trim()) completed++
@@ -173,10 +171,14 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
         }
       } else {
         newTranslations.push({
+          id: 0,
+          article_id: 0,
           language,
           title: field === 'title' ? value : '',
           content: field === 'content' ? value : '',
-          summary: field === 'summary' ? value : ''
+          summary: field === 'summary' ? value : '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
       }
       
@@ -204,6 +206,7 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
     try {
       const articleData = {
         ...formData,
+        default_lang: locale,
         translations: translations.filter(t => t.title.trim() || t.content.trim() || t.summary.trim())
       }
 

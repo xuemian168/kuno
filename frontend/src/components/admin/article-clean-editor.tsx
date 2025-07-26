@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { apiClient, Article, Category } from "@/lib/api"
+import { apiClient, Article, Category, ArticleTranslation } from "@/lib/api"
 import { 
   ArrowLeft,
   Save,
@@ -19,13 +19,6 @@ import {
   Languages
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-interface Translation {
-  language: string
-  title: string
-  content: string
-  summary: string
-}
 
 interface ArticleCleanEditorProps {
   article?: Article
@@ -58,13 +51,17 @@ export function ArticleCleanEditor({ article, isEditing = false, locale = 'zh' }
     category_id: article?.category_id || 0
   })
   
-  const [translations, setTranslations] = useState<Translation[]>(() => {
+  const [translations, setTranslations] = useState<ArticleTranslation[]>(() => {
     if (article?.translations && Array.isArray(article.translations)) {
       return article.translations.map((t: any) => ({
+        id: t.id || 0,
+        article_id: t.article_id || 0,
         language: t.language,
         title: t.title || '',
         content: t.content || '',
-        summary: t.summary || ''
+        summary: t.summary || '',
+        created_at: t.created_at || new Date().toISOString(),
+        updated_at: t.updated_at || new Date().toISOString()
       }))
     }
     return []
@@ -73,18 +70,26 @@ export function ArticleCleanEditor({ article, isEditing = false, locale = 'zh' }
   const getTranslation = (language: string) => {
     if (language === locale) {
       return {
+        id: 0,
+        article_id: 0,
         language: locale,
         title: formData.title,
         content: formData.content,
-        summary: formData.summary
+        summary: formData.summary,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
     }
     
     return translations.find(t => t.language === language) || {
+      id: 0,
+      article_id: 0,
       language,
       title: '',
       content: '',
-      summary: ''
+      summary: '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
   }
 
@@ -131,14 +136,19 @@ export function ArticleCleanEditor({ article, isEditing = false, locale = 'zh' }
       if (existingIndex >= 0) {
         newTranslations[existingIndex] = {
           ...newTranslations[existingIndex],
-          [field]: value
+          [field]: value,
+          updated_at: new Date().toISOString()
         }
       } else {
         newTranslations.push({
+          id: 0,
+          article_id: 0,
           language,
           title: field === 'title' ? value : '',
           content: field === 'content' ? value : '',
-          summary: field === 'summary' ? value : ''
+          summary: field === 'summary' ? value : '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
       }
       
@@ -157,6 +167,7 @@ export function ArticleCleanEditor({ article, isEditing = false, locale = 'zh' }
     try {
       const articleData = {
         ...formData,
+        default_lang: locale,
         translations: translations.filter(t => t.title.trim() || t.content.trim() || t.summary.trim())
       }
 
@@ -199,7 +210,7 @@ export function ArticleCleanEditor({ article, isEditing = false, locale = 'zh' }
   const sourceTranslation = getTranslation(sourceLanguage)
   const targetTranslation = getTranslation(targetLanguage)
 
-  const renderField = (language: string, translation: Translation, isPreview: boolean) => {
+  const renderField = (language: string, translation: ArticleTranslation, isPreview: boolean) => {
     const isSource = language === sourceLanguage
     
     switch (activeField) {

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, X } from "lucide-react"
-import { useTranslation } from "react-i18next"
+import { useTranslations } from "next-intl"
 
 interface SuccessDialogProps {
   open: boolean
@@ -29,7 +29,7 @@ export function SuccessDialog({
   autoCloseDelay = 3000 
 }: SuccessDialogProps) {
   const [isVisible, setIsVisible] = useState(open)
-  const { t } = useTranslation()
+  const t = useTranslations()
   useEffect(() => {
     setIsVisible(open)
     

@@ -242,6 +242,26 @@
     "exportSuccess": "エクスポート成功",  
     "exportFailed": "エクスポート失敗"
   },
+  "rss": {
+    "rssFeeds": "RSS",
+    "subscribeToRSS": "RSSを購読",
+    "allArticles": "すべての記事",
+    "categoryArticles": "カテゴリ記事",
+    "rssDescription": "RSSフィードを購読して最新記事の更新を受け取る",
+    "copyRSSLink": "RSSリンクをコピー",
+    "openInReader": "リーダーで開く",
+    "rssLinkCopied": "RSSリンクをコピーしました",
+    "availableLanguages": "利用可能な言語",
+    "selectLanguage": "言語を選択",
+    "rssForCategory": "{category}カテゴリのRSS",
+    "rssForAllArticles": "すべての記事のRSS",
+    "aboutRSSFeeds": "RSSフィードについて",
+    "rssInfo1": "RSSリンクは多言語パラメータに対応しており、異なる言語の記事を購読できます",
+    "rssInfo2": "すべての記事RSSにはすべてのカテゴリの最新記事が含まれます",
+    "rssInfo3": "カテゴリRSSには特定のカテゴリの記事のみが含まれます",
+    "rssInfo4": "RSSフィードは自動更新されるため、手動で更新する必要はありません",
+    "rssInfo5": "Feedly、InoreaderなどのRSSリーダーでの購読をお勧めします"
+  },
   "site": {
     "title": "ミニマリストブログ",
     "description": "ダークモード対応のミニマリストブログスペース",

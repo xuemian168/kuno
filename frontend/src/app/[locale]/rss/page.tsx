@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: RSSPageProps): Promise<Metada
   let siteTitle = t('site.title')
   let siteDescription = t('site.description')
   let rssTitle = t('rss.rssFeeds')
-  let rssDescription = t('rss.rssDescription')
+  const rssDescription = t('rss.rssDescription')
   
   try {
     // Try to fetch site settings

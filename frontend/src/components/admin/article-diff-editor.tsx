@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { apiClient, Article, Category } from "@/lib/api"
+import { apiClient, Article, Category, ArticleTranslation } from "@/lib/api"
 import { 
   ArrowLeft,
   Save,
@@ -54,12 +54,7 @@ import { MediaLibrary } from "@/lib/api"
 import { playSuccessSound, initializeSoundSettings } from "@/lib/sound"
 import { NotificationDialog, useNotificationDialog } from "@/components/ui/notification-dialog"
 
-interface Translation {
-  language: string
-  title: string
-  content: string
-  summary: string
-}
+
 
 interface ArticleDiffEditorProps {
   article?: Article
@@ -117,17 +112,21 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     seo_slug: article?.seo_slug || ""
   })
   
-  const [translations, setTranslations] = useState<Translation[]>(() => {
+  const [translations, setTranslations] = useState<ArticleTranslation[]>(() => {
     if (article?.translations && Array.isArray(article.translations)) {
       // Filter out the default language from translations array
       const defaultLang = article.default_lang || 'zh'
       return article.translations
         .filter((t: any) => t.language !== defaultLang)
         .map((t: any) => ({
+          id: t.id || 0,
+          article_id: t.article_id || 0,
           language: t.language,
           title: t.title || '',
           content: t.content || '',
-          summary: t.summary || ''
+          summary: t.summary || '',
+          created_at: t.created_at || new Date().toISOString(),
+          updated_at: t.updated_at || new Date().toISOString()
         }))
     }
     return []
@@ -138,18 +137,26 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     const defaultLang = article?.default_lang || 'zh'
     if (language === defaultLang) {
       return {
+        id: 0,
+        article_id: 0,
         language: defaultLang,
         title: formData.title,
         content: formData.content,
-        summary: formData.summary
+        summary: formData.summary,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
     }
     
     return translations.find(t => t.language === language) || {
+      id: 0,
+      article_id: 0,
       language,
       title: '',
       content: '',
-      summary: ''
+      summary: '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
   }
 
@@ -172,7 +179,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
 
   // Calculate translation progress for content
   const translationProgress = useMemo(() => {
-    if (activeField !== 'content') return { sourceLines: [], targetLines: [], untranslatedLines: [], totalLines: 0, translatedLines: 0 }
+    if (activeField !== 'content') return { sourceLines: [] as string[], targetLines: [] as string[], untranslatedLines: [] as number[], totalLines: 0, translatedLines: 0 }
     
     const sourceTranslation = getTranslation(sourceLanguage)
     const targetTranslation = getTranslation(targetLanguage)
@@ -358,7 +365,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     try {
       // Collect only non-default language translations
       const defaultLang = article?.default_lang || 'zh'
-      const allTranslations = []
+      const allTranslations: ArticleTranslation[] = []
       
       // Add other language translations (exclude default language)
       translations.forEach(t => {
@@ -426,21 +433,51 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   }
 
   const copyToTarget = () => {
+    if (activeField === 'seo') {
+      // SEO fields are not language-specific, so no copying needed
+      return
+    }
+    
     const targetTranslation = getTranslation(targetLanguage)
-    const hasExistingContent = targetTranslation[activeField].trim().length > 0
+    const sourceTranslation = getTranslation(sourceLanguage)
+    
+    let hasExistingContent = false
+    
+    if (activeField === 'basic') {
+      hasExistingContent = targetTranslation.title.trim().length > 0 || targetTranslation.summary.trim().length > 0
+    } else if (activeField === 'content') {
+      hasExistingContent = targetTranslation.content.trim().length > 0
+    }
     
     if (hasExistingContent) {
       setShowCopyConfirm(true)
       return
     }
     
-    const sourceTranslation = getTranslation(sourceLanguage)
-    updateTranslation(targetLanguage, activeField, sourceTranslation[activeField])
+    if (activeField === 'basic') {
+      updateTranslation(targetLanguage, 'title', sourceTranslation.title)
+      updateTranslation(targetLanguage, 'summary', sourceTranslation.summary)
+    } else if (activeField === 'content') {
+      updateTranslation(targetLanguage, 'content', sourceTranslation.content)
+    }
   }
 
   const handleConfirmCopy = () => {
+    if (activeField === 'seo') {
+      // SEO fields are not language-specific, so no copying needed
+      setShowCopyConfirm(false)
+      return
+    }
+    
     const sourceTranslation = getTranslation(sourceLanguage)
-    updateTranslation(targetLanguage, activeField, sourceTranslation[activeField])
+    
+    if (activeField === 'basic') {
+      updateTranslation(targetLanguage, 'title', sourceTranslation.title)
+      updateTranslation(targetLanguage, 'summary', sourceTranslation.summary)
+    } else if (activeField === 'content') {
+      updateTranslation(targetLanguage, 'content', sourceTranslation.content)
+    }
+    
     setShowCopyConfirm(false)
   }
 
@@ -634,10 +671,14 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         }
       } else {
         newTranslations.push({
+          id: 0,
+          article_id: 0,
           language,
           title: field === 'title' ? value : '',
           content: field === 'content' ? value : '',
-          summary: field === 'summary' ? value : ''
+          summary: field === 'summary' ? value : '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
       }
       
@@ -911,7 +952,13 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             <ArticleSEOForm
               article={{
                 ...article,
-                ...formData
+                ...formData,
+                id: article?.id || 0,
+                category: article?.category || { id: 0, name: '', description: '', created_at: '', updated_at: '' },
+                default_lang: article?.default_lang || 'zh',
+                translations: article?.translations || [],
+                created_at: article?.created_at || new Date().toISOString(),
+                updated_at: article?.updated_at || new Date().toISOString()
               }}
               translations={translations}
               activeLanguage={defaultLang}
@@ -978,7 +1025,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     )
   }
 
-  const renderField = (language: string, translation: Translation, isPreview: boolean, side: 'source' | 'target') => {
+  const renderField = (language: string, translation: ArticleTranslation, isPreview: boolean, side: 'source' | 'target') => {
     const isSource = language === sourceLanguage
     
     switch (activeField) {
@@ -1235,7 +1282,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           {/* Translation Progress */}
           {activeField === 'content' && translationProgress.totalLines > 0 && (
             <div className="text-xs text-muted-foreground mr-4">
-              {translationProgress.untranslatedCount > 0 ? (
+              {(translationProgress.untranslatedCount || 0) > 0 ? (
                 <span className="text-orange-600 dark:text-orange-400">
                   {translationProgress.untranslatedCount} {t('article.linesUntranslated')}
                 </span>
@@ -1391,7 +1438,13 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleAutoTranslate(activeField)}
+                onClick={() => {
+                  if (activeField === 'basic') {
+                    handleAutoTranslate('all')
+                  } else if (activeField === 'content') {
+                    handleAutoTranslate('content')
+                  }
+                }}
                 disabled={isTranslating || !hasTranslationProvider}
                 className="h-6 px-2"
                 title="Auto translate this field"

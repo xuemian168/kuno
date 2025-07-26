@@ -20,7 +20,7 @@ export default function EditCategoryPage({ params }: EditCategoryPageProps) {
       const fetchCategory = async () => {
         try {
           const categoryId = parseInt(id)
-          const categoryData = await apiClient.getCategory(categoryId, { lang: paramLocale })
+          const categoryData = await apiClient.getCategory(categoryId)
           setCategory(categoryData)
         } catch (error) {
           console.error('Failed to fetch category:', error)

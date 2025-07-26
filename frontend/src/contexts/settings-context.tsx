@@ -27,6 +27,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         id: 1,
         site_title: 'Blog',
         site_subtitle: 'A minimalist space for thoughts and ideas',
+        footer_text: '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })

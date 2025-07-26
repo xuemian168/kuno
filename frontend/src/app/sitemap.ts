@@ -16,7 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     routes.push({
       url,
       lastModified: new Date(),
-      changeFreq: 'daily',
+      changeFrequency: 'daily',
       priority: 1,
       alternates: {
         languages: Object.fromEntries(
@@ -76,7 +76,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         routes.push({
           url: baseArticleUrl,
           lastModified: new Date(article.updated_at || article.created_at),
-          changeFreq: 'weekly',
+          changeFrequency: 'weekly',
           priority: 0.8,
           alternates: {
             languages: Object.fromEntries(
@@ -94,11 +94,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           },
           // Add images to sitemap for better SEO
           ...(images.length > 0 && {
-            images: images.map(img => ({
-              url: img,
-              title: article.seo_title || article.title,
-              caption: article.seo_description || article.summary || article.title
-            }))
+            images: images
           })
         })
       })

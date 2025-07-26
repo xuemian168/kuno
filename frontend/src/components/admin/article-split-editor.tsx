@@ -17,7 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MarkdownEditor } from "@/components/markdown/markdown-editor"
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer"
-import { apiClient, Article, Category } from "@/lib/api"
+import { apiClient, Article, Category, ArticleTranslation } from "@/lib/api"
 import { 
   Languages, 
   Copy, 
@@ -35,12 +35,6 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-interface Translation {
-  language: string
-  title: string
-  content: string
-  summary: string
-}
 
 interface ArticleSplitEditorProps {
   article?: Article
@@ -73,13 +67,17 @@ export function ArticleSplitEditor({ article, isEditing = false, locale = 'zh' }
     category_id: article?.category_id || 0
   })
   
-  const [translations, setTranslations] = useState<Translation[]>(() => {
+  const [translations, setTranslations] = useState<ArticleTranslation[]>(() => {
     if (article?.translations && Array.isArray(article.translations)) {
       return article.translations.map((t: any) => ({
+        id: t.id || 0,
+        article_id: t.article_id || 0,
         language: t.language,
         title: t.title || '',
         content: t.content || '',
-        summary: t.summary || ''
+        summary: t.summary || '',
+        created_at: t.created_at || new Date().toISOString(),
+        updated_at: t.updated_at || new Date().toISOString()
       }))
     }
     return []
@@ -164,10 +162,14 @@ export function ArticleSplitEditor({ article, isEditing = false, locale = 'zh' }
         }
       } else {
         newTranslations.push({
+          id: 0,
+          article_id: 0,
           language,
           title: field === 'title' ? value : '',
           content: field === 'content' ? value : '',
-          summary: field === 'summary' ? value : ''
+          summary: field === 'summary' ? value : '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
       }
       
@@ -186,6 +188,7 @@ export function ArticleSplitEditor({ article, isEditing = false, locale = 'zh' }
     try {
       const articleData = {
         ...formData,
+        default_lang: locale,
         translations: translations.filter(t => t.title.trim() || t.content.trim() || t.summary.trim())
       }
 

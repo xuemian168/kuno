@@ -14,15 +14,9 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { MarkdownEditor } from "@/components/markdown/markdown-editor"
-import { apiClient, Article, Category } from "@/lib/api"
+import { apiClient, Article, Category, ArticleTranslation } from "@/lib/api"
 import { Languages, Plus, Trash2 } from "lucide-react"
 
-interface Translation {
-  language: string
-  title: string
-  content: string
-  summary: string
-}
 
 interface ArticleFormProps {
   article?: Article
@@ -48,22 +42,30 @@ export function ArticleForm({ article, isEditing = false, locale = 'zh' }: Artic
     summary: article?.summary || "",
     category_id: article?.category_id || 0
   })
-  const [translations, setTranslations] = useState<Translation[]>(() => {
+  const [translations, setTranslations] = useState<ArticleTranslation[]>(() => {
     // Initialize translations from article data if available
     if (article?.translations && Array.isArray(article.translations)) {
       return article.translations.map((t: any) => ({
+        id: t.id || 0,
+        article_id: t.article_id || 0,
         language: t.language,
         title: t.title || '',
         content: t.content || '',
-        summary: t.summary || ''
+        summary: t.summary || '',
+        created_at: t.created_at || new Date().toISOString(),
+        updated_at: t.updated_at || new Date().toISOString()
       }))
     }
     // Initialize with current language
     return [{
+      id: 0,
+      article_id: 0,
       language: locale,
       title: article?.title || "",
       content: article?.content || "",
-      summary: article?.summary || ""
+      summary: article?.summary || "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }]
   })
 
@@ -101,10 +103,14 @@ export function ArticleForm({ article, isEditing = false, locale = 'zh' }: Artic
         }
       } else {
         newTranslations.push({
+          id: 0,
+          article_id: 0,
           language: activeTab,
           title: field === 'title' ? value : '',
           content: field === 'content' ? value : '',
-          summary: field === 'summary' ? value : ''
+          summary: field === 'summary' ? value : '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
       }
       
@@ -123,10 +129,14 @@ export function ArticleForm({ article, isEditing = false, locale = 'zh' }: Artic
   const addLanguage = (langCode: string) => {
     if (!translations.find(t => t.language === langCode)) {
       setTranslations(prev => [...prev, {
+        id: 0,
+        article_id: 0,
         language: langCode,
         title: '',
         content: '',
-        summary: ''
+        summary: '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }])
     }
     setActiveTab(langCode)
@@ -147,6 +157,7 @@ export function ArticleForm({ article, isEditing = false, locale = 'zh' }: Artic
     try {
       const articleData = {
         ...formData,
+        default_lang: locale,
         translations: translations.filter(t => t.title.trim() || t.content.trim() || t.summary.trim())
       }
 
