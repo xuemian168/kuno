@@ -1,12 +1,14 @@
-// Get API URL from runtime config or fallback to environment variable
+// Get API URL from environment variable or default
 function getApiBaseUrl(): string {
-  // Check if we're in the browser and runtime config is available
-  if (typeof window !== 'undefined' && window.runtimeConfig?.API_URL) {
-    return window.runtimeConfig.API_URL
+  // Use environment variable if available, otherwise use default
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL
+  
+  // If no environment variable is set, use default localhost
+  if (!apiUrl || apiUrl === '' || apiUrl === 'undefined') {
+    return 'http://localhost:8080/api'
   }
   
-  // Fallback to environment variable (for SSR/build time)
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
+  return apiUrl
 }
 
 export interface ArticleTranslation {

@@ -32,11 +32,10 @@ RUN npm ci && npm cache clean --force
 # Copy frontend source
 COPY frontend/ .
 
-# Build arguments for environment variables (optional, can be set at runtime)
+# Build arguments for environment variables (leave empty for runtime configuration)
 ARG NEXT_PUBLIC_API_URL=""
 
-# Set environment variables for build (empty by default, will be set at runtime)
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+# Don't set NEXT_PUBLIC_API_URL at build time to allow runtime configuration
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 ENV NEXT_TELEMETRY_DISABLED=1
 
@@ -76,9 +75,9 @@ COPY nginx-unified.conf /etc/nginx/nginx.conf
 # Copy supervisor configuration
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Copy runtime configuration script
-COPY runtime-config.sh /app/
-RUN chmod +x /app/runtime-config.sh
+# Copy environment variable injection script
+COPY inject-env.sh /app/
+RUN chmod +x /app/inject-env.sh
 
 # Create data directory for SQLite
 RUN mkdir -p /app/data && chown -R appuser:appgroup /app /var/log/supervisor
