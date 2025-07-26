@@ -20,6 +20,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: REGISTRY
     
     steps:
     - name: Checkout repository
