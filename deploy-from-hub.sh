@@ -43,7 +43,7 @@ echo ""
 read -p "Docker image (default: ${DEFAULT_IMAGE}): " IMAGE
 IMAGE=${IMAGE:-$DEFAULT_IMAGE}
 
-read -p "Port (default: ${DEFAULT_PORT}): " PORT
+read -p "Port (default: ${DEFAULT_PORT}): " PORT  
 PORT=${PORT:-$DEFAULT_PORT}
 
 read -p "Container name (default: ${DEFAULT_CONTAINER_NAME}): " CONTAINER_NAME
