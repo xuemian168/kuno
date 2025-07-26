@@ -51,9 +51,9 @@ FROM alpine:latest
 # Install runtime dependencies
 RUN apk --no-cache add ca-certificates sqlite nginx supervisor nodejs npm
 
-# Create app user
+# Create app user with shell
 RUN addgroup -g 1001 -S appgroup && \
-    adduser -S -u 1001 -G appgroup appuser
+    adduser -S -u 1001 -G appgroup -s /bin/sh appuser
 
 # Create directories
 RUN mkdir -p /app/backend /app/frontend /var/log/supervisor /run/nginx
