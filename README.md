@@ -94,19 +94,42 @@ docker-compose -f docker-compose.prod.yml up --build -d
 
 ### Environment Variables
 
-Copy `.env.example` to `.env` and modify as needed:
+The application uses a unified configuration approach. Copy `.env.example` to `.env` and modify as needed:
 
 ```bash
 # Backend Configuration
 DB_PATH=./data/blog.db
 GIN_MODE=release
 PORT=8080
+RECOVERY_MODE=false
 
 # Frontend Configuration
-NEXT_PUBLIC_API_URL=http://localhost:8080/api
+NEXT_PUBLIC_API_URL=https://yourdomain.com/api
 NODE_ENV=production
 PORT=3000
 ```
+
+#### Important Configuration Notes
+
+- **Unified API URL**: Only `NEXT_PUBLIC_API_URL` needs to be configured. The base URL is automatically derived from this value.
+- **Build-time Configuration**: The API URL is baked into the frontend build, so changes require rebuilding the Docker container.
+- **Environment Variable Priority**: Docker Compose environment variables override Dockerfile defaults.
+
+#### Example Configurations
+
+**Local Development:**
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8080/api
+```
+
+**Production:**
+```bash
+NEXT_PUBLIC_API_URL=https://yourdomain.com/api
+```
+
+The frontend will automatically use:
+- API requests: `https://yourdomain.com/api/*`
+- Base URL for SEO/metadata: `https://yourdomain.com`
 
 ### Docker Volumes
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from 'next-intl/server'
 import HomePageClient from './home-client'
+import { getBaseUrl } from '@/lib/utils'
 
 interface PageProps {
   params: Promise<{ locale: string }>
@@ -10,7 +11,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { locale } = await params
   const t = await getTranslations({ locale })
   
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const baseUrl = getBaseUrl()
   
   let siteTitle = t('site.title')
   let siteDescription = t('site.description')

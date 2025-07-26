@@ -13,6 +13,7 @@ import { apiClient, Article, Category } from '@/lib/api'
 import { Link } from '@/i18n/routing'
 import NextLink from 'next/link'
 import { WebsiteStructuredData } from '@/components/seo/structured-data'
+import { getBaseUrl } from '@/lib/utils'
 
 interface HomePageClientProps {
   locale: string
@@ -76,7 +77,7 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
     )
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const baseUrl = getBaseUrl()
   const homeUrl = locale === 'zh' ? baseUrl : `${baseUrl}/${locale}`
 
   return (

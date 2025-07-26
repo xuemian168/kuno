@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from 'next-intl/server'
 import ArticlePageClient from './article-client'
 import { apiClient } from '@/lib/api'
+import { getBaseUrl } from '@/lib/utils'
 
 interface ArticlePageProps {
   params: Promise<{ id: string; locale: string }>
@@ -11,7 +12,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   const { id, locale } = await params
   const t = await getTranslations({ locale })
   
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const baseUrl = getBaseUrl()
   const { routing } = await import('@/i18n/routing')
   
   try {

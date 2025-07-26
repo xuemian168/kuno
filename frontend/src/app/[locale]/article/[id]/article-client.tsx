@@ -12,6 +12,7 @@ import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import { apiClient, Article } from '@/lib/api'
 import { ArticleStructuredData, BreadcrumbStructuredData } from '@/components/seo/structured-data'
+import { getBaseUrl } from '@/lib/utils'
 
 interface ArticlePageClientProps {
   id: string
@@ -78,7 +79,7 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
     )
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const baseUrl = getBaseUrl()
   const articleUrl = locale === 'zh' 
     ? `${baseUrl}/article/${id}` 
     : `${baseUrl}/${locale}/article/${id}`

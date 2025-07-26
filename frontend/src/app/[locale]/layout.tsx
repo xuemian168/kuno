@@ -8,6 +8,8 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { SettingsProvider } from '@/contexts/settings-context'
 import { AuthProvider } from '@/contexts/auth-context'
 import '../globals.css'
+import { getBaseUrl } from '@/lib/utils'
+import { apiClient } from '@/lib/api'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,7 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params
   const t = await getTranslations({ locale })
   
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const baseUrl = getBaseUrl()
   
   let siteTitle = t('site.title')
   let siteDescription = t('site.description')

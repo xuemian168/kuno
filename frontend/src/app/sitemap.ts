@@ -1,9 +1,10 @@
 import { MetadataRoute } from 'next'
 import { apiClient } from '@/lib/api'
 import { routing } from '@/i18n/routing'
+import { getBaseUrl } from '@/lib/utils'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const baseUrl = getBaseUrl()
   
   const routes: MetadataRoute.Sitemap = []
   

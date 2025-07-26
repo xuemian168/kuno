@@ -35,7 +35,7 @@ COPY --from=builder /app/main .
 RUN mkdir -p ./data
 
 # Expose port
-EXPOSE 8080
+EXPOSE 8085
 
 # Set environment variables
 ENV DB_PATH=./data/blog.db

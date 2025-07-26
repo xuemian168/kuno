@@ -1,0 +1,84 @@
+# Multi-stage build for unified container
+FROM golang:1.23-alpine AS backend-builder
+
+# Install build dependencies for backend
+RUN apk add --no-cache gcc musl-dev sqlite-dev
+
+# Set working directory for backend
+WORKDIR /app/backend
+
+# Copy backend files
+COPY backend/go.mod backend/go.sum ./
+RUN go mod download
+
+# Copy backend source
+COPY backend/ .
+
+# Build backend
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o main cmd/server/main.go
+
+# Frontend build stage
+FROM node:18-alpine AS frontend-builder
+
+# Install frontend dependencies
+RUN apk add --no-cache libc6-compat git
+
+WORKDIR /app/frontend
+
+# Copy frontend package files
+COPY frontend/package*.json ./
+RUN npm ci && npm cache clean --force
+
+# Copy frontend source
+COPY frontend/ .
+
+# Build arguments for environment variables
+ARG NEXT_PUBLIC_API_URL
+
+# Set environment variables for build
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+# Build frontend
+RUN npm run build
+
+# Final runtime stage
+FROM alpine:latest
+
+# Install runtime dependencies
+RUN apk --no-cache add ca-certificates sqlite nginx supervisor nodejs npm
+
+# Create app user
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S -u 1001 -G appgroup appuser
+
+# Create directories
+RUN mkdir -p /app/backend /app/frontend /var/log/supervisor /run/nginx
+
+# Copy backend binary
+COPY --from=backend-builder /app/backend/main /app/backend/
+COPY --from=backend-builder /app/backend/uploads /app/backend/uploads
+
+# Copy frontend build
+COPY --from=frontend-builder /app/frontend/.next/standalone /app/frontend/
+COPY --from=frontend-builder /app/frontend/.next/static /app/frontend/.next/static
+COPY --from=frontend-builder /app/frontend/public /app/frontend/public
+
+# Copy nginx configuration
+COPY nginx-unified.conf /etc/nginx/nginx.conf
+
+# Copy supervisor configuration
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Create data directory for SQLite
+RUN mkdir -p /app/data && chown -R appuser:appgroup /app /var/log/supervisor
+
+# Set default environment variables (will be overridden by docker-compose)
+ENV DB_PATH=/app/data/blog.db
+ENV GIN_MODE=release
+ENV NODE_ENV=production
+
+# Expose port
+EXPOSE 80
+
+# Use supervisor to run both services
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

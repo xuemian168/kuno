@@ -1,45 +1,28 @@
 services:
-  backend:
+  blog:
     build: 
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
-    container_name: blog-backend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://b.zli.li/api}
+    container_name: blog-unified
     ports:
-      - "8085:8085"
+      - "80:80"
     volumes:
-      - blog_data:/root/data
+      - blog_data:/app/data
     environment:
-      - DB_PATH=/root/data/blog.db
+      - DB_PATH=/app/data/blog.db
       - GIN_MODE=release
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://b.zli.li/api}
       - RECOVERY_MODE=${RECOVERY_MODE:-false}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8085/api/categories"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/api/categories"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: blog-frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_BASE_URL=https://b.zli.li/api
-      - NODE_ENV=production
-    depends_on:
-      backend:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      start_period: 60s
 
 volumes:
   blog_data:

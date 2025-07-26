@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import RSSPageClient from './rss-client'
+import { getBaseUrl } from '@/lib/utils'
 
 interface RSSPageProps {
   params: Promise<{ locale: string }>
@@ -10,7 +11,7 @@ export async function generateMetadata({ params }: RSSPageProps): Promise<Metada
   const { locale } = await params
   const t = await getTranslations({ locale })
   
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const baseUrl = getBaseUrl()
   
   let siteTitle = t('site.title')
   let siteDescription = t('site.description')
