@@ -32,14 +32,16 @@ RUN npm ci && npm cache clean --force
 # Copy frontend source
 COPY frontend/ .
 
-# Build arguments for environment variables
-ARG NEXT_PUBLIC_API_URL
+# Build arguments for environment variables (optional, can be set at runtime)
+ARG NEXT_PUBLIC_API_URL=""
 
-# Set environment variables for build
+# Set environment variables for build (empty by default, will be set at runtime)
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build frontend
-RUN npm run build
+# Build frontend with increased memory and timeout
+RUN timeout 900 npm run build || (echo "Build timed out after 15 minutes" && exit 1)
 
 # Final runtime stage
 FROM alpine:latest
@@ -74,10 +76,27 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Create data directory for SQLite
 RUN mkdir -p /app/data && chown -R appuser:appgroup /app /var/log/supervisor
 
+# Build arguments for metadata
+ARG BUILD_DATE
+ARG VERSION
+ARG VCS_REF
+
 # Set default environment variables (will be overridden by docker-compose)
 ENV DB_PATH=/app/data/blog.db
 ENV GIN_MODE=release
 ENV NODE_ENV=production
+
+# Add metadata labels
+LABEL maintainer="xuemian168" \
+      org.opencontainers.image.title="I18N Blog" \
+      org.opencontainers.image.description="A multilingual blog system with Go backend and Next.js frontend" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.source="https://github.com/xuemian168/i18n_blog" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.vendor="xuemian168" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.documentation="https://github.com/xuemian168/i18n_blog#readme"
 
 # Expose port
 EXPOSE 80

@@ -21,6 +21,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment: REGISTRY
+    timeout-minutes: 60
     
     steps:
     - name: Checkout repository
@@ -60,7 +61,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        platforms: linux/amd64,linux/arm64
+        platforms: linux/amd64
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
@@ -70,6 +71,8 @@ jobs:
           VCS_REF=${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        # Add build timeout and resource settings
+        timeout: 3600
     
     - name: Update Docker Hub description
       if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
