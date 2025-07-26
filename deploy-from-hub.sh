@@ -41,18 +41,24 @@ echo -e "${YELLOW}🔧 Configuration Setup${NC}"
 echo ""
 
 read -p "Docker image (default: ${DEFAULT_IMAGE}): " IMAGE
-IMAGE=${IMAGE:-$DEFAULT_IMAGE}
+if [ "$IMAGE" = "" ]; then
+    IMAGE="$DEFAULT_IMAGE"
+fi
 
 read -p "Port (default: ${DEFAULT_PORT}): " PORT
-PORT=${PORT:-$DEFAULT_PORT}
+if [ "$PORT" = "" ]; then
+    PORT="$DEFAULT_PORT"
+fi
 
 read -p "Container name (default: ${DEFAULT_CONTAINER_NAME}): " CONTAINER_NAME
-CONTAINER_NAME=${CONTAINER_NAME:-$DEFAULT_CONTAINER_NAME}
+if [ "$CONTAINER_NAME" = "" ]; then
+    CONTAINER_NAME="$DEFAULT_CONTAINER_NAME"
+fi
 
 echo ""
 echo -e "${YELLOW}📝 Please provide your API URL (e.g., https://your-domain.com/api)${NC}"
 read -p "API URL: " API_URL
-while [ -z "$API_URL" ]; do
+while [ "$API_URL" = "" ]; do
     echo -e "${RED}❌ API URL is required for the blog to function properly.${NC}"
     read -p "API URL: " API_URL
 done
