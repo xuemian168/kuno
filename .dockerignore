@@ -54,7 +54,11 @@ Dockerfile*
 # Scripts and deployment
 scripts/
 deploy-from-hub.sh
-*.sh
+start.sh
+stop.sh
+build-info.sh
+# Allow inject-env.sh for Docker build
+!inject-env.sh
 
 # Environment files
 .env*
