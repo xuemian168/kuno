@@ -105,8 +105,8 @@ export function RSSFeeds({ locale }: RSSFeedsProps) {
         </div>
 
         {/* Language Selection */}
-        <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <CardHeader className="bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/50 dark:to-indigo-900/50 rounded-t-lg border-b border-blue-200 dark:border-blue-700 p-4">
+        <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
+          <CardHeader className="bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/50 dark:to-indigo-900/50 rounded-t-lg border-b border-blue-200 dark:border-blue-700 pt-6 pb-4 px-4 flex flex-col justify-center min-h-[80px]">
             <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
               <Globe className="h-5 w-5" />
               {t('rss.availableLanguages')}
@@ -145,8 +145,8 @@ export function RSSFeeds({ locale }: RSSFeedsProps) {
         </Card>
 
         {/* All Articles RSS */}
-        <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <CardHeader className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/50 dark:to-emerald-900/50 rounded-t-lg border-b border-green-200 dark:border-green-700 p-4">
+        <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
+          <CardHeader className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/50 dark:to-emerald-900/50 rounded-t-lg border-b border-green-200 dark:border-green-700 pt-6 pb-4 px-4 flex flex-col justify-center min-h-[80px]">
             <CardTitle className="flex items-center gap-2 text-green-900 dark:text-green-100">
               <Rss className="h-5 w-5" />
               {t('rss.allArticles')}
@@ -184,8 +184,8 @@ export function RSSFeeds({ locale }: RSSFeedsProps) {
 
         {/* Category RSS Feeds */}
         {categories.length > 0 && (
-          <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-            <CardHeader className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-t-lg border-b border-purple-200 dark:border-purple-700 p-4">
+          <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
+            <CardHeader className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 rounded-t-lg border-b border-purple-200 dark:border-purple-700 pt-6 pb-4 px-4 flex flex-col justify-center min-h-[80px]">
               <CardTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100">
                 <Rss className="h-5 w-5" />
                 {t('rss.categoryArticles')}
@@ -255,7 +255,7 @@ export function RSSFeeds({ locale }: RSSFeedsProps) {
         )}
 
         {/* RSS Information */}
-        <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
           <CardContent className="p-4">
             <div className="space-y-4 text-sm text-muted-foreground">
               <h3 className="font-semibold text-base text-foreground">{t('rss.aboutRSSFeeds')}</h3>

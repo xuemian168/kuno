@@ -502,8 +502,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
           </TabsList>
 
           <TabsContent value="general" className="space-y-6">
-            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-              <CardHeader className="bg-gradient-to-r from-emerald-100 to-teal-100 dark:from-emerald-900/50 dark:to-teal-900/50 border-b border-emerald-200 dark:border-emerald-700 p-4 rounded-t-lg">
+            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
+              <CardHeader className="bg-gradient-to-r from-emerald-100 to-teal-100 dark:from-emerald-900/50 dark:to-teal-900/50 border-b border-emerald-200 dark:border-emerald-700 pt-6 pb-4 px-4 rounded-t-lg flex flex-col justify-center min-h-[80px]">
                 <CardTitle className="flex items-center gap-2 text-emerald-900 dark:text-emerald-100">
                   <Info className="h-5 w-5" />
                   {t('settings.siteInfoSettings')}
@@ -615,8 +615,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
             </Card>
 
             {/* Branding Section */}
-            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-              <CardHeader className="bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-900/50 dark:to-red-900/50 border-b border-orange-200 dark:border-orange-700 p-4 rounded-t-lg">
+            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
+              <CardHeader className="bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-900/50 dark:to-red-900/50 border-b border-orange-200 dark:border-orange-700 pt-6 pb-4 px-4 rounded-t-lg flex flex-col justify-center min-h-[80px]">
                 <CardTitle className="flex items-center gap-2 text-orange-900 dark:text-orange-100">
                   <Star className="h-5 w-5" />
                   {t('settings.branding')}
@@ -727,8 +727,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
             </Card>
 
             {settings && (
-              <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-                <CardHeader className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 border-b border-purple-200 dark:border-purple-700 p-4 rounded-t-lg">
+              <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
+                <CardHeader className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 border-b border-purple-200 dark:border-purple-700 pt-6 pb-4 px-4 rounded-t-lg flex flex-col justify-center min-h-[80px]">
                   <CardTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100 text-lg">
                     <Eye className="h-5 w-5" />
                     {t('settings.realTimePreview')}
@@ -738,15 +738,15 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="p-4 bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 space-y-3">
-                    <div className="font-bold text-xl text-gray-900 dark:text-white">
+                  <div className="p-6 bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 min-h-[200px] flex flex-col justify-center space-y-3">
+                    <div className="font-bold text-xl text-gray-900 dark:text-white text-center">
                       {formData.site_title || t('settings.myBlog')}
                     </div>
-                    <div className="text-gray-600 dark:text-gray-300">
+                    <div className="text-gray-600 dark:text-gray-300 text-center">
                       {formData.site_subtitle || t('settings.blogSubtitle')}
                     </div>
                     {formData.footer_text && (
-                      <div className="text-sm text-gray-500 dark:text-gray-400 pt-2 mt-2 border-t border-gray-200 dark:border-gray-600">
+                      <div className="text-sm text-gray-500 dark:text-gray-400 pt-2 mt-2 border-t border-gray-200 dark:border-gray-600 text-center">
                         {t('settings.footerPrefix')}{formData.footer_text}
                       </div>
                     )}
@@ -758,8 +758,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
 
           <TabsContent value="translations" className="space-y-6">
             {/* Language Configuration Section */}
-            <Card>
-              <CardHeader>
+            <Card className="pt-0">
+              <CardHeader className="pt-6 pb-4 px-6">
                 <CardTitle className="flex items-center gap-2">
                   <Languages className="h-5 w-5" />
                   {t('settings.languageConfiguration')}
@@ -855,8 +855,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
             </Card>
 
             {/* Translation API Configuration Section */}
-            <Card>
-              <CardHeader>
+            <Card className="pt-0">
+              <CardHeader className="pt-6 pb-4 px-6">
                 <CardTitle className="flex items-center gap-2">
                   <Key className="h-5 w-5" />
                   {t('settings.translationAPIConfiguration')}
@@ -951,8 +951,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
             </Card>
 
             {/* Site Translations Section */}
-            <Card>
-              <CardHeader>
+            <Card className="pt-0">
+              <CardHeader className="pt-6 pb-4 px-6">
                 <CardTitle className="flex items-center gap-2">
                   <Globe className="h-5 w-5" />
                   {t('settings.siteTranslations')}
@@ -968,8 +968,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     const progress = getProgress(lang.code)
                     
                     return (
-                      <Card key={lang.code} className="border border-gray-200 dark:border-gray-700">
-                        <CardHeader className="pb-4">
+                      <Card key={lang.code} className="border border-gray-200 dark:border-gray-700 pt-0">
+                        <CardHeader className="pt-6 pb-4 px-6">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <CardTitle className="text-lg">{lang.name}</CardTitle>
@@ -1042,8 +1042,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
 
 
           <TabsContent value="security" className="space-y-6">
-            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-              <CardHeader className="bg-gradient-to-r from-red-100 to-orange-100 dark:from-red-900/50 dark:to-orange-900/50 border-b border-red-200 dark:border-red-700 p-4 rounded-t-lg">
+            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
+              <CardHeader className="bg-gradient-to-r from-red-100 to-orange-100 dark:from-red-900/50 dark:to-orange-900/50 border-b border-red-200 dark:border-red-700 pt-6 pb-4 px-4 rounded-t-lg flex flex-col justify-center min-h-[80px]">
                 <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
                   <Lock className="h-5 w-5" />
                   {t('settings.changePassword')}
@@ -1133,7 +1133,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
           </TabsContent>
 
           <TabsContent value="social" className="space-y-6">
-            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
               <CardContent className="p-6">
                 <SocialMediaManager />
               </CardContent>
