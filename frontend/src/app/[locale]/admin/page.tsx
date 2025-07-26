@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { Plus, Edit, Trash2, Settings, Eye, BarChart3, Download } from "lucide-react"
+import { Plus, Edit, Trash2, Settings, Eye, BarChart3, Download, Check } from "lucide-react"
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Checkbox } from "@/components/ui/checkbox"
 import { apiClient, Article, Category } from "@/lib/api"
+import { WordPressImport } from "@/components/admin/wordpress-import"
 
 interface AdminPageProps {
   params: Promise<{ locale: string }>
@@ -22,6 +24,8 @@ export default function AdminPage({ params }: AdminPageProps) {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [selectedArticles, setSelectedArticles] = useState<Set<number>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   useEffect(() => {
     // Get locale from params
@@ -55,6 +59,12 @@ export default function AdminPage({ params }: AdminPageProps) {
     try {
       await apiClient.deleteArticle(id)
       setArticles(articles.filter(article => article.id !== id))
+      // Clear selection if deleted article was selected
+      if (selectedArticles.has(id)) {
+        const newSelection = new Set(selectedArticles)
+        newSelection.delete(id)
+        setSelectedArticles(newSelection)
+      }
     } catch (error) {
       console.error('Failed to delete article:', error)
       alert('Failed to delete article')
@@ -91,6 +101,82 @@ export default function AdminPage({ params }: AdminPageProps) {
     } catch (error) {
       console.error('Failed to export article:', error)
       alert('Failed to export article')
+    }
+  }
+
+  const handleImportComplete = async () => {
+    // Refresh data after import
+    setLoading(true)
+    try {
+      const [articlesData, categoriesData] = await Promise.all([
+        apiClient.getArticles({ lang: locale }),
+        apiClient.getCategories({ lang: locale })
+      ])
+      setArticles(articlesData)
+      setCategories(categoriesData)
+    } catch (error) {
+      console.error('Failed to refresh data after import:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSelectArticle = (articleId: number, checked: boolean) => {
+    const newSelection = new Set(selectedArticles)
+    if (checked) {
+      newSelection.add(articleId)
+    } else {
+      newSelection.delete(articleId)
+    }
+    setSelectedArticles(newSelection)
+  }
+
+  const handleSelectAll = () => {
+    if (selectedArticles.size === articles.length) {
+      setSelectedArticles(new Set())
+    } else {
+      setSelectedArticles(new Set(articles.map(a => a.id)))
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedArticles.size === 0) return
+    
+    if (!confirm(t('common.confirm') + ' ' + t('common.delete') + ` ${selectedArticles.size} articles?`)) return
+    
+    setBulkDeleting(true)
+    try {
+      // Delete articles one by one
+      const deletePromises = Array.from(selectedArticles).map(id => 
+        apiClient.deleteArticle(id).catch(err => {
+          console.error(`Failed to delete article ${id}:`, err)
+          return { error: true, id }
+        })
+      )
+      
+      await Promise.all(deletePromises)
+      
+      // Remove deleted articles from the list
+      setArticles(articles.filter(article => !selectedArticles.has(article.id)))
+      setSelectedArticles(new Set())
+    } catch (error) {
+      console.error('Failed to delete articles:', error)
+      alert('Failed to delete some articles')
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
+  const handleBulkExport = async () => {
+    if (selectedArticles.size === 0) return
+    
+    try {
+      const articleIds = Array.from(selectedArticles).join(',')
+      await apiClient.exportArticles({ article_ids: articleIds, lang: locale })
+      setSelectedArticles(new Set())
+    } catch (error) {
+      console.error('Failed to export articles:', error)
+      alert('Failed to export articles')
     }
   }
 
@@ -178,6 +264,48 @@ export default function AdminPage({ params }: AdminPageProps) {
               </div>
             </div>
 
+            {/* Bulk Actions Toolbar */}
+            {selectedArticles.size > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 p-4 bg-muted rounded-lg flex items-center justify-between"
+              >
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium">
+                    {selectedArticles.size} {selectedArticles.size === 1 ? 'article' : 'articles'} selected
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedArticles(new Set())}
+                  >
+                    Clear selection
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBulkExport}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Selected
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={bulkDeleting}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {bulkDeleting ? 'Deleting...' : 'Delete Selected'}
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
             {loading ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">{t('common.loading')}</p>
@@ -188,6 +316,16 @@ export default function AdminPage({ params }: AdminPageProps) {
               </div>
             ) : (
               <div className="grid gap-4">
+                {/* Select All Checkbox */}
+                {articles.length > 0 && (
+                  <div className="flex items-center gap-2 pb-2">
+                    <Checkbox
+                      checked={selectedArticles.size === articles.length && articles.length > 0}
+                      onCheckedChange={handleSelectAll}
+                    />
+                    <span className="text-sm font-medium">Select All</span>
+                  </div>
+                )}
                 {articles.map((article, index) => (
                   <motion.div
                     key={article.id}
@@ -195,10 +333,14 @@ export default function AdminPage({ params }: AdminPageProps) {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.05 }}
                   >
-                    <Card>
+                    <Card className={selectedArticles.has(article.id) ? 'ring-2 ring-primary' : ''}>
                       <CardHeader>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={selectedArticles.has(article.id)}
+                              onCheckedChange={(checked) => handleSelectArticle(article.id, checked as boolean)}
+                            />
                             <Badge variant="outline">
                               {article.category.name}
                             </Badge>
@@ -246,6 +388,14 @@ export default function AdminPage({ params }: AdminPageProps) {
                 ))}
               </div>
             )}
+          </div>
+
+          <Separator className="mb-8" />
+
+          {/* WordPress Import */}
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold mb-6">Content Import</h2>
+            <WordPressImport onImportComplete={handleImportComplete} />
           </div>
 
           <Separator className="mb-8" />

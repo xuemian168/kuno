@@ -84,6 +84,10 @@ export function SocialMediaManager() {
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [isDragging, setIsDragging] = useState(false)
+  const [reorderTimeout, setReorderTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [draggedItem, setDraggedItem] = useState<SocialMedia | null>(null)
+  const [draggedOverIndex, setDraggedOverIndex] = useState<number | null>(null)
 
   useEffect(() => {
     fetchSocialMedia()
@@ -208,6 +212,73 @@ export function SocialMediaManager() {
     return <IconComponent className="h-4 w-4" />
   }
 
+  const handleDragStart = (e: React.DragEvent, item: SocialMedia, index: number) => {
+    setDraggedItem(item)
+    setIsDragging(true)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDraggedOverIndex(index)
+  }
+
+  const handleDragLeave = () => {
+    setDraggedOverIndex(null)
+  }
+
+  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault()
+    setDraggedOverIndex(null)
+    
+    if (!draggedItem) return
+
+    const draggedIndex = socialMediaList.findIndex(item => item.id === draggedItem.id)
+    if (draggedIndex === dropIndex) {
+      setIsDragging(false)
+      return
+    }
+
+    // Create new array with the item moved to the new position
+    const newList = [...socialMediaList]
+    newList.splice(draggedIndex, 1)
+    newList.splice(dropIndex, 0, draggedItem)
+    
+    setSocialMediaList(newList)
+    
+    // Save the new order
+    try {
+      const orderData = newList.map((item, index) => ({
+        id: item.id,
+        order: index
+      }))
+      await apiClient.updateSocialMediaOrder(orderData)
+    } catch (error) {
+      console.error('Failed to update order:', error)
+      // Revert to original order on error
+      await fetchSocialMedia()
+    } finally {
+      setIsDragging(false)
+      setDraggedItem(null)
+    }
+  }
+
+  const handleDragEnd = () => {
+    setDraggedOverIndex(null)
+    setDraggedItem(null)
+    setIsDragging(false)
+  }
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (reorderTimeout) {
+        clearTimeout(reorderTimeout)
+      }
+    }
+  }, [reorderTimeout])
+
   if (loading) {
     return (
       <div className="text-center py-8">
@@ -222,7 +293,9 @@ export function SocialMediaManager() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-medium">{t('settings.socialMedia')}</h3>
-          <p className="text-sm text-muted-foreground">{t('settings.socialMediaDesc')}</p>
+          <p className="text-sm text-muted-foreground">
+            {isDragging ? 'Saving order...' : t('settings.socialMediaDesc')}
+          </p>
         </div>
         {!isAdding && !editingId && (
           <Button onClick={handleAdd} size="sm" className="gap-2">
@@ -336,22 +409,32 @@ export function SocialMediaManager() {
             </CardContent>
           </Card>
         ) : (
-          socialMediaList.map((item) => (
-            <motion.div
-              key={item.id}
-              layout
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <Card className={!item.is_active ? 'opacity-60' : ''}>
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
-                    <div className="p-2 rounded-lg bg-secondary">
-                      {renderIcon(item.icon_name)}
-                    </div>
-                    <div>
+          <>
+            {socialMediaList.map((item, index) => (
+              <div
+                key={item.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, item, index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, index)}
+                onDragEnd={handleDragEnd}
+                className={`relative ${draggedItem?.id === item.id ? 'opacity-50' : ''}`}
+              >
+                {/* Drop indicator */}
+                {draggedOverIndex === index && draggedItem?.id !== item.id && (
+                  <div className="absolute -top-1 left-0 right-0 h-0.5 bg-primary z-10" />
+                )}
+                <Card className={`${!item.is_active ? 'opacity-60' : ''} transition-all hover:shadow-md`}>
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="cursor-grab active:cursor-grabbing">
+                        <GripVertical className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="p-2 rounded-lg bg-secondary">
+                        {renderIcon(item.icon_name)}
+                      </div>
+                      <div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{item.platform}</span>
                         {!item.is_active && (
@@ -394,8 +477,25 @@ export function SocialMediaManager() {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
-          ))
+            </div>
+          ))}
+          {/* Drop zone after last item */}
+          {isDragging && (
+            <div
+              className="relative h-20 border-2 border-dashed border-muted-foreground/20 rounded-lg"
+              onDragOver={(e) => handleDragOver(e, socialMediaList.length)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, socialMediaList.length)}
+            >
+              {draggedOverIndex === socialMediaList.length && (
+                <div className="absolute -top-1 left-0 right-0 h-0.5 bg-primary" />
+              )}
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                Drop here to move to end
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>

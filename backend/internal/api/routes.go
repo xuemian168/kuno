@@ -71,6 +71,7 @@ func SetupRoutes() *gin.Engine {
 					adminArticles.PUT("/:id", UpdateArticle)
 					adminArticles.DELETE("/:id", DeleteArticle)
 					adminArticles.POST("/import", ImportMarkdown)
+					adminArticles.POST("/import-wordpress", ImportWordPress)
 				}
 
 				// Category management
