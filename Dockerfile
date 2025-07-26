@@ -40,8 +40,11 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build frontend with increased memory and timeout
-RUN timeout 900 npm run build || (echo "Build timed out after 15 minutes" && exit 1)
+# Clean any existing build artifacts
+RUN rm -rf .next
+
+# Build frontend with increased memory
+RUN npm run build
 
 # Final runtime stage
 FROM alpine:latest
