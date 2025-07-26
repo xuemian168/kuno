@@ -16,12 +16,33 @@ A full-stack blog application with Go backend and Next.js frontend, containerize
 
 ## Quick Start
 
-### Prerequisites
+### 🚀 One-Click Deployment (Recommended)
+
+Deploy directly from Docker Hub without cloning the repository:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/xuemian168/i18n_blog/main/deploy-from-hub.sh | bash
+```
+
+Or manually with Docker:
+
+```bash
+docker run -d \
+  --name i18n-blog \
+  -p 80:80 \
+  -v $(pwd)/blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
+  xuemian168/i18n-blog:latest
+```
+
+### 🛠️ Development Setup
+
+#### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 
-### One-Click Deployment
+#### Local Development
 
 1. **Clone the repository**:
    ```bash
@@ -38,6 +59,84 @@ A full-stack blog application with Go backend and Next.js frontend, containerize
    - **Frontend**: http://localhost:3000
    - **API**: http://localhost:8080/api
    - **Admin Panel**: http://localhost:3000/admin
+
+### 🐳 Docker Hub Deployment Options
+
+#### Option 1: Using Docker Compose (Recommended)
+
+```bash
+# Download the compose file
+curl -O https://raw.githubusercontent.com/xuemian168/i18n_blog/main/docker-compose.hub.yml
+
+# Configure environment
+cp .env.hub.example .env
+# Edit .env with your settings
+
+# Deploy
+docker-compose -f docker-compose.hub.yml up -d
+```
+
+#### Option 2: Direct Docker Run
+
+```bash
+docker run -d \
+  --name i18n-blog \
+  --restart unless-stopped \
+  -p 80:80 \
+  -v blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL=https://your-api-domain.com/api \
+  -e DB_PATH=/app/data/blog.db \
+  xuemian168/i18n-blog:latest
+```
+
+#### Available Tags
+
+- `xuemian168/i18n-blog:latest` - Latest stable release
+- `xuemian168/i18n-blog:v1.0.0` - Specific version
+- `xuemian168/i18n-blog:develop` - Development branch
+
+### 🔧 Configuration
+
+#### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NEXT_PUBLIC_API_URL` | `https://your-domain.com/api` | Your API endpoint URL |
+| `DB_PATH` | `/app/data/blog.db` | SQLite database path |
+| `GIN_MODE` | `release` | Go Gin mode (release/debug) |
+| `NODE_ENV` | `production` | Node.js environment |
+| `RECOVERY_MODE` | `false` | Password recovery mode |
+
+#### First Time Setup
+
+1. **Access the blog**: http://localhost (or your domain)
+2. **Admin login**: http://localhost/admin
+   - Username: `admin`
+   - Password: `xuemian168`
+3. **⚠️ Important**: Change the default password immediately!
+
+### 📊 Management Commands
+
+```bash
+# Check status
+docker ps | grep i18n-blog
+
+# View logs
+docker logs i18n-blog
+
+# Update to latest version
+docker pull xuemian168/i18n-blog:latest
+docker stop i18n-blog
+docker rm i18n-blog
+# Run with new image
+
+# Backup data
+docker cp i18n-blog:/app/data ./backup-data
+
+# Stop and remove
+docker stop i18n-blog
+docker rm i18n-blog
+```
 
 ### Manual Deployment
 
