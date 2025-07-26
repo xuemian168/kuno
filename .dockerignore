@@ -1,0 +1,93 @@
+# Git and version control
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+LICENSE
+
+# Development and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node.js (frontend)
+frontend/node_modules/
+frontend/.next/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Go (backend)
+backend/data/
+backend/*.exe
+backend/*.exe~
+backend/*.dll
+backend/*.so
+backend/*.dylib
+backend/main
+backend/*.test
+backend/*.out
+backend/go.work
+
+# Docker files
+docker-compose*.yml
+Dockerfile*
+
+# Scripts and deployment
+scripts/
+deploy-from-hub.sh
+*.sh
+
+# Environment files
+.env*
+!.env.example
+
+# Build artifacts
+dist/
+build/
+
+# Logs
+logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Coverage reports
+coverage/
+*.cover
+*.coverprofile
+
+# Test files
+*_test.go
+test/
+tests/
+
+# Development database
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Local uploads (use volume mounts instead)
+backend/uploads/
+frontend/public/uploads/
