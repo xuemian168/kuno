@@ -21,8 +21,10 @@ A full-stack blog application with Go backend and Next.js frontend, containerize
 Deploy directly from Docker Hub without cloning the repository:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/xuemian168/i18n_blog/main/deploy-from-hub.sh | bash
+curl -sSL https://raw.githubusercontent.com/xuemian168/i18n_blog/main/deploy-from-hub.sh -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
 ```
+
+> **Note**: Interactive scripts should not be piped directly to bash. Download and execute locally to ensure proper functionality.
 
 Or manually with Docker:
 
@@ -210,9 +212,10 @@ PORT=3000
 
 #### Important Configuration Notes
 
-- **Unified API URL**: Only `NEXT_PUBLIC_API_URL` needs to be configured. The base URL is automatically derived from this value.
-- **Build-time Configuration**: The API URL is baked into the frontend build, so changes require rebuilding the Docker container.
-- **Environment Variable Priority**: Docker Compose environment variables override Dockerfile defaults.
+- **Runtime Configuration**: The API URL can be set dynamically at container startup via the `NEXT_PUBLIC_API_URL` environment variable.
+- **No Rebuild Required**: Changes to the API URL only require restarting the container, not rebuilding the image.
+- **Automatic Detection**: The system automatically detects and applies the API URL configuration during container startup.
+- **Fallback Support**: If no environment variable is provided, defaults to `http://localhost:8080/api`.
 
 #### Example Configurations
 
@@ -370,6 +373,14 @@ npm start
 1. **Port conflicts**: Make sure ports 3000 and 8080 are available
 2. **Docker permissions**: Run with `sudo` if needed on Linux
 3. **Build failures**: Clear Docker cache with `docker system prune -f`
+4. **Deployment script errors**: 
+   - **Issue**: `curl | bash` fails with "syntax error near unexpected token 'fi'"
+   - **Solution**: Download script first: `curl -sSL https://raw.githubusercontent.com/xuemian168/i18n_blog/main/deploy-from-hub.sh -o deploy.sh && chmod +x deploy.sh && ./deploy.sh`
+   - **Reason**: Interactive scripts require local execution, not piped execution
+5. **API URL issues**:
+   - **Issue**: Frontend shows "Request URL: http://localhost:8080/api/..." even when `NEXT_PUBLIC_API_URL` is set
+   - **Solution**: Restart the container to apply the new environment variable
+   - **Verification**: Check container logs: `docker logs container-name` to see "Setting runtime API URL to: your-url"
 
 ### Health Checks
 

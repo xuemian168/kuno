@@ -76,6 +76,10 @@ COPY nginx-unified.conf /etc/nginx/nginx.conf
 # Copy supervisor configuration
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Copy runtime configuration script
+COPY runtime-config.sh /app/
+RUN chmod +x /app/runtime-config.sh
+
 # Create data directory for SQLite
 RUN mkdir -p /app/data && chown -R appuser:appgroup /app /var/log/supervisor
 

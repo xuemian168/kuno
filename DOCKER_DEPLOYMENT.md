@@ -26,8 +26,10 @@ The Docker image is built **without** hardcoded API URLs. The `NEXT_PUBLIC_API_U
 The fastest way to get started:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/xuemian168/i18n_blog/main/deploy-from-hub.sh | bash
+curl -sSL https://raw.githubusercontent.com/xuemian168/i18n_blog/main/deploy-from-hub.sh -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
 ```
+
+> **Important**: Interactive scripts must be downloaded and executed locally, not piped directly to bash.
 
 This script will:
 - Check Docker installation

@@ -1,4 +1,13 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
+// Get API URL from runtime config or fallback to environment variable
+function getApiBaseUrl(): string {
+  // Check if we're in the browser and runtime config is available
+  if (typeof window !== 'undefined' && window.runtimeConfig?.API_URL) {
+    return window.runtimeConfig.API_URL
+  }
+  
+  // Fallback to environment variable (for SSR/build time)
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
+}
 
 export interface ArticleTranslation {
   id: number
@@ -161,12 +170,14 @@ export interface MediaListResponse {
 }
 
 class ApiClient {
-  private baseUrl: string
   private token: string | null = null
 
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl
+  constructor() {
     this.loadToken()
+  }
+
+  private getBaseUrl(): string {
+    return getApiBaseUrl()
   }
 
   private loadToken() {
@@ -190,7 +201,7 @@ class ApiClient {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`
+    const url = `${this.getBaseUrl()}${endpoint}`
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
@@ -311,7 +322,7 @@ class ApiClient {
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await fetch(`${this.baseUrl}/settings/upload-logo`, {
+    const response = await fetch(`${this.getBaseUrl()}/settings/upload-logo`, {
       method: 'POST',
       headers: {
         'Authorization': this.token ? `Bearer ${this.token}` : '',
@@ -337,7 +348,7 @@ class ApiClient {
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await fetch(`${this.baseUrl}/settings/upload-favicon`, {
+    const response = await fetch(`${this.getBaseUrl()}/settings/upload-favicon`, {
       method: 'POST',
       headers: {
         'Authorization': this.token ? `Bearer ${this.token}` : '',
@@ -447,7 +458,7 @@ class ApiClient {
       formData.append('alt', alt)
     }
 
-    const response = await fetch(`${this.baseUrl}/media/upload`, {
+    const response = await fetch(`${this.getBaseUrl()}/media/upload`, {
       method: 'POST',
       headers: {
         'Authorization': this.token ? `Bearer ${this.token}` : '',
@@ -526,7 +537,7 @@ class ApiClient {
     const url = queryParams.toString() ? `/export/article/${id}?${queryParams}` : `/export/article/${id}`
     
     // Direct download via window.open
-    const fullUrl = `${this.baseUrl}${url}`
+    const fullUrl = `${this.getBaseUrl()}${url}`
     const token = localStorage.getItem('auth_token')
     if (token) {
       // Use fetch to handle authentication
@@ -575,7 +586,7 @@ class ApiClient {
     }
     
     const url = queryParams.toString() ? `/export/articles?${queryParams}` : '/export/articles'
-    const fullUrl = `${this.baseUrl}${url}`
+    const fullUrl = `${this.getBaseUrl()}${url}`
     const token = localStorage.getItem('auth_token')
     
     if (token) {
@@ -613,7 +624,7 @@ class ApiClient {
     }
     
     const url = queryParams.toString() ? `/export/all?${queryParams}` : '/export/all'
-    const fullUrl = `${this.baseUrl}${url}`
+    const fullUrl = `${this.getBaseUrl()}${url}`
     const token = localStorage.getItem('auth_token')
     
     if (token) {
@@ -645,4 +656,4 @@ class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient(API_BASE_URL)
+export const apiClient = new ApiClient()
