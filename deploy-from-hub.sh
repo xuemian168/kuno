@@ -41,13 +41,19 @@ echo -e "${YELLOW}🔧 Configuration Setup${NC}"
 echo ""
 
 read -p "Docker image (default: ${DEFAULT_IMAGE}): " IMAGE
-IMAGE=${IMAGE:-$DEFAULT_IMAGE}
+if [ -z "$IMAGE" ]; then
+    IMAGE="$DEFAULT_IMAGE"
+fi
 
-read -p "Port (default: ${DEFAULT_PORT}): " PORT  
-PORT=${PORT:-$DEFAULT_PORT}
+read -p "Port (default: ${DEFAULT_PORT}): " PORT
+if [ -z "$PORT" ]; then
+    PORT="$DEFAULT_PORT"
+fi
 
 read -p "Container name (default: ${DEFAULT_CONTAINER_NAME}): " CONTAINER_NAME
-CONTAINER_NAME=${CONTAINER_NAME:-$DEFAULT_CONTAINER_NAME}
+if [ -z "$CONTAINER_NAME" ]; then
+    CONTAINER_NAME="$DEFAULT_CONTAINER_NAME"
+fi
 
 echo ""
 echo -e "${YELLOW}📝 Please provide your API URL (e.g., https://your-domain.com/api)${NC}"
@@ -59,10 +65,10 @@ done
 
 echo ""
 echo -e "${BLUE}📋 Deployment Summary:${NC}"
-echo -e "  🐳 Image: ${IMAGE}"
-echo -e "  🌐 Port: ${PORT}"
-echo -e "  📦 Container: ${CONTAINER_NAME}"
-echo -e "  🔗 API URL: ${API_URL}"
+echo -e "  🐳 Image: $IMAGE"
+echo -e "  🌐 Port: $PORT"
+echo -e "  📦 Container: $CONTAINER_NAME"
+echo -e "  🔗 API URL: $API_URL"
 echo ""
 
 read -p "Continue with deployment? (y/n): " -n 1 -r
