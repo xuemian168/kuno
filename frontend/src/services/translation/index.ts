@@ -79,18 +79,27 @@ export class TranslationService {
       const globalPattern = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g')
       
       while ((match = globalPattern.exec(processedText)) !== null) {
-        const placeholder = `__PROTECTED_${index}_${matchIndex}__`
+        // Use a more unique placeholder format to prevent conflicts
+        const placeholder = `___TRANSLATION_PROTECT_${index}_${matchIndex}___`
         protectedItems.push({
           placeholder,
           originalContent: match[0]
         })
-        // Replace only the first occurrence to avoid double replacement
-        processedText = processedText.replace(match[0], placeholder)
+        // Replace the matched content with placeholder
+        processedText = processedText.substring(0, match.index) + 
+                      placeholder + 
+                      processedText.substring(match.index + match[0].length)
+        
+        // Update global pattern lastIndex to account for the new content length
+        const lengthDiff = placeholder.length - match[0].length
+        globalPattern.lastIndex = match.index + placeholder.length
+        
         matchIndex++
         
-        // Reset the search position to avoid infinite loops with zero-width matches
-        if (match.index === globalPattern.lastIndex) {
-          globalPattern.lastIndex++
+        // Prevent infinite loops
+        if (matchIndex > 1000) {
+          console.warn('Too many matches found, breaking to prevent infinite loop')
+          break
         }
       }
     })
@@ -101,11 +110,92 @@ export class TranslationService {
   private restoreProtectedContent(translatedText: string, protectedItems: ProtectedContent[]): string {
     let restoredText = translatedText
 
+    // First, try to restore using exact placeholder matches
     protectedItems.forEach(item => {
-      restoredText = restoredText.replace(item.placeholder, item.originalContent)
+      const regex = new RegExp(item.placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
+      restoredText = restoredText.replace(regex, item.originalContent)
+    })
+
+    // Then handle various possible transformations of the placeholder
+    protectedItems.forEach(item => {
+      const variations = [
+        item.placeholder.toLowerCase(), // Lowercase
+        item.placeholder.replace(/_/g, ' '), // Underscores to spaces
+        item.placeholder.replace(/___/g, ' '), // Triple underscores to spaces
+        item.placeholder.replace(/TRANSLATION_PROTECT/g, 'Translation Protect'), // Case change
+        item.placeholder.replace(/TRANSLATION_PROTECT/g, 'translation protect'), // All lowercase
+        item.placeholder.replace(/___TRANSLATION_PROTECT_/g, '__ Protected_').replace(/___/g, '__'), // Specific case
+        item.placeholder.replace(/___TRANSLATION_PROTECT_/g, '_Protected_').replace(/___/g, '_'), // Partial underscore
+        item.placeholder.replace(/___TRANSLATION_PROTECT_/g, 'Protected_').replace(/___/g, ''), // No leading underscores
+      ]
+
+      variations.forEach(variation => {
+        // Use global replace to handle multiple occurrences
+        const regex = new RegExp(variation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+        restoredText = restoredText.replace(regex, item.originalContent)
+      })
+    })
+
+    // Clean up partial placeholders and leftover underscores
+    const cleanupPatterns = [
+      // Full placeholder patterns
+      /___TRANSLATION_PROTECT_\d+_\d+___/gi,
+      /__ Protected_\d+_\d+__/gi,
+      /__PROTECTED_\d+_\d+__/gi,
+      // Partial placeholder patterns
+      /_TRANSLATION_PROTECT_\d+_\d+_/gi,
+      /TRANSLATION_PROTECT_\d+_\d+/gi,
+      /Protected_\d+_\d+/gi,
+      // Standalone underscores that might be leftovers
+      /^_+(?=<)/gm, // Leading underscores before tags
+      /^_+(?=```)/gm, // Leading underscores before code blocks
+      // Clean up sequences of underscores that are clearly leftovers
+      /(?:\n|^)_+(?=\S)/gm, // Underscores at start of lines before non-whitespace
+    ]
+
+    cleanupPatterns.forEach(pattern => {
+      restoredText = restoredText.replace(pattern, '')
     })
 
     return restoredText
+  }
+
+  // Public method to clean up corrupted protected content
+  public cleanupProtectedContent(text: string): string {
+    let cleanedText = text
+
+    // Remove various placeholder patterns that might have been left behind
+    const placeholderPatterns = [
+      // Full placeholder patterns
+      /___TRANSLATION_PROTECT_\d+_\d+___/gi,
+      /__ Protected_\d+_\d+__/gi,
+      /__PROTECTED_\d+_\d+__/gi,
+      /__ Translation_Protect_\d+_\d+__/gi,
+      /__ translation_protect_\d+_\d+__/gi,
+      // Partial placeholder patterns
+      /_TRANSLATION_PROTECT_\d+_\d+_/gi,
+      /TRANSLATION_PROTECT_\d+_\d+/gi,
+      /Protected_\d+_\d+/gi,
+      // Leading underscores before specific content
+      /^_+(?=<YouTubeEmbed)/gm,
+      /^_+(?=<youtubeembed)/gmi,
+      /^_+(?=<BilibiliEmbed)/gm,
+      /^_+(?=<bilibiliembed)/gmi,
+      /^_+(?=```)/gm,
+      /^_+(?=<[a-zA-Z])/gm,
+      // Underscores at start of lines that look like leftovers
+      /(?:\n|^)_+(?=\S)/gm,
+    ]
+
+    placeholderPatterns.forEach(pattern => {
+      cleanedText = cleanedText.replace(pattern, '')
+    })
+
+    // Clean up extra whitespace that might result from removing placeholders
+    cleanedText = cleanedText.replace(/\n\s*\n\s*\n/g, '\n\n')
+    cleanedText = cleanedText.replace(/^\s+|\s+$/g, '')
+
+    return cleanedText
   }
 
   async translate(text: string, from: string, to: string): Promise<string> {
@@ -121,16 +211,34 @@ export class TranslationService {
     const { processedText, protectedItems } = this.protectContent(text)
     
     // Skip translation if text is empty or only contains protected content
-    if (processedText.trim() === '' || protectedItems.length > 0 && processedText.trim().replace(/__PROTECTED_\d+_\d+__/g, '').trim() === '') {
+    if (processedText.trim() === '' || 
+        (protectedItems.length > 0 && processedText.trim().replace(/___TRANSLATION_PROTECT_\d+_\d+___/g, '').trim() === '')) {
+      console.log('Skipping translation: text is empty or only contains protected content')
       return text
     }
 
     try {
+      console.log('Translation input:', { 
+        originalText: text.substring(0, 200) + (text.length > 200 ? '...' : ''),
+        processedText: processedText.substring(0, 200) + (processedText.length > 200 ? '...' : ''),
+        protectedItemsCount: protectedItems.length,
+        protectedItems: protectedItems.map(item => ({ 
+          placeholder: item.placeholder, 
+          content: item.originalContent.substring(0, 50) + (item.originalContent.length > 50 ? '...' : '')
+        }))
+      })
+
       // Translate the processed text
       const translatedText = await this.activeProvider.translate(processedText, from, to)
       
+      console.log('Translation output before restore:', translatedText.substring(0, 200) + (translatedText.length > 200 ? '...' : ''))
+      
       // Restore protected content
-      return this.restoreProtectedContent(translatedText, protectedItems)
+      const restoredText = this.restoreProtectedContent(translatedText, protectedItems)
+      
+      console.log('Translation output after restore:', restoredText.substring(0, 200) + (restoredText.length > 200 ? '...' : ''))
+      
+      return restoredText
     } catch (error) {
       console.error('Translation failed:', error)
       // Return original text if translation fails
