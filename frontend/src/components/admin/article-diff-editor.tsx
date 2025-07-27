@@ -359,6 +359,31 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   }
 
   const handleSubmit = async (exitAfterSave = false) => {
+    // Validate required fields
+    if (!formData.title.trim()) {
+      notification.showError(
+        locale === 'zh' ? '标题必须输入' : 'Title is required',
+        locale === 'zh' ? '请输入文章标题' : 'Please enter article title'
+      )
+      return
+    }
+    
+    if (!formData.content.trim()) {
+      notification.showError(
+        locale === 'zh' ? '内容必须输入' : 'Content is required', 
+        locale === 'zh' ? '请输入文章内容' : 'Please enter article content'
+      )
+      return
+    }
+
+    if (formData.category_id === 0) {
+      notification.showError(
+        locale === 'zh' ? '分类必须选择' : 'Category is required',
+        locale === 'zh' ? '请选择文章分类' : 'Please select article category'
+      )
+      return
+    }
+
     setLoading(true)
     setSaveStatus('saving')
 

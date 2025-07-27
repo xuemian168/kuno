@@ -12,6 +12,8 @@ import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
 import { apiClient, Article, Category } from "@/lib/api"
 import { WordPressImport } from "@/components/admin/wordpress-import"
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog"
+import { useThrottle } from "@/hooks/use-debounce"
 
 interface AdminPageProps {
   params: Promise<{ locale: string }>
@@ -24,8 +26,20 @@ export default function AdminPage({ params }: AdminPageProps) {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [exportingArticles, setExportingArticles] = useState<Set<number>>(new Set())
+  const [bulkExporting, setBulkExporting] = useState(false)
   const [selectedArticles, setSelectedArticles] = useState<Set<number>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean
+    type: 'article' | 'category' | 'bulk'
+    item?: Article | Category
+    articleIds?: number[]
+  }>({
+    open: false,
+    type: 'article'
+  })
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     // Get locale from params
@@ -53,54 +67,53 @@ export default function AdminPage({ params }: AdminPageProps) {
     fetchData()
   }, [locale])
 
-  const handleDeleteArticle = async (id: number) => {
-    if (!confirm(t('common.confirm') + ' ' + t('common.delete') + ' article?')) return
-    
-    try {
-      await apiClient.deleteArticle(id)
-      setArticles(articles.filter(article => article.id !== id))
-      // Clear selection if deleted article was selected
-      if (selectedArticles.has(id)) {
-        const newSelection = new Set(selectedArticles)
-        newSelection.delete(id)
-        setSelectedArticles(newSelection)
-      }
-    } catch (error) {
-      console.error('Failed to delete article:', error)
-      alert('Failed to delete article')
-    }
+  const handleDeleteArticle = (article: Article) => {
+    setDeleteDialog({
+      open: true,
+      type: 'article',
+      item: article
+    })
   }
 
-  const handleDeleteCategory = async (id: number) => {
-    if (!confirm(t('common.confirm') + ' ' + t('common.delete') + ' category?')) return
-    
-    try {
-      await apiClient.deleteCategory(id)
-      setCategories(categories.filter(category => category.id !== id))
-    } catch (error) {
-      console.error('Failed to delete category:', error)
-      alert('Failed to delete category')
-    }
+  const handleDeleteCategory = (category: Category) => {
+    setDeleteDialog({
+      open: true,
+      type: 'category',
+      item: category
+    })
   }
 
   const handleExportAll = async () => {
+    // Prevent multiple simultaneous exports
+    if (exporting) return
+    
     try {
       setExporting(true)
       await apiClient.exportAllArticles({ lang: locale })
     } catch (error) {
       console.error('Failed to export articles:', error)
-      alert('Failed to export articles')
+      alert(locale === 'zh' ? '导出失败' : 'Failed to export articles')
     } finally {
       setExporting(false)
     }
   }
 
   const handleExportArticle = async (articleId: number) => {
+    // Prevent exporting the same article multiple times
+    if (exportingArticles.has(articleId)) return
+    
     try {
+      setExportingArticles(prev => new Set([...prev, articleId]))
       await apiClient.exportArticle(articleId, { lang: locale })
     } catch (error) {
       console.error('Failed to export article:', error)
-      alert('Failed to export article')
+      alert(locale === 'zh' ? '导出失败' : 'Failed to export article')
+    } finally {
+      setExportingArticles(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(articleId)
+        return newSet
+      })
     }
   }
 
@@ -139,44 +152,117 @@ export default function AdminPage({ params }: AdminPageProps) {
     }
   }
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedArticles.size === 0) return
     
-    if (!confirm(t('common.confirm') + ' ' + t('common.delete') + ` ${selectedArticles.size} articles?`)) return
-    
-    setBulkDeleting(true)
-    try {
-      // Delete articles one by one
-      const deletePromises = Array.from(selectedArticles).map(id => 
-        apiClient.deleteArticle(id).catch(err => {
-          console.error(`Failed to delete article ${id}:`, err)
-          return { error: true, id }
-        })
-      )
-      
-      await Promise.all(deletePromises)
-      
-      // Remove deleted articles from the list
-      setArticles(articles.filter(article => !selectedArticles.has(article.id)))
-      setSelectedArticles(new Set())
-    } catch (error) {
-      console.error('Failed to delete articles:', error)
-      alert('Failed to delete some articles')
-    } finally {
-      setBulkDeleting(false)
-    }
+    setDeleteDialog({
+      open: true,
+      type: 'bulk',
+      articleIds: Array.from(selectedArticles)
+    })
   }
 
   const handleBulkExport = async () => {
-    if (selectedArticles.size === 0) return
+    if (selectedArticles.size === 0 || bulkExporting) return
     
     try {
+      setBulkExporting(true)
       const articleIds = Array.from(selectedArticles)
       await apiClient.exportArticles({ articleIds: articleIds, lang: locale })
       setSelectedArticles(new Set())
     } catch (error) {
       console.error('Failed to export articles:', error)
-      alert('Failed to export articles')
+      alert(locale === 'zh' ? '批量导出失败' : 'Failed to export articles')
+    } finally {
+      setBulkExporting(false)
+    }
+  }
+
+  // Create throttled export functions to prevent rapid clicking
+  const throttledExportAll = useThrottle(handleExportAll, 2000)
+  const throttledBulkExport = useThrottle(handleBulkExport, 2000)
+  const throttledExportArticle = useThrottle(handleExportArticle, 1000)
+
+  const handleConfirmDelete = async () => {
+    setDeleting(true)
+    
+    try {
+      if (deleteDialog.type === 'article' && deleteDialog.item) {
+        const article = deleteDialog.item as Article
+        await apiClient.deleteArticle(article.id)
+        setArticles(articles.filter(a => a.id !== article.id))
+        
+        // Clear selection if deleted article was selected
+        if (selectedArticles.has(article.id)) {
+          const newSelection = new Set(selectedArticles)
+          newSelection.delete(article.id)
+          setSelectedArticles(newSelection)
+        }
+      } else if (deleteDialog.type === 'category' && deleteDialog.item) {
+        const category = deleteDialog.item as Category
+        await apiClient.deleteCategory(category.id)
+        setCategories(categories.filter(c => c.id !== category.id))
+      } else if (deleteDialog.type === 'bulk' && deleteDialog.articleIds) {
+        // Delete articles one by one
+        const deletePromises = deleteDialog.articleIds.map(id => 
+          apiClient.deleteArticle(id).catch(err => {
+            console.error(`Failed to delete article ${id}:`, err)
+            return { error: true, id }
+          })
+        )
+        
+        await Promise.all(deletePromises)
+        
+        // Remove deleted articles from the list
+        setArticles(articles.filter(article => !deleteDialog.articleIds!.includes(article.id)))
+        setSelectedArticles(new Set())
+      }
+      
+      // Close dialog
+      setDeleteDialog({ open: false, type: 'article' })
+    } catch (error) {
+      console.error('Failed to delete:', error)
+      alert(locale === 'zh' ? '删除失败' : 'Failed to delete')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const getDeleteDialogInfo = () => {
+    if (deleteDialog.type === 'article' && deleteDialog.item) {
+      const article = deleteDialog.item as Article
+      return {
+        title: locale === 'zh' ? '删除文章' : 'Delete Article',
+        description: locale === 'zh' 
+          ? '此操作将永久删除这篇文章。删除后无法恢复，请谨慎操作。' 
+          : 'This action will permanently delete this article. This cannot be undone.',
+        itemName: article.title
+      }
+    } else if (deleteDialog.type === 'category' && deleteDialog.item) {
+      const category = deleteDialog.item as Category
+      return {
+        title: locale === 'zh' ? '删除分类' : 'Delete Category',
+        description: locale === 'zh' 
+          ? '此操作将永久删除这个分类。删除后无法恢复，请谨慎操作。' 
+          : 'This action will permanently delete this category. This cannot be undone.',
+        itemName: category.name
+      }
+    } else if (deleteDialog.type === 'bulk' && deleteDialog.articleIds) {
+      return {
+        title: locale === 'zh' ? '批量删除文章' : 'Bulk Delete Articles',
+        description: locale === 'zh' 
+          ? `此操作将永久删除 ${deleteDialog.articleIds.length} 篇文章。删除后无法恢复，请谨慎操作。` 
+          : `This action will permanently delete ${deleteDialog.articleIds.length} articles. This cannot be undone.`,
+        itemName: locale === 'zh' 
+          ? `${deleteDialog.articleIds.length} 篇文章` 
+          : `${deleteDialog.articleIds.length} articles`
+      }
+    }
+    
+    return {
+      title: locale === 'zh' ? '确认删除' : 'Confirm Delete',
+      description: locale === 'zh' ? '此操作无法撤销。' : 'This action cannot be undone.',
+      itemName: ''
     }
   }
 
@@ -204,6 +290,35 @@ export default function AdminPage({ params }: AdminPageProps) {
               {t('admin.manageBlogContent')}
             </p>
           </div>
+
+          {/* Export Status */}
+          {(exporting || bulkExporting || exportingArticles.size > 0) && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                <div className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                  {exporting && (locale === 'zh' ? '正在导出所有文章...' : 'Exporting all articles...')}
+                  {bulkExporting && (locale === 'zh' ? '正在批量导出文章...' : 'Bulk exporting articles...')}
+                  {exportingArticles.size > 0 && !exporting && !bulkExporting && 
+                    (locale === 'zh' 
+                      ? `正在导出 ${exportingArticles.size} 篇文章...` 
+                      : `Exporting ${exportingArticles.size} article${exportingArticles.size > 1 ? 's' : ''}...`
+                    )
+                  }
+                </div>
+              </div>
+              <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                {locale === 'zh' 
+                  ? '请等待当前导出完成，避免重复点击' 
+                  : 'Please wait for current export to complete, avoid repeated clicks'
+                }
+              </p>
+            </motion.div>
+          )}
 
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -249,10 +364,14 @@ export default function AdminPage({ params }: AdminPageProps) {
                 </Link>
                 <Button 
                   variant="outline" 
-                  onClick={handleExportAll}
+                  onClick={throttledExportAll}
                   disabled={exporting}
                 >
-                  <Download className="mr-2 h-4 w-4" />
+                  {exporting ? (
+                    <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
                   {exporting ? t('export.exporting') : t('export.exportAll')}
                 </Button>
                 <Link href="/admin/articles/new">
@@ -289,10 +408,15 @@ export default function AdminPage({ params }: AdminPageProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleBulkExport}
+                    onClick={throttledBulkExport}
+                    disabled={bulkExporting}
                   >
-                    <Download className="mr-2 h-4 w-4" />
-                    {t('common.exportSelected')}
+                    {bulkExporting ? (
+                      <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    {bulkExporting ? t('export.exporting') : t('common.exportSelected')}
                   </Button>
                   <Button
                     variant="outline"
@@ -360,10 +484,15 @@ export default function AdminPage({ params }: AdminPageProps) {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => handleExportArticle(article.id)}
+                              onClick={() => throttledExportArticle(article.id)}
+                              disabled={exportingArticles.has(article.id)}
                               title={t('export.exportAsMarkdown')}
                             >
-                              <Download className="h-4 w-4" />
+                              {exportingArticles.has(article.id) ? (
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              ) : (
+                                <Download className="h-4 w-4" />
+                              )}
                             </Button>
                             <Link href={`/admin/articles/${article.id}`}>
                               <Button variant="outline" size="sm">
@@ -373,7 +502,7 @@ export default function AdminPage({ params }: AdminPageProps) {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => handleDeleteArticle(article.id)}
+                              onClick={() => handleDeleteArticle(article)}
                               className="text-destructive hover:text-destructive"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -440,7 +569,7 @@ export default function AdminPage({ params }: AdminPageProps) {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => handleDeleteCategory(category.id)}
+                              onClick={() => handleDeleteCategory(category)}
                               className="text-destructive hover:text-destructive"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -459,6 +588,19 @@ export default function AdminPage({ params }: AdminPageProps) {
               </div>
             )}
           </div>
+
+          {/* Delete Confirmation Dialog */}
+          <DeleteConfirmationDialog
+            open={deleteDialog.open}
+            onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}
+            onConfirm={handleConfirmDelete}
+            title={getDeleteDialogInfo().title}
+            description={getDeleteDialogInfo().description}
+            itemName={getDeleteDialogInfo().itemName}
+            confirmText="delete"
+            loading={deleting}
+            locale={locale}
+          />
     </motion.div>
   )
 }

@@ -15,6 +15,20 @@ var DB *gorm.DB
 
 func InitDatabase() {
 	dbPath := getEnv("DB_PATH", "./data/blog.db")
+	
+	// Enhanced logging for database initialization
+	log.Printf("🔍 Database initialization starting...")
+	log.Printf("📁 Database path: %s", dbPath)
+	
+	// Check if database file exists
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		log.Printf("📄 Database file does not exist, will be created: %s", dbPath)
+	} else if err != nil {
+		log.Printf("⚠️ Error checking database file: %v", err)
+	} else {
+		info, _ := os.Stat(dbPath)
+		log.Printf("📊 Existing database file found: %s (size: %d bytes)", dbPath, info.Size())
+	}
 
 	var err error
 	DB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
@@ -30,6 +44,7 @@ func InitDatabase() {
 	// Initialize default site settings if none exist
 	var settingsCount int64
 	DB.Model(&models.SiteSettings{}).Count(&settingsCount)
+	log.Printf("📊 Found %d site settings records", settingsCount)
 	if settingsCount == 0 {
 		defaultSettings := models.SiteSettings{
 			SiteTitle:          "Blog",
@@ -62,6 +77,7 @@ func InitDatabase() {
 	// Initialize default admin user if none exist
 	var userCount int64
 	DB.Model(&models.User{}).Count(&userCount)
+	log.Printf("👥 Found %d user records", userCount)
 	if userCount == 0 {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("xuemian168"), bcrypt.DefaultCost)
 		if err != nil {
@@ -146,13 +162,16 @@ func initializeDefaultContent() {
 	// Check if we already have categories
 	var categoryCount int64
 	DB.Model(&models.Category{}).Count(&categoryCount)
+	log.Printf("📂 Found %d category records", categoryCount)
 	
 	// Check if we already have articles
 	var articleCount int64
 	DB.Model(&models.Article{}).Count(&articleCount)
+	log.Printf("📝 Found %d article records", articleCount)
 	
 	// Only initialize if we have no categories and no articles
 	if categoryCount == 0 && articleCount == 0 {
+		log.Printf("🆕 No existing content found, initializing default content...")
 		// Create default category
 		defaultCategory := models.Category{
 			Name:        "Welcome",
@@ -242,6 +261,8 @@ func initializeDefaultContent() {
 		}
 		
 		log.Println("Default content initialized: Welcome category and Hello World article created")
+	} else {
+		log.Printf("✅ Existing content found, skipping default content initialization (categories: %d, articles: %d)", categoryCount, articleCount)
 	}
 }
 

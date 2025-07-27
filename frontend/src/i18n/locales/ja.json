@@ -170,7 +170,8 @@
     "completed": "完了",
     "uploaded": "アップロード済み",
     "altText": "代替テキスト",
-    "updateAltText": "代替テキストを更新"
+    "updateAltText": "代替テキストを更新",
+    "important": "重要"
   },
   "status": {
     "fetchFailed": "取得に失敗しました",
@@ -413,6 +414,7 @@
     "copyCommandsHelp": "これらのコマンドをコピーしてターミナルで実行し、アプリケーションを更新してください。",
     "updateInstructionsTitle": "アップグレード手順",
     "updateImportantNote": "重要：これらのコマンドはアップグレード中にデータを保護します。デプロイ方法に合った方法を選択してください。",
+    "dockerDeploymentWarning": "Dockerデプロイには手動アップグレードコマンドが必要です。これらのコマンドはアップグレードプロセス中のデータ保護を確保します。",
     "dockerSingleContainer": "Dockerデプロイ（単一コンテナ）",
     "dockerCompose": "Docker Composeデプロイ",
     "step": "ステップ",
@@ -436,6 +438,8 @@
     "stopServicesDesc": "一貫性のあるバックアップのため一時的にサービスを停止",
     "upgradeZeroDowntimeDesc": "最小限のダウンタイムでサービスをアップグレード",
     "cleanupOldImagesDesc": "古いイメージを削除してディスク容量を解放",
+    "verifyDataVolume": "データボリューム確認",
+    "verifyDataVolumeDesc": "アップグレード前にデータの存在を確認",
     "authenticationRequired": "認証が必要です",
     "failedToCheckUpdates": "更新の確認に失敗しました",
     "failedToClearCache": "キャッシュのクリアに失敗しました"

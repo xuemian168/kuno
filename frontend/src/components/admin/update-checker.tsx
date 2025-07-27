@@ -158,62 +158,159 @@ export function UpdateChecker() {
     return new Date(dateString).toLocaleDateString()
   }
 
-  const parseTextCommands = (text: string): UpdateInstructions => {
-    const sections = text.split('## 🐳')
-    const dockerSection = sections.find(s => s.includes('Docker Deployment (Single Container)'))
-    const composeSection = sections.find(s => s.includes('Docker Compose Deployment'))
-    
-    const parseSection = (section: string | undefined): UpdateCommand[] => {
-      if (!section) return []
-      
-      const commands: UpdateCommand[] = []
-      const steps = section.split(/# \d+\./)
-      
-      steps.slice(1).forEach((step, index) => {
-        const lines = step.trim().split('\n')
-        const titleLine = lines[0]
-        const commandLines = lines.slice(1).join('\n').trim()
-        
-        // Map common titles to translation keys
-        const titleMap: Record<string, string> = {
-          'Backup your data': 'backupData',
-          'Pull the latest image': 'pullLatestImage',
-          'Pull the latest images': 'pullLatestImages',
-          'Stop and remove the old container': 'stopOldContainer',
-          'Start the new container': 'startNewContainer',
-          'Verify the upgrade': 'verifyUpgrade',
-          'Stop services for backup': 'stopServices',
-          'Upgrade with zero downtime': 'upgradeZeroDowntime',
-          'Clean up old images (optional)': 'cleanupOldImages',
-        }
-        
-        const title = titleMap[titleLine] || titleLine
-        
-        commands.push({
-          step: index + 1,
-          title,
-          description: titleLine,
-          command: commandLines
-        })
-      })
-      
-      return commands
-    }
-    
+  const getDockerUpgradeCommands = (): UpdateInstructions => {
     return {
-      docker: parseSection(dockerSection),
-      docker_compose: parseSection(composeSection)
+      docker: [
+        {
+          step: 1,
+          title: 'backupData',
+          description: 'backupDataDesc',
+          command: `# Create backup directory
+mkdir -p ./backups/$(date +%Y%m%d_%H%M%S)
+
+# Backup data volume
+docker run --rm \\
+  -v blog-data:/data \\
+  -v $(pwd)/backups/$(date +%Y%m%d_%H%M%S):/backup \\
+  alpine sh -c "cd /data && tar czf /backup/blog-data-backup.tar.gz ."
+
+echo "✅ Backup completed"`
+        },
+        {
+          step: 2,
+          title: 'pullLatestImage',
+          description: 'pullLatestImageDesc',
+          command: `# Pull latest image
+docker pull ictrun/i18n_blog:latest
+
+echo "✅ Latest image pulled"`
+        },
+        {
+          step: 3,
+          title: 'stopOldContainer',
+          description: 'stopOldContainerDesc',
+          command: `# Stop and remove old container
+docker stop i18n_blog 2>/dev/null || echo "Container not running"
+docker rm i18n_blog 2>/dev/null || echo "Container not found"
+
+echo "✅ Old container removed"`
+        },
+        {
+          step: 4,
+          title: 'verifyDataVolume',
+          description: 'verifyDataVolumeDesc',
+          command: `# Verify data volume before upgrade
+echo "📊 Checking data volume..."
+docker run --rm -v blog-data:/data alpine sh -c "ls -la /data/ && if [ -f /data/blog.db ]; then echo '✅ Database file exists'; else echo '❌ Database file missing'; fi"`
+        },
+        {
+          step: 5,
+          title: 'startNewContainer',
+          description: 'startNewContainerDesc',
+          command: `# Start new container with data volume
+docker run -d \\
+  --name i18n_blog \\
+  --restart unless-stopped \\
+  -p 80:80 \\
+  -v blog-data:/app/data \\
+  -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \\
+  -e DB_PATH=/app/data/blog.db \\
+  ictrun/i18n_blog:latest
+
+echo "✅ New container started"`
+        },
+        {
+          step: 6,
+          title: 'verifyUpgrade',
+          description: 'verifyUpgradeDesc',
+          command: `# Wait for container to start
+sleep 15
+
+# Check container status
+docker ps | grep i18n_blog
+
+# Check container logs
+echo "📋 Container logs:"
+docker logs --tail=20 i18n_blog
+
+# Verify data is accessible
+echo "📊 Verifying data:"
+docker exec i18n_blog ls -la /app/data/`
+        }
+      ],
+      docker_compose: [
+        {
+          step: 1,
+          title: 'stopServices',
+          description: 'stopServicesDesc',
+          command: `# Create backup directory
+mkdir -p ./backups/$(date +%Y%m%d_%H%M%S)
+
+# Stop services temporarily
+docker-compose stop
+
+# Backup data volume (adjust volume name if needed)
+docker run --rm \\
+  -v blog_blog_data:/data \\
+  -v $(pwd)/backups/$(date +%Y%m%d_%H%M%S):/backup \\
+  alpine sh -c "cd /data && tar czf /backup/blog-data-backup.tar.gz ."
+
+# Start services back up
+docker-compose start
+
+echo "✅ Backup completed"`
+        },
+        {
+          step: 2,
+          title: 'pullLatestImages',
+          description: 'pullLatestImagesDesc',
+          command: `# Pull latest images
+docker-compose pull
+
+echo "✅ Latest images pulled"`
+        },
+        {
+          step: 3,
+          title: 'upgradeZeroDowntime',
+          description: 'upgradeZeroDowntimeDesc',
+          command: `# Upgrade with zero downtime
+docker-compose up -d --force-recreate --remove-orphans
+
+echo "✅ Services upgraded"`
+        },
+        {
+          step: 4,
+          title: 'cleanupOldImages',
+          description: 'cleanupOldImagesDesc',
+          command: `# Clean up old images (optional)
+docker image prune -f
+
+echo "✅ Old images cleaned up"`
+        },
+        {
+          step: 5,
+          title: 'verifyUpgrade',
+          description: 'verifyUpgradeDesc',
+          command: `# Check services status
+docker-compose ps
+
+# Check logs
+docker-compose logs -f --tail=50`
+        }
+      ]
     }
   }
 
   const renderUpdateCommand = (cmd: UpdateCommand, type: 'docker' | 'compose') => {
     const commandId = `${type}-${cmd.step}`
-    const isTranslationKey = !cmd.title.includes(' ')
     
-    // Try to get translated description
-    const descriptionKey = `system.${cmd.title}Desc`
-    const hasTranslatedDesc = isTranslationKey
-    const description = hasTranslatedDesc ? t(descriptionKey, { defaultValue: cmd.description }) : cmd.description
+    // Handle title translation - if it doesn't contain spaces, it's a translation key
+    const isTranslationKey = !cmd.title.includes(' ')
+    const title = isTranslationKey ? t(`system.${cmd.title}`) : cmd.title
+    
+    // Handle description translation - if it doesn't contain spaces and ends with 'Desc', it's a translation key  
+    const isDescriptionKey = !cmd.description.includes(' ') && cmd.description.endsWith('Desc')
+    const description = isDescriptionKey ? t(`system.${cmd.description}`) : cmd.description
     
     return (
       <div key={cmd.step} className="space-y-3 p-4 rounded-lg bg-muted/50 border border-border/50">
@@ -224,7 +321,7 @@ export function UpdateChecker() {
                 {t('system.step')} {cmd.step}
               </Badge>
               <h5 className="font-medium text-sm">
-                {isTranslationKey ? t(`system.${cmd.title}`) : cmd.title}
+                {title}
               </h5>
             </div>
             <p className="text-xs text-muted-foreground">{description}</p>
@@ -409,7 +506,8 @@ export function UpdateChecker() {
                 </div>
               )}
 
-              {updateInfo.has_update && updateInfo.update_command && (
+              {/* Always show upgrade commands - Docker deployment requires manual commands */}
+              {(
                 <div className="space-y-2">
                   <Button
                     variant="outline"
@@ -432,30 +530,34 @@ export function UpdateChecker() {
                             {t('system.updateImportantNote')}
                           </AlertDescription>
                         </Alert>
+                        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription className="text-sm">
+                            <strong>{t('common.important')}:</strong> {t('system.dockerDeploymentWarning')}
+                          </AlertDescription>
+                        </Alert>
                       </div>
 
-                      {updateInfo.update_command && (
-                        <Tabs defaultValue="docker" className="w-full">
-                          <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="docker" className="flex items-center gap-2">
-                              <Server className="h-4 w-4" />
-                              {t('system.dockerSingleContainer')}
-                            </TabsTrigger>
-                            <TabsTrigger value="compose" className="flex items-center gap-2">
-                              <Layers className="h-4 w-4" />
-                              {t('system.dockerCompose')}
-                            </TabsTrigger>
-                          </TabsList>
-                          
-                          <TabsContent value="docker" className="space-y-3 mt-4">
-                            {parseTextCommands(updateInfo.update_command).docker.map(cmd => renderUpdateCommand(cmd, 'docker'))}
-                          </TabsContent>
-                          
-                          <TabsContent value="compose" className="space-y-3 mt-4">
-                            {parseTextCommands(updateInfo.update_command).docker_compose.map(cmd => renderUpdateCommand(cmd, 'compose'))}
-                          </TabsContent>
-                        </Tabs>
-                      )}
+                      <Tabs defaultValue="docker" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="docker" className="flex items-center gap-2">
+                            <Server className="h-4 w-4" />
+                            {t('system.dockerSingleContainer')}
+                          </TabsTrigger>
+                          <TabsTrigger value="compose" className="flex items-center gap-2">
+                            <Layers className="h-4 w-4" />
+                            {t('system.dockerCompose')}
+                          </TabsTrigger>
+                        </TabsList>
+                        
+                        <TabsContent value="docker" className="space-y-3 mt-4">
+                          {getDockerUpgradeCommands().docker.map(cmd => renderUpdateCommand(cmd, 'docker'))}
+                        </TabsContent>
+                        
+                        <TabsContent value="compose" className="space-y-3 mt-4">
+                          {getDockerUpgradeCommands().docker_compose.map(cmd => renderUpdateCommand(cmd, 'compose'))}
+                        </TabsContent>
+                      </Tabs>
                     </div>
                   )}
                 </div>

@@ -170,7 +170,8 @@
     "completed": "Completed",
     "uploaded": "Uploaded",
     "altText": "Alt Text",
-    "updateAltText": "Update Alt Text"
+    "updateAltText": "Update Alt Text",
+    "important": "Important"
   },
   "status": {
     "fetchFailed": "Failed to fetch",
@@ -475,6 +476,7 @@
     "copyCommandsHelp": "Copy and run these commands in your terminal to update the application.",
     "updateInstructionsTitle": "Upgrade Instructions",
     "updateImportantNote": "Important: These commands will preserve your data during the upgrade. Choose the method that matches your deployment.",
+    "dockerDeploymentWarning": "Docker deployments require manual upgrade commands. These commands ensure data preservation during the upgrade process.",
     "dockerSingleContainer": "Docker Deployment (Single Container)",
     "dockerCompose": "Docker Compose Deployment",
     "step": "Step",
@@ -498,6 +500,8 @@
     "stopServicesDesc": "Stop services temporarily for consistent backup",
     "upgradeZeroDowntimeDesc": "Upgrade services with minimal downtime",
     "cleanupOldImagesDesc": "Remove old images to free up disk space",
+    "verifyDataVolume": "Verify Data Volume",
+    "verifyDataVolumeDesc": "Check if data exists before upgrade",
     "authenticationRequired": "Authentication required",
     "failedToCheckUpdates": "Failed to check for updates",
     "failedToClearCache": "Failed to clear cache"

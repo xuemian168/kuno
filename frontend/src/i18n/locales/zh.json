@@ -171,7 +171,8 @@
     "uploaded": "上传时间",
     "altText": "替代文本",
     "updateAltText": "更新替代文本",
-    "disabled": "已禁用"
+    "disabled": "已禁用",
+    "important": "重要"
   },
   "status": {
     "fetchFailed": "获取失败",
@@ -476,6 +477,7 @@
     "copyCommandsHelp": "复制并在终端中运行这些命令来更新应用程序。",
     "updateInstructionsTitle": "升级说明",
     "updateImportantNote": "重要提示：这些命令会在升级过程中保护您的数据。请选择与您的部署方式匹配的方法。",
+    "dockerDeploymentWarning": "Docker部署需要手动升级命令。这些命令确保升级过程中的数据保护。",
     "dockerSingleContainer": "Docker 部署（单容器）",
     "dockerCompose": "Docker Compose 部署",
     "step": "步骤",
@@ -499,6 +501,8 @@
     "stopServicesDesc": "为备份停止服务",
     "upgradeZeroDowntimeDesc": "以最少停机时间升级服务",
     "cleanupOldImagesDesc": "删除旧镜像以释放磁盘空间",
+    "verifyDataVolume": "验证数据卷",
+    "verifyDataVolumeDesc": "升级前检查数据是否存在",
     "authenticationRequired": "需要身份验证",
     "failedToCheckUpdates": "检查更新失败",
     "failedToClearCache": "清除缓存失败"
