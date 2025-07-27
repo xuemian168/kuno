@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from 'next-intl/server'
+import { notFound } from 'next/navigation'
 import ArticlePageClient from './article-client'
 import { apiClient } from '@/lib/api'
 import { getBaseUrl } from '@/lib/utils'
@@ -157,6 +158,16 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { id, locale } = await params
+  
+  // Pre-check if article exists on server side for better SEO and performance
+  try {
+    await apiClient.getArticle(parseInt(id), locale)
+  } catch (error) {
+    // If article doesn't exist, show 404 page
+    if (error instanceof Error && error.message.includes('404')) {
+      notFound()
+    }
+  }
   
   return <ArticlePageClient id={id} locale={locale} />
 }

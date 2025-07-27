@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { notFound } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Calendar, Tag, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -38,6 +39,11 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
         setArticle(articleData)
         setSiteSettings(settingsData)
       } catch (err) {
+        console.error('Failed to fetch article:', err)
+        // If it's a 404 error (article not found), trigger the 404 page
+        if (err instanceof Error && (err.message.includes('404') || err.message.includes('Not Found'))) {
+          notFound()
+        }
         setError(err instanceof Error ? err.message : 'Failed to fetch article')
       } finally {
         setLoading(false)
@@ -68,15 +74,8 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
   }
 
   if (error || !article) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Header />
-        <main className="flex-1 container mx-auto px-4 py-8">
-          <div className="text-center text-red-500">{error || 'Article not found'}</div>
-        </main>
-        <Footer />
-      </div>
-    )
+    // If we have an error or no article, trigger 404 page
+    notFound()
   }
 
   const baseUrl = getBaseUrl()

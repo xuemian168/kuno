@@ -503,6 +503,15 @@
     "failedToCheckUpdates": "检查更新失败",
     "failedToClearCache": "清除缓存失败"
   },
+  "notFound": {
+    "title": "页面未找到",
+    "description": "您访问的页面似乎已经消失在数字虚空中了。",
+    "requestedPath": "请求路径",
+    "backHome": "返回首页",
+    "goBack": "返回上页",
+    "helpText": "需要帮助？试试浏览我们的",
+    "latestArticles": "最新文章"
+  },
   "site": {
     "title": "极简博客",
     "description": "一个支持深色模式的极简博客空间",

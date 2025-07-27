@@ -502,6 +502,15 @@
     "failedToCheckUpdates": "Failed to check for updates",
     "failedToClearCache": "Failed to clear cache"
   },
+  "notFound": {
+    "title": "Page Not Found",
+    "description": "The page you're looking for seems to have vanished into the digital void.",
+    "requestedPath": "Requested Path",
+    "backHome": "Back to Home",
+    "goBack": "Go Back",
+    "helpText": "Need help? Try exploring our",
+    "latestArticles": "latest articles"
+  },
   "site": {
     "title": "Minimalist Blog",
     "description": "A minimalist blog space with dark mode support",

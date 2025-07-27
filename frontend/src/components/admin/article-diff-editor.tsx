@@ -411,8 +411,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         if (exitAfterSave) {
           router.push('/admin')
         } else {
-          // After creating, switch to edit mode with the new article
-          router.replace(`/admin/articles/${newArticle.id}/edit`)
+          // After creating, redirect to the new article's edit page
+          router.replace(`/admin/articles/${newArticle.id}`)
         }
       }
     } catch (error) {

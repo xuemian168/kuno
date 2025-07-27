@@ -461,6 +461,15 @@
     "autoFillFromTitle": "タイトルから自動入力",
     "autoFillFromContent": "内容から自動入力"
   },
+  "notFound": {
+    "title": "ページが見つかりません",
+    "description": "お探しのページはデジタルの世界に消えてしまったようです。",
+    "requestedPath": "リクエストパス",
+    "backHome": "ホームに戻る",
+    "goBack": "戻る",
+    "helpText": "お困りですか？こちらをご覧ください",
+    "latestArticles": "最新記事"
+  },
   "site": {
     "title": "ミニマリストブログ",
     "description": "ダークモード対応のミニマリストブログスペース",
