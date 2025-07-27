@@ -34,7 +34,7 @@ print_error() {
 
 # Configuration
 GITHUB_REPO="xuemian168/i18n_blog"
-DOCKER_IMAGE="xuemian168/i18n_blog:latest"
+DOCKER_IMAGE="ictrun/i18n_blog:latest"
 
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1; then
