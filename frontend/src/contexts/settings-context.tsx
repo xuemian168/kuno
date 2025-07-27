@@ -13,14 +13,7 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = useState<SiteSettings | null>({
-    id: 1,
-    site_title: 'Blog',
-    site_subtitle: 'A minimalist space for thoughts and ideas',
-    footer_text: '',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  })
+  const [settings, setSettings] = useState<SiteSettings | null>(null)
   const [loading, setLoading] = useState(true)
 
   const fetchSettings = async () => {
