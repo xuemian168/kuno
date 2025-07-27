@@ -150,7 +150,21 @@ jobs:
           - [Deployment Guide](https://github.com/xuemian168/i18n_blog/blob/main/DOCKER_DEPLOYMENT.md)
           EOF
 
+      - name: Check if release exists
+        id: check_release
+        run: |
+          if gh release view ${{ steps.extract_version.outputs.tag }} >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Release ${{ steps.extract_version.outputs.tag }} already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Release ${{ steps.extract_version.outputs.tag }} does not exist"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create GitHub Release
+        if: steps.check_release.outputs.exists == 'false'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -160,6 +174,16 @@ jobs:
           body_path: release_notes.md
           draft: false
           prerelease: false
+
+      - name: Update existing release
+        if: steps.check_release.outputs.exists == 'true'
+        run: |
+          echo "Updating existing release ${{ steps.extract_version.outputs.tag }}"
+          gh release edit ${{ steps.extract_version.outputs.tag }} \
+            --notes-file release_notes.md \
+            --title "Release ${{ steps.extract_version.outputs.tag }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update Docker Hub description
         uses: peter-evans/dockerhub-description@v3
@@ -180,6 +204,7 @@ jobs:
             echo "✅ Release ${{ github.ref_name }} completed successfully!"
             echo "🐳 Docker image: ${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
             echo "📦 Available at: https://hub.docker.com/r/ictrun/i18n_blog"
+            echo "📋 GitHub Release: https://github.com/xuemian168/i18n_blog/releases/tag/${{ github.ref_name }}"
           else
             echo "❌ Release ${{ github.ref_name }} failed!"
           fi
