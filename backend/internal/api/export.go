@@ -2,14 +2,15 @@ package api
 
 import (
 	"archive/zip"
+	"blog-backend/internal/database"
+	"blog-backend/internal/models"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
-	"blog-backend/internal/database"
-	"blog-backend/internal/models"
-	"github.com/gin-gonic/gin"
 )
 
 // ExportArticle exports a single article as markdown file
@@ -45,7 +46,7 @@ func ExportArticle(c *gin.Context) {
 
 	// Set headers for file download
 	c.Header("Content-Type", "text/markdown")
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	c.Header("Content-Disposition", formatContentDisposition(filename))
 	c.Header("Content-Length", strconv.Itoa(len(markdown)))
 
 	c.String(http.StatusOK, markdown)
@@ -221,23 +222,64 @@ func sanitizeFilename(filename string) string {
 	// Replace invalid characters with underscores
 	invalidChars := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|"}
 	result := filename
-	
+
 	for _, char := range invalidChars {
 		result = strings.ReplaceAll(result, char, "_")
 	}
-	
+
 	// Trim spaces and dots from the end
 	result = strings.TrimRight(result, " .")
-	
+
 	// Limit filename length to 100 characters
 	if len(result) > 100 {
 		result = result[:100]
 	}
-	
+
 	// Ensure filename is not empty
 	if result == "" {
 		result = "untitled"
 	}
-	
+
 	return result
+}
+
+// formatContentDisposition formats Content-Disposition header with proper UTF-8 encoding for non-ASCII filenames
+func formatContentDisposition(filename string) string {
+	// Check if filename contains non-ASCII characters
+	hasNonASCII := false
+	for _, r := range filename {
+		if r > 127 {
+			hasNonASCII = true
+			break
+		}
+	}
+	
+	if !hasNonASCII {
+		// Simple case: ASCII-only filename
+		return fmt.Sprintf("attachment; filename=\"%s\"", filename)
+	}
+	
+	// Complex case: filename contains non-ASCII characters
+	// Use RFC 5987 format: filename*=UTF-8''encoded_filename
+	encodedFilename := url.QueryEscape(filename)
+	return fmt.Sprintf("attachment; filename=\"%s\"; filename*=UTF-8''%s", 
+		sanitizeFilenameASCII(filename), encodedFilename)
+}
+
+// sanitizeFilenameASCII creates an ASCII-safe fallback filename
+func sanitizeFilenameASCII(filename string) string {
+	var result strings.Builder
+	for _, r := range filename {
+		if r <= 127 && r >= 32 && r != '"' && r != '\\' {
+			result.WriteRune(r)
+		} else {
+			result.WriteRune('_')
+		}
+	}
+	
+	fallback := result.String()
+	if fallback == "" || fallback == "_" {
+		return "file"
+	}
+	return fallback
 }

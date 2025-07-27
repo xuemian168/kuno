@@ -1,36 +1,36 @@
 package api
 
 import (
+	"blog-backend/internal/database"
+	"blog-backend/internal/models"
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	"html"
 	"io"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
-	"blog-backend/internal/database"
-	"blog-backend/internal/models"
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 // WordPress WXR XML structures
 type WXRChannel struct {
-	XMLName     xml.Name    `xml:"channel"`
-	Title       string      `xml:"title"`
-	Link        string      `xml:"link"`
-	Description string      `xml:"description"`
-	PubDate     string      `xml:"pubDate"`
-	Language    string      `xml:"language"`
-	WXRVersion  string      `xml:"http://wordpress.org/export/1.2/ wxr_version"`
-	BaseSiteURL string      `xml:"http://wordpress.org/export/1.2/ base_site_url"`
-	BaseBlogURL string      `xml:"http://wordpress.org/export/1.2/ base_blog_url"`
-	Authors     []WXRAuthor `xml:"http://wordpress.org/export/1.2/ author"`
+	XMLName     xml.Name      `xml:"channel"`
+	Title       string        `xml:"title"`
+	Link        string        `xml:"link"`
+	Description string        `xml:"description"`
+	PubDate     string        `xml:"pubDate"`
+	Language    string        `xml:"language"`
+	WXRVersion  string        `xml:"http://wordpress.org/export/1.2/ wxr_version"`
+	BaseSiteURL string        `xml:"http://wordpress.org/export/1.2/ base_site_url"`
+	BaseBlogURL string        `xml:"http://wordpress.org/export/1.2/ base_blog_url"`
+	Authors     []WXRAuthor   `xml:"http://wordpress.org/export/1.2/ author"`
 	Categories  []WXRCategory `xml:"http://wordpress.org/export/1.2/ category"`
-	Tags        []WXRTag    `xml:"http://wordpress.org/export/1.2/ tag"`
-	Items       []WXRItem   `xml:"item"`
+	Tags        []WXRTag      `xml:"http://wordpress.org/export/1.2/ tag"`
+	Items       []WXRItem     `xml:"item"`
 }
 
 type WXRAuthor struct {
@@ -58,26 +58,26 @@ type WXRTag struct {
 }
 
 type WXRItem struct {
-	Title         string        `xml:"title"`
-	Link          string        `xml:"link"`
-	PubDate       string        `xml:"pubDate"`
-	Creator       string        `xml:"http://purl.org/dc/elements/1.1/ creator"`
-	GUID          string        `xml:"guid"`
-	Description   string        `xml:"description"`
-	Content       string        `xml:"http://purl.org/rss/1.0/modules/content/ encoded"`
-	Excerpt       string        `xml:"http://wordpress.org/export/1.2/excerpt/ encoded"`
-	PostID        int           `xml:"http://wordpress.org/export/1.2/ post_id"`
-	PostDate      string        `xml:"http://wordpress.org/export/1.2/ post_date"`
-	PostDateGMT   string        `xml:"http://wordpress.org/export/1.2/ post_date_gmt"`
-	PostType      string        `xml:"http://wordpress.org/export/1.2/ post_type"`
-	PostStatus    string        `xml:"http://wordpress.org/export/1.2/ status"`
-	PostParent    int           `xml:"http://wordpress.org/export/1.2/ post_parent"`
-	MenuOrder     int           `xml:"http://wordpress.org/export/1.2/ menu_order"`
-	PostPassword  string        `xml:"http://wordpress.org/export/1.2/ post_password"`
-	IsSticky      int           `xml:"http://wordpress.org/export/1.2/ is_sticky"`
-	Categories    []WXRItemCategory `xml:"category"`
-	PostMeta      []WXRPostMeta `xml:"http://wordpress.org/export/1.2/ postmeta"`
-	Comments      []WXRComment  `xml:"http://wordpress.org/export/1.2/ comment"`
+	Title        string            `xml:"title"`
+	Link         string            `xml:"link"`
+	PubDate      string            `xml:"pubDate"`
+	Creator      string            `xml:"http://purl.org/dc/elements/1.1/ creator"`
+	GUID         string            `xml:"guid"`
+	Description  string            `xml:"description"`
+	Content      string            `xml:"http://purl.org/rss/1.0/modules/content/ encoded"`
+	Excerpt      string            `xml:"http://wordpress.org/export/1.2/excerpt/ encoded"`
+	PostID       int               `xml:"http://wordpress.org/export/1.2/ post_id"`
+	PostDate     string            `xml:"http://wordpress.org/export/1.2/ post_date"`
+	PostDateGMT  string            `xml:"http://wordpress.org/export/1.2/ post_date_gmt"`
+	PostType     string            `xml:"http://wordpress.org/export/1.2/ post_type"`
+	PostStatus   string            `xml:"http://wordpress.org/export/1.2/ status"`
+	PostParent   int               `xml:"http://wordpress.org/export/1.2/ post_parent"`
+	MenuOrder    int               `xml:"http://wordpress.org/export/1.2/ menu_order"`
+	PostPassword string            `xml:"http://wordpress.org/export/1.2/ post_password"`
+	IsSticky     int               `xml:"http://wordpress.org/export/1.2/ is_sticky"`
+	Categories   []WXRItemCategory `xml:"category"`
+	PostMeta     []WXRPostMeta     `xml:"http://wordpress.org/export/1.2/ postmeta"`
+	Comments     []WXRComment      `xml:"http://wordpress.org/export/1.2/ comment"`
 }
 
 type WXRItemCategory struct {
@@ -120,7 +120,7 @@ func cleanXMLData(data []byte) []byte {
 		}
 		return r
 	}, data)
-	
+
 	return cleaned
 }
 
@@ -177,7 +177,7 @@ func ImportWordPress(c *gin.Context) {
 		// Handle various character encodings
 		return input, nil
 	}
-	
+
 	if err := decoder.Decode(&rss); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Failed to parse XML: %v", err)})
 		return
@@ -195,12 +195,12 @@ func ImportWordPress(c *gin.Context) {
 		ImportedArticles  int      `json:"imported_articles"`
 		CreatedCategories int      `json:"created_categories"`
 		SkippedPosts      int      `json:"skipped_posts"`
-		Errors           []string `json:"errors"`
+		Errors            []string `json:"errors"`
 	}{
 		ImportedArticles:  0,
 		CreatedCategories: 0,
 		SkippedPosts:      0,
-		Errors:           []string{}, // Initialize as empty slice instead of nil
+		Errors:            []string{}, // Initialize as empty slice instead of nil
 	}
 
 	// Import categories first
@@ -399,7 +399,7 @@ func cleanWordPressContent(content string) string {
 	// Clean up extra whitespace
 	content = regexp.MustCompile(`[ \t]+`).ReplaceAllString(content, " ")
 	content = regexp.MustCompile(`\n[ \t]+`).ReplaceAllString(content, "\n")
-	
+
 	// Clean up multiple newlines
 	multipleNewlineRegex := regexp.MustCompile(`\n{3,}`)
 	content = multipleNewlineRegex.ReplaceAllString(content, "\n\n")

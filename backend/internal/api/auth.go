@@ -1,12 +1,12 @@
 package api
 
 import (
-	"net/http"
 	"blog-backend/internal/auth"
 	"blog-backend/internal/database"
 	"blog-backend/internal/models"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
+	"net/http"
 )
 
 type LoginRequest struct {
@@ -15,8 +15,8 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Token    string      `json:"token"`
-	User     models.User `json:"user"`
+	Token string      `json:"token"`
+	User  models.User `json:"user"`
 }
 
 func Login(c *gin.Context) {
@@ -52,7 +52,7 @@ func Login(c *gin.Context) {
 
 func GetCurrentUser(c *gin.Context) {
 	userID, _ := c.Get("userID")
-	
+
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
@@ -64,12 +64,12 @@ func GetCurrentUser(c *gin.Context) {
 
 func ChangePassword(c *gin.Context) {
 	userID, _ := c.Get("userID")
-	
+
 	var req struct {
 		OldPassword string `json:"old_password" binding:"required"`
 		NewPassword string `json:"new_password" binding:"required,min=6"`
 	}
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -112,14 +112,14 @@ type RecoveryStatusResponse struct {
 
 func GetRecoveryStatus(c *gin.Context) {
 	isRecoveryMode := database.IsRecoveryMode()
-	
+
 	response := RecoveryStatusResponse{
 		IsRecoveryMode: isRecoveryMode,
 	}
-	
+
 	if isRecoveryMode {
 		response.Message = "Recovery mode is active. Please disable recovery mode to continue."
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }

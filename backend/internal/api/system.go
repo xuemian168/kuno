@@ -145,28 +145,28 @@ func fetchLatestVersion(currentVersion string) (*UpdateInfo, error) {
 // findLatestVersion finds the latest semantic version from Docker tags
 func findLatestVersion(tags []DockerHubTag) string {
 	var versions []Version
-	
+
 	for _, tag := range tags {
 		// Skip non-version tags like "latest", "dev", etc.
 		if tag.Name == "latest" || tag.Name == "dev" || strings.Contains(tag.Name, "beta") {
 			continue
 		}
-		
+
 		version, err := parseVersion(tag.Name)
 		if err == nil {
 			versions = append(versions, version)
 		}
 	}
-	
+
 	if len(versions) == 0 {
 		return ""
 	}
-	
+
 	// Sort versions to find the latest
 	sort.Slice(versions, func(i, j int) bool {
 		return compareVersions(versions[i], versions[j]) > 0
 	})
-	
+
 	return versions[0].Raw
 }
 
@@ -195,7 +195,7 @@ func createUpdateInfo(currentVersion, latestVersion string, isSimulated bool) (*
 	if hasUpdate {
 		updateInfo.UpdateCommand = generateUpdateCommand()
 		updateInfo.Changelog = generateChangelog(currentVer, latestVer)
-		
+
 		// Add note if this is simulated data
 		if isSimulated {
 			updateInfo.Changelog = append([]string{"📝 Note: Update check uses 'latest' tag - version-based updates not available"}, updateInfo.Changelog...)

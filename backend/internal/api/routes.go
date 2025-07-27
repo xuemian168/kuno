@@ -2,17 +2,19 @@ package api
 
 import (
 	"blog-backend/internal/auth"
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 )
 
 func SetupRoutes() *gin.Engine {
 	r := gin.Default()
 
+	// Default CORS config for most endpoints
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"http://localhost:3000"}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "Cache-Control"}
+	config.AllowCredentials = true
 	r.Use(cors.New(config))
 
 	api := r.Group("/api")
@@ -20,7 +22,7 @@ func SetupRoutes() *gin.Engine {
 		// Public routes
 		api.POST("/login", Login)
 		api.GET("/recovery-status", GetRecoveryStatus)
-		
+
 		// Public read-only routes
 		articles := api.Group("/articles")
 		{
@@ -107,10 +109,18 @@ func SetupRoutes() *gin.Engine {
 				admin.GET("/analytics", GetAnalytics)
 				admin.GET("/analytics/articles/:id", GetArticleAnalytics)
 
-				// Export functions
-				admin.GET("/export/article/:id", ExportArticle)
-				admin.GET("/export/articles", ExportArticles)
-				admin.GET("/export/all", ExportAllArticles)
+				// Export functions with special CORS for Content-Disposition header
+				exportGroup := admin.Group("/export")
+				exportGroup.Use(func(c *gin.Context) {
+					// Add Content-Disposition to exposed headers for export endpoints only
+					c.Header("Access-Control-Expose-Headers", "Content-Disposition, Content-Length, Content-Type")
+					c.Next()
+				})
+				{
+					exportGroup.GET("/article/:id", ExportArticle)
+					exportGroup.GET("/articles", ExportArticles)
+					exportGroup.GET("/all", ExportAllArticles)
+				}
 
 				// Social media management
 				adminSocialMedia := admin.Group("/social-media")
