@@ -5,6 +5,11 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://b.zli.li/api}
+        NEXT_PUBLIC_APP_VERSION: ${NEXT_PUBLIC_APP_VERSION:-1.0.0}
+        NEXT_PUBLIC_BUILD_NUMBER: ${NEXT_PUBLIC_BUILD_NUMBER:-dev}
+        NEXT_PUBLIC_BUILD_DATE: ${NEXT_PUBLIC_BUILD_DATE:-unknown}
+        NEXT_PUBLIC_GIT_COMMIT: ${NEXT_PUBLIC_GIT_COMMIT:-dev}
+        NEXT_PUBLIC_GIT_BRANCH: ${NEXT_PUBLIC_GIT_BRANCH:-main}
     container_name: blog-unified
     ports:
       - "80:80"
@@ -16,6 +21,11 @@ services:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://b.zli.li/api}
       - RECOVERY_MODE=${RECOVERY_MODE:-false}
+      - NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION:-1.0.0}
+      - NEXT_PUBLIC_BUILD_NUMBER=${NEXT_PUBLIC_BUILD_NUMBER:-dev}
+      - NEXT_PUBLIC_BUILD_DATE=${NEXT_PUBLIC_BUILD_DATE:-unknown}
+      - NEXT_PUBLIC_GIT_COMMIT=${NEXT_PUBLIC_GIT_COMMIT:-dev}
+      - NEXT_PUBLIC_GIT_BRANCH=${NEXT_PUBLIC_GIT_BRANCH:-main}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/api/categories"]
