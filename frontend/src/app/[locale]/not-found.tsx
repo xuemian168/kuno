@@ -11,7 +11,6 @@ import {
   Search, 
   FileX, 
   Sparkles,
-  Globe,
   Compass
 } from 'lucide-react'
 import Link from 'next/link'
@@ -98,7 +97,7 @@ export default function NotFound() {
       y: 0,
       opacity: 1,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 100,
         damping: 12
       }
@@ -111,7 +110,7 @@ export default function NotFound() {
       transition: {
         duration: 2,
         repeat: Infinity,
-        ease: "easeInOut"
+        ease: "easeInOut" as const
       }
     }
   }
