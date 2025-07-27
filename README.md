@@ -30,11 +30,11 @@ Or manually with Docker:
 
 ```bash
 docker run -d \
-  --name i18n-blog \
+  --name i18n_blog \
   -p 80:80 \
   -v $(pwd)/blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
-  xuemian168/i18n-blog:latest
+  ictrun/i18n_blog:latest
 ```
 
 ### 🛠️ Development Setup
@@ -82,20 +82,20 @@ docker-compose -f docker-compose.hub.yml up -d
 
 ```bash
 docker run -d \
-  --name i18n-blog \
+  --name i18n_blog \
   --restart unless-stopped \
   -p 80:80 \
   -v blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL=https://your-api-domain.com/api \
   -e DB_PATH=/app/data/blog.db \
-  xuemian168/i18n-blog:latest
+  ictrun/i18n_blog:latest
 ```
 
 #### Available Tags
 
-- `xuemian168/i18n-blog:latest` - Latest stable release
-- `xuemian168/i18n-blog:v1.0.0` - Specific version
-- `xuemian168/i18n-blog:develop` - Development branch
+- `ictrun/i18n_blog:latest` - Latest stable release
+- `ictrun/i18n_blog:v1.0.0` - Specific version
+- `ictrun/i18n_blog:develop` - Development branch
 
 ### 🔧 Configuration
 
@@ -121,23 +121,23 @@ docker run -d \
 
 ```bash
 # Check status
-docker ps | grep i18n-blog
+docker ps | grep i18n_blog
 
 # View logs
-docker logs i18n-blog
+docker logs i18n_blog
 
 # Update to latest version
-docker pull xuemian168/i18n-blog:latest
-docker stop i18n-blog
-docker rm i18n-blog
+docker pull ictrun/i18n_blog:latest
+docker stop i18n_blog
+docker rm i18n_blog
 # Run with new image
 
 # Backup data
-docker cp i18n-blog:/app/data ./backup-data
+docker cp i18n_blog:/app/data ./backup-data
 
 # Stop and remove
-docker stop i18n-blog
-docker rm i18n-blog
+docker stop i18n_blog
+docker rm i18n_blog
 ```
 
 ### Manual Deployment
