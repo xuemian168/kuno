@@ -91,6 +91,7 @@
     "videos": "视频",
     "youtube": "YouTube",
     "bilibili": "哔哩哔哩",
+    "tiktok": "TikTok",
     "previewVideo": "预览视频",
     "addVideo": "添加视频",
     "manageImagesVideos": "管理您的图片和视频"
@@ -142,8 +143,9 @@
     "invalidUrl": "无效的URL",
     "invalidYouTubeUrl": "无效的YouTube链接",
     "invalidBilibiliUrl": "无效的哔哩哔哩链接",
+    "invalidTikTokUrl": "无效的TikTok链接",
     "enterVideoUrl": "请输入视频链接",
-    "enterValidUrl": "请输入有效的YouTube或哔哩哔哩链接"
+    "enterValidUrl": "请输入有效的YouTube、哔哩哔哩或TikTok链接"
   },
   "placeholder": {
     "describeImage": "描述这张图片...",

@@ -915,10 +915,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     
     return (
       <div 
-        className="absolute left-0 top-0 w-12 h-full border-r border-border text-xs text-muted-foreground font-mono select-none"
+        className="absolute left-0 top-0 w-12 h-full border-r border-border text-xs text-muted-foreground font-mono select-none bg-background"
         style={{ 
-          zIndex: 10,
-          backgroundColor: 'hsl(var(--background))'
+          zIndex: 20
         }}
       >
         <div className="py-4">
@@ -1064,7 +1063,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         const lines = translation.content.split('\n')
         
         return isPreview ? (
-          <div className="p-4">
+          <div className="p-4 h-full overflow-y-auto">
             {translation.content ? (
               <MarkdownRenderer content={translation.content} />
             ) : (
@@ -1072,10 +1071,10 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             )}
           </div>
         ) : (
-          <div className="relative flex-1 overflow-hidden">
+          <div className="relative flex-1 h-full overflow-hidden">
             {renderLineNumbers(lines, side)}
             {/* Highlight untranslated lines - behind textarea */}
-            <div className="absolute inset-0 pl-14 pr-4 py-4 pointer-events-none font-mono text-sm leading-5" style={{ zIndex: -1 }}>
+            <div className="absolute inset-0 pl-14 pr-4 py-4 pointer-events-none font-mono text-sm leading-5 overflow-hidden" style={{ zIndex: 0 }}>
               {lines.map((line, index) => (
                 <div
                   key={index}
@@ -1084,7 +1083,11 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                     activeLine === index && "bg-primary/5",
                     translationProgress.untranslatedLines.includes(index) && "bg-yellow-50 dark:bg-yellow-900/10"
                   )}
-                  style={{ lineHeight: '20px' }}
+                  style={{ 
+                    lineHeight: '20px',
+                    width: 'calc(100% - 56px)', // Subtract line number width (14*4=56px)
+                    overflow: 'hidden'
+                  }}
                 />
               ))}
             </div>
@@ -1095,13 +1098,14 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
               onScroll={(e) => handleTextareaScroll(side, e)}
               onClick={(e) => handleTextareaClick(side, e)}
               placeholder={t('article.enterContent')}
-              className="pl-14 pr-4 py-4 min-h-[400px] border-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm w-full h-full bg-transparent"
+              className="pl-14 pr-4 py-4 border-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm w-full h-full bg-transparent overflow-auto relative"
               style={{
                 lineHeight: '20px',
                 whiteSpace: 'pre',
-                overflowX: 'auto',
                 overflowWrap: 'normal',
-                wordWrap: 'normal'
+                wordWrap: 'normal',
+                minHeight: '100%',
+                zIndex: 1
               }}
             />
           </div>

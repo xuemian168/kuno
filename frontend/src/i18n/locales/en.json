@@ -91,6 +91,7 @@
     "videos": "Videos",
     "youtube": "YouTube",
     "bilibili": "Bilibili",
+    "tiktok": "TikTok",
     "previewVideo": "Preview Video",
     "addVideo": "Add Video",
     "manageImagesVideos": "Manage your images and videos"
@@ -141,8 +142,9 @@
     "invalidUrl": "Invalid URL",
     "invalidYouTubeUrl": "Invalid YouTube URL",
     "invalidBilibiliUrl": "Invalid Bilibili URL",
+    "invalidTikTokUrl": "Invalid TikTok URL",
     "enterVideoUrl": "Please enter a video URL",
-    "enterValidUrl": "Please enter a valid YouTube or Bilibili URL"
+    "enterValidUrl": "Please enter a valid YouTube, Bilibili, or TikTok URL"
   },
   "placeholder": {
     "describeImage": "Describe this image...",

@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, SiteSettings, SiteSettingsTranslation } from "@/lib/api"
 import { useSettings } from "@/contexts/settings-context"
-import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle } from "lucide-react"
+import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle, AlertTriangle } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { translationService, TranslationConfig, SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation"
@@ -68,6 +68,88 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     confirmPassword: ''
   })
   const [passwordChanging, setPasswordChanging] = useState(false)
+
+  // Password strength calculation
+  const calculatePasswordStrength = (password: string) => {
+    if (!password) return { strength: 0, crackTime: '', color: 'gray', level: '' }
+    
+    let score = 0
+    let charsetSize = 0
+    
+    // Character set size calculation
+    if (/[a-z]/.test(password)) charsetSize += 26 // lowercase
+    if (/[A-Z]/.test(password)) charsetSize += 26 // uppercase  
+    if (/[0-9]/.test(password)) charsetSize += 10 // digits
+    if (/[^a-zA-Z0-9]/.test(password)) charsetSize += 32 // special characters
+    
+    // Length bonus
+    score += Math.min(password.length * 4, 25)
+    
+    // Character variety bonus
+    score += Math.min(charsetSize * 2, 25)
+    
+    // Pattern penalties
+    if (/(.)\1{2,}/.test(password)) score -= 10 // repeated characters
+    if (/123|abc|qwe|password|admin/.test(password.toLowerCase())) score -= 15 // common patterns
+    
+    // Calculate entropy and crack time
+    const entropy = password.length * Math.log2(charsetSize)
+    const combinations = Math.pow(charsetSize, password.length)
+    const attemptsPerSecond = 1e12 // 1 trillion attempts per second (modern hardware)
+    const secondsToCrack = combinations / (2 * attemptsPerSecond) // average case
+    
+    let crackTime = ''
+    let color = 'red'
+    let level = locale === 'zh' ? '很弱' : 'Very Weak'
+    
+    if (secondsToCrack < 1) {
+      crackTime = locale === 'zh' ? '瞬间' : 'Instantly'
+      color = 'red'
+      level = locale === 'zh' ? '很弱' : 'Very Weak'
+    } else if (secondsToCrack < 3600) { // < 1 hour
+      const minutes = Math.ceil(secondsToCrack / 60)
+      crackTime = locale === 'zh' ? `${minutes}分钟` : `${minutes} minute${minutes > 1 ? 's' : ''}`
+      color = 'red'
+      level = locale === 'zh' ? '弱' : 'Weak'
+    } else if (secondsToCrack < 86400) { // < 1 day
+      const hours = Math.ceil(secondsToCrack / 3600)
+      crackTime = locale === 'zh' ? `${hours}小时` : `${hours} hour${hours > 1 ? 's' : ''}`
+      color = 'orange'
+      level = locale === 'zh' ? '一般' : 'Fair'
+    } else if (secondsToCrack < 2592000) { // < 30 days
+      const days = Math.ceil(secondsToCrack / 86400)
+      crackTime = locale === 'zh' ? `${days}天` : `${days} day${days > 1 ? 's' : ''}`
+      color = 'yellow'
+      level = locale === 'zh' ? '好' : 'Good'
+    } else if (secondsToCrack < 31536000) { // < 1 year
+      const months = Math.ceil(secondsToCrack / 2592000)
+      crackTime = locale === 'zh' ? `${months}个月` : `${months} month${months > 1 ? 's' : ''}`
+      color = 'green'
+      level = locale === 'zh' ? '强' : 'Strong'
+    } else {
+      const years = Math.ceil(secondsToCrack / 31536000)
+      if (years > 1000000000) {
+        crackTime = locale === 'zh' ? '数十亿年' : 'Billions of years'
+      } else if (years > 1000000) {
+        crackTime = locale === 'zh' ? `${Math.ceil(years / 1000000)}百万年` : `${Math.ceil(years / 1000000)} million years`
+      } else if (years > 1000) {
+        crackTime = locale === 'zh' ? `${Math.ceil(years / 1000)}千年` : `${Math.ceil(years / 1000)} thousand years`
+      } else {
+        crackTime = locale === 'zh' ? `${years}年` : `${years} year${years > 1 ? 's' : ''}`
+      }
+      color = 'green'
+      level = locale === 'zh' ? '很强' : 'Very Strong'
+    }
+    
+    return {
+      strength: Math.min(Math.max(score, 0), 100),
+      crackTime,
+      color,
+      level
+    }
+  }
+
+  const passwordStrength = calculatePasswordStrength(passwordForm.newPassword)
 
   // File upload state
   const [logoUploading, setLogoUploading] = useState(false)
@@ -1094,6 +1176,77 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {t('settings.passwordMinLength')}
                     </p>
+                    
+                    {/* Password Strength Indicator */}
+                    {passwordForm.newPassword && (
+                      <div className="space-y-2 mt-3 p-3 border rounded-lg bg-gray-50 dark:bg-gray-800">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {locale === 'zh' ? '密码强度' : 'Password Strength'}:
+                          </span>
+                          <span className={`text-sm font-semibold ${
+                            passwordStrength.color === 'red' ? 'text-red-500' :
+                            passwordStrength.color === 'orange' ? 'text-orange-500' :
+                            passwordStrength.color === 'yellow' ? 'text-yellow-500' :
+                            passwordStrength.color === 'green' ? 'text-green-500' : 'text-gray-400'
+                          }`}>
+                            {passwordStrength.level}
+                          </span>
+                        </div>
+                        
+                        {/* Strength Bar */}
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              passwordStrength.color === 'red' ? 'bg-red-500' :
+                              passwordStrength.color === 'orange' ? 'bg-orange-500' :
+                              passwordStrength.color === 'yellow' ? 'bg-yellow-500' :
+                              passwordStrength.color === 'green' ? 'bg-green-500' : 'bg-gray-400'
+                            }`}
+                            style={{ width: `${passwordStrength.strength}%` }}
+                          />
+                        </div>
+                        
+                        {/* Crack Time Warning */}
+                        <div className={`flex items-center gap-2 text-sm ${
+                          passwordStrength.color === 'red' || passwordStrength.color === 'orange' 
+                            ? 'text-red-600 dark:text-red-400' 
+                            : passwordStrength.color === 'yellow'
+                            ? 'text-yellow-600 dark:text-yellow-400'
+                            : 'text-green-600 dark:text-green-400'
+                        }`}>
+                          {(passwordStrength.color === 'red' || passwordStrength.color === 'orange') && (
+                            <AlertTriangle className="h-4 w-4" />
+                          )}
+                          <span>
+                            {locale === 'zh' 
+                              ? `预计破解时间：${passwordStrength.crackTime}` 
+                              : `Estimated crack time: ${passwordStrength.crackTime}`
+                            }
+                          </span>
+                        </div>
+                        
+                        {/* Hardware Baseline Information */}
+                        <div className="text-xs text-gray-500 dark:text-gray-500 border-t pt-2 mt-2">
+                          {locale === 'zh' ? (
+                            <span>📊 算力基准：RTX 4090 GPU (1万亿次/秒) 暴力破解估算</span>
+                          ) : (
+                            <span>📊 Hardware baseline: RTX 4090 GPU (1 trillion attempts/sec) brute force estimation</span>
+                          )}
+                        </div>
+                        
+                        {/* Security Tips */}
+                        {passwordStrength.color === 'red' || passwordStrength.color === 'orange' ? (
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            {locale === 'zh' ? (
+                              <span>💡 建议：使用大小写字母、数字和特殊符号的组合，长度至少12位</span>
+                            ) : (
+                              <span>💡 Tip: Use a mix of uppercase, lowercase, numbers, and symbols with at least 12 characters</span>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="space-y-3">
