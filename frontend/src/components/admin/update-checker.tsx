@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { apiClient } from '@/lib/api'
 import { 
   RefreshCw, 
@@ -17,7 +18,13 @@ import {
   Calendar,
   GitCommit,
   GitBranch,
-  Package
+  Package,
+  Copy,
+  Check,
+  Terminal,
+  ChevronRight,
+  Server,
+  Layers
 } from 'lucide-react'
 
 interface SystemInfo {
@@ -26,6 +33,18 @@ interface SystemInfo {
   git_commit: string
   git_branch: string
   build_number: string
+}
+
+interface UpdateCommand {
+  step: number
+  title: string
+  description: string
+  command: string
+}
+
+interface UpdateInstructions {
+  docker: UpdateCommand[]
+  docker_compose: UpdateCommand[]
 }
 
 interface UpdateInfo {
@@ -45,6 +64,7 @@ export function UpdateChecker() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showUpdateCommand, setShowUpdateCommand] = useState(false)
+  const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
 
   // Load system info on mount
   useEffect(() => {
@@ -111,6 +131,16 @@ export function UpdateChecker() {
     }
   }
 
+  const copyToClipboard = async (text: string, commandId: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedCommand(commandId)
+      setTimeout(() => setCopiedCommand(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
   const formatFileSize = (bytes: number) => {
     const units = ['B', 'KB', 'MB', 'GB']
     let size = bytes
@@ -126,6 +156,104 @@ export function UpdateChecker() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString()
+  }
+
+  const parseTextCommands = (text: string): UpdateInstructions => {
+    const sections = text.split('## 🐳')
+    const dockerSection = sections.find(s => s.includes('Docker Deployment (Single Container)'))
+    const composeSection = sections.find(s => s.includes('Docker Compose Deployment'))
+    
+    const parseSection = (section: string | undefined): UpdateCommand[] => {
+      if (!section) return []
+      
+      const commands: UpdateCommand[] = []
+      const steps = section.split(/# \d+\./)
+      
+      steps.slice(1).forEach((step, index) => {
+        const lines = step.trim().split('\n')
+        const titleLine = lines[0]
+        const commandLines = lines.slice(1).join('\n').trim()
+        
+        // Map common titles to translation keys
+        const titleMap: Record<string, string> = {
+          'Backup your data': 'backupData',
+          'Pull the latest image': 'pullLatestImage',
+          'Pull the latest images': 'pullLatestImages',
+          'Stop and remove the old container': 'stopOldContainer',
+          'Start the new container': 'startNewContainer',
+          'Verify the upgrade': 'verifyUpgrade',
+          'Stop services for backup': 'stopServices',
+          'Upgrade with zero downtime': 'upgradeZeroDowntime',
+          'Clean up old images (optional)': 'cleanupOldImages',
+        }
+        
+        const title = titleMap[titleLine] || titleLine
+        
+        commands.push({
+          step: index + 1,
+          title,
+          description: titleLine,
+          command: commandLines
+        })
+      })
+      
+      return commands
+    }
+    
+    return {
+      docker: parseSection(dockerSection),
+      docker_compose: parseSection(composeSection)
+    }
+  }
+
+  const renderUpdateCommand = (cmd: UpdateCommand, type: 'docker' | 'compose') => {
+    const commandId = `${type}-${cmd.step}`
+    const isTranslationKey = !cmd.title.includes(' ')
+    
+    // Try to get translated description
+    const descriptionKey = `system.${cmd.title}Desc`
+    const hasTranslatedDesc = isTranslationKey
+    const description = hasTranslatedDesc ? t(descriptionKey, { defaultValue: cmd.description }) : cmd.description
+    
+    return (
+      <div key={cmd.step} className="space-y-3 p-4 rounded-lg bg-muted/50 border border-border/50">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="px-1.5 py-0.5 text-xs">
+                {t('system.step')} {cmd.step}
+              </Badge>
+              <h5 className="font-medium text-sm">
+                {isTranslationKey ? t(`system.${cmd.title}`) : cmd.title}
+              </h5>
+            </div>
+            <p className="text-xs text-muted-foreground">{description}</p>
+          </div>
+        </div>
+        <div className="relative group">
+          <pre className="text-xs font-mono bg-background p-3 pr-12 rounded border overflow-x-auto whitespace-pre">
+            {cmd.command}
+          </pre>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => copyToClipboard(cmd.command, commandId)}
+            className="absolute right-2 top-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            {copiedCommand === commandId ? (
+              <Check className="h-3 w-3 text-green-600" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+          </Button>
+          {copiedCommand === commandId && (
+            <span className="absolute right-10 top-2.5 text-xs text-green-600 animate-fade-in">
+              {t('system.copiedToClipboard')}
+            </span>
+          )}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -292,14 +420,42 @@ export function UpdateChecker() {
                   </Button>
                   
                   {showUpdateCommand && (
-                    <div className="bg-muted rounded-lg p-4">
-                      <h4 className="text-sm font-medium mb-2">{t('system.updateCommands')}</h4>
-                      <pre className="text-xs whitespace-pre-wrap font-mono bg-background p-3 rounded border overflow-x-auto">
-                        {updateInfo.update_command}
-                      </pre>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {t('system.copyCommandsHelp')}
-                      </p>
+                    <div className="space-y-4 mt-4">
+                      <div className="space-y-2">
+                        <h4 className="text-base font-semibold flex items-center gap-2">
+                          <Terminal className="h-4 w-4" />
+                          {t('system.updateInstructionsTitle')}
+                        </h4>
+                        <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+                          <Info className="h-4 w-4" />
+                          <AlertDescription className="text-sm">
+                            {t('system.updateImportantNote')}
+                          </AlertDescription>
+                        </Alert>
+                      </div>
+
+                      {updateInfo.update_command && (
+                        <Tabs defaultValue="docker" className="w-full">
+                          <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="docker" className="flex items-center gap-2">
+                              <Server className="h-4 w-4" />
+                              {t('system.dockerSingleContainer')}
+                            </TabsTrigger>
+                            <TabsTrigger value="compose" className="flex items-center gap-2">
+                              <Layers className="h-4 w-4" />
+                              {t('system.dockerCompose')}
+                            </TabsTrigger>
+                          </TabsList>
+                          
+                          <TabsContent value="docker" className="space-y-3 mt-4">
+                            {parseTextCommands(updateInfo.update_command).docker.map(cmd => renderUpdateCommand(cmd, 'docker'))}
+                          </TabsContent>
+                          
+                          <TabsContent value="compose" className="space-y-3 mt-4">
+                            {parseTextCommands(updateInfo.update_command).docker_compose.map(cmd => renderUpdateCommand(cmd, 'compose'))}
+                          </TabsContent>
+                        </Tabs>
+                      )}
                     </div>
                   )}
                 </div>

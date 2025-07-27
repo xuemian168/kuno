@@ -126,12 +126,6 @@ docker ps | grep i18n_blog
 # View logs
 docker logs i18n_blog
 
-# Update to latest version
-docker pull ictrun/i18n_blog:latest
-docker stop i18n_blog
-docker rm i18n_blog
-# Run with new image
-
 # Backup data
 docker cp i18n_blog:/app/data ./backup-data
 
@@ -139,6 +133,277 @@ docker cp i18n_blog:/app/data ./backup-data
 docker stop i18n_blog
 docker rm i18n_blog
 ```
+
+## 🔄 Upgrade Instructions
+
+### 🐳 For Docker Deployment (Single Container)
+
+To upgrade your Docker deployment while preserving all data:
+
+#### Step 1: Backup Your Data (Recommended)
+```bash
+# Create backup directory
+mkdir -p ./backups/$(date +%Y%m%d_%H%M%S)
+
+# Backup the data volume
+docker run --rm -v blog-data:/data -v $(pwd)/backups/$(date +%Y%m%d_%H%M%S):/backup alpine sh -c "cd /data && tar czf /backup/blog-data-backup.tar.gz ."
+
+# Or if using bind mount, simply copy the directory
+cp -r ./blog-data ./backups/$(date +%Y%m%d_%H%M%S)/
+```
+
+#### Step 2: Pull the Latest Image
+```bash
+docker pull ictrun/i18n_blog:latest
+```
+
+#### Step 3: Stop and Remove the Old Container
+```bash
+docker stop i18n_blog
+docker rm i18n_blog
+```
+
+#### Step 4: Start the New Container
+```bash
+# If using named volume (recommended)
+docker run -d \
+  --name i18n_blog \
+  --restart unless-stopped \
+  -p 80:80 \
+  -v blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
+  -e DB_PATH=/app/data/blog.db \
+  ictrun/i18n_blog:latest
+
+# If using bind mount
+docker run -d \
+  --name i18n_blog \
+  --restart unless-stopped \
+  -p 80:80 \
+  -v $(pwd)/blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
+  -e DB_PATH=/app/data/blog.db \
+  ictrun/i18n_blog:latest
+```
+
+#### Step 5: Verify the Upgrade
+```bash
+# Check container status
+docker ps | grep i18n_blog
+
+# Check logs for any errors
+docker logs i18n_blog
+
+# Test the application
+curl -f http://localhost/api/categories || echo "API check failed"
+```
+
+### 🐳 For Docker Compose Deployment
+
+To upgrade your Docker Compose deployment while preserving all data:
+
+#### Step 1: Backup Your Data (Recommended)
+```bash
+# Create backup directory
+mkdir -p ./backups/$(date +%Y%m%d_%H%M%S)
+
+# Stop services temporarily for consistent backup
+docker-compose stop
+
+# Backup the data volume
+docker run --rm -v blog_blog_data:/data -v $(pwd)/backups/$(date +%Y%m%d_%H%M%S):/backup alpine sh -c "cd /data && tar czf /backup/blog-data-backup.tar.gz ."
+
+# Or backup the entire compose environment
+cp -r ./data ./backups/$(date +%Y%m%d_%H%M%S)/ 2>/dev/null || true
+cp docker-compose.yml ./backups/$(date +%Y%m%d_%H%M%S)/ 2>/dev/null || true
+cp .env ./backups/$(date +%Y%m%d_%H%M%S)/ 2>/dev/null || true
+
+# Restart services
+docker-compose start
+```
+
+#### Step 2: Pull the Latest Images
+```bash
+docker-compose pull
+```
+
+#### Step 3: Upgrade with Zero Downtime
+```bash
+# Method 1: Rolling update (recommended for production)
+docker-compose up -d --force-recreate --remove-orphans
+
+# Method 2: Complete restart (if you need to stop everything)
+docker-compose down && docker-compose up -d
+```
+
+#### Step 4: Clean Up Old Images (Optional)
+```bash
+# Remove unused images to free up space
+docker image prune -f
+
+# Or remove specific old images
+docker images | grep i18n_blog | grep -v latest | awk '{print $3}' | xargs docker rmi 2>/dev/null || true
+```
+
+#### Step 5: Verify the Upgrade
+```bash
+# Check all services status
+docker-compose ps
+
+# Check logs for any errors
+docker-compose logs -f --tail=50
+
+# Test the application
+curl -f http://localhost:3000 || echo "Frontend check failed"
+curl -f http://localhost:8080/api/categories || echo "API check failed"
+```
+
+### 🔄 Automated Upgrade Script
+
+For convenience, you can create an automated upgrade script:
+
+#### For Docker Deployment
+```bash
+#!/bin/bash
+# save as upgrade-docker.sh
+
+set -e
+
+echo "🚀 Starting Docker deployment upgrade..."
+
+# Configuration
+CONTAINER_NAME="i18n_blog"
+IMAGE_NAME="ictrun/i18n_blog:latest"
+BACKUP_DIR="./backups/$(date +%Y%m%d_%H%M%S)"
+
+# Create backup
+echo "📦 Creating backup..."
+mkdir -p "$BACKUP_DIR"
+docker run --rm -v blog-data:/data -v "$BACKUP_DIR":/backup alpine sh -c "cd /data && tar czf /backup/blog-data-backup.tar.gz ."
+
+# Pull latest image
+echo "⬇️ Pulling latest image..."
+docker pull "$IMAGE_NAME"
+
+# Stop and remove old container
+echo "🛑 Stopping old container..."
+docker stop "$CONTAINER_NAME" 2>/dev/null || true
+docker rm "$CONTAINER_NAME" 2>/dev/null || true
+
+# Start new container
+echo "🚀 Starting new container..."
+docker run -d \
+  --name "$CONTAINER_NAME" \
+  --restart unless-stopped \
+  -p 80:80 \
+  -v blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-http://localhost/api}" \
+  -e DB_PATH=/app/data/blog.db \
+  "$IMAGE_NAME"
+
+# Verify
+echo "✅ Verifying upgrade..."
+sleep 10
+if docker ps | grep -q "$CONTAINER_NAME"; then
+  echo "✅ Upgrade completed successfully!"
+  echo "📄 Backup saved to: $BACKUP_DIR"
+else
+  echo "❌ Upgrade failed! Check logs: docker logs $CONTAINER_NAME"
+  exit 1
+fi
+```
+
+#### For Docker Compose Deployment
+```bash
+#!/bin/bash
+# save as upgrade-compose.sh
+
+set -e
+
+echo "🚀 Starting Docker Compose deployment upgrade..."
+
+# Configuration
+BACKUP_DIR="./backups/$(date +%Y%m%d_%H%M%S)"
+
+# Create backup
+echo "📦 Creating backup..."
+mkdir -p "$BACKUP_DIR"
+docker-compose stop
+docker run --rm -v blog_blog_data:/data -v "$BACKUP_DIR":/backup alpine sh -c "cd /data && tar czf /backup/blog-data-backup.tar.gz ."
+cp -r ./data "$BACKUP_DIR/" 2>/dev/null || true
+cp docker-compose.yml "$BACKUP_DIR/" 2>/dev/null || true
+cp .env "$BACKUP_DIR/" 2>/dev/null || true
+
+# Pull and upgrade
+echo "⬇️ Pulling latest images..."
+docker-compose pull
+
+echo "🔄 Upgrading services..."
+docker-compose up -d --force-recreate --remove-orphans
+
+# Clean up
+echo "🧹 Cleaning up old images..."
+docker image prune -f
+
+# Verify
+echo "✅ Verifying upgrade..."
+sleep 15
+if docker-compose ps | grep -q "Up"; then
+  echo "✅ Upgrade completed successfully!"
+  echo "📄 Backup saved to: $BACKUP_DIR"
+else
+  echo "❌ Upgrade failed! Check logs: docker-compose logs"
+  exit 1
+fi
+```
+
+### 🛠️ Rollback Instructions
+
+If an upgrade fails, you can rollback to the previous version:
+
+#### For Docker Deployment
+```bash
+# Stop the failed container
+docker stop i18n_blog && docker rm i18n_blog
+
+# Restore from backup (if needed)
+docker run --rm -v blog-data:/data -v $(pwd)/backups/BACKUP_DATE:/backup alpine sh -c "cd /data && tar xzf /backup/blog-data-backup.tar.gz"
+
+# Run the previous image version
+docker run -d \
+  --name i18n_blog \
+  --restart unless-stopped \
+  -p 80:80 \
+  -v blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
+  ictrun/i18n_blog:PREVIOUS_TAG
+```
+
+#### For Docker Compose Deployment
+```bash
+# Edit docker-compose.yml to use previous image tag
+# Then restart
+docker-compose down
+docker-compose up -d
+
+# Restore data if needed
+docker-compose stop
+docker run --rm -v blog_blog_data:/data -v $(pwd)/backups/BACKUP_DATE:/backup alpine sh -c "cd /data && tar xzf /backup/blog-data-backup.tar.gz"
+docker-compose start
+```
+
+### 📋 Upgrade Checklist
+
+- [ ] **Backup your data** before starting
+- [ ] **Test the backup** by extracting it to a temporary location
+- [ ] **Note your current version** for potential rollback
+- [ ] **Check available disk space** for new images
+- [ ] **Plan maintenance window** for production systems
+- [ ] **Verify environment variables** are correctly set
+- [ ] **Test the application** after upgrade
+- [ ] **Monitor logs** for any issues
+- [ ] **Update any external monitoring** or health checks
+- [ ] **Document the upgrade** in your change log
 
 ### Manual Deployment
 

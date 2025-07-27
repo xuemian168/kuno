@@ -4,6 +4,22 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Fade in animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

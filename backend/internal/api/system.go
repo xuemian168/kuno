@@ -222,17 +222,53 @@ func simulateLatestVersion() string {
 
 // generateUpdateCommand generates the Docker update command
 func generateUpdateCommand() string {
-	return fmt.Sprintf(`# Stop current container
-docker-compose down
+	return fmt.Sprintf(`## 🐳 Docker Deployment (Single Container)
 
-# Pull latest image
+# 1. Backup your data
+mkdir -p ./backups/$(date +%%Y%%m%%d_%%H%%M%%S)
+docker run --rm -v blog-data:/data -v $(pwd)/backups/$(date +%%Y%%m%%d_%%H%%M%%S):/backup alpine sh -c "cd /data && tar czf /backup/blog-data-backup.tar.gz ."
+
+# 2. Pull the latest image
 docker pull %s:latest
 
-# Start with new image
-docker-compose up -d
+# 3. Stop and remove the old container
+docker stop i18n_blog
+docker rm i18n_blog
 
-# Clean up old images (optional)
-docker image prune -f`, dockerImageName)
+# 4. Start the new container
+docker run -d \
+  --name i18n_blog \
+  --restart unless-stopped \
+  -p 80:80 \
+  -v blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
+  -e DB_PATH=/app/data/blog.db \
+  %s:latest
+
+# 5. Verify the upgrade
+docker ps | grep i18n_blog
+docker logs i18n_blog
+
+## 🐳 Docker Compose Deployment
+
+# 1. Backup your data
+mkdir -p ./backups/$(date +%%Y%%m%%d_%%H%%M%%S)
+docker-compose stop
+docker run --rm -v blog_blog_data:/data -v $(pwd)/backups/$(date +%%Y%%m%%d_%%H%%M%%S):/backup alpine sh -c "cd /data && tar czf /backup/blog-data-backup.tar.gz ."
+docker-compose start
+
+# 2. Pull the latest images
+docker-compose pull
+
+# 3. Upgrade with zero downtime
+docker-compose up -d --force-recreate --remove-orphans
+
+# 4. Clean up old images (optional)
+docker image prune -f
+
+# 5. Verify the upgrade
+docker-compose ps
+docker-compose logs -f --tail=50`, dockerImageName, dockerImageName)
 }
 
 // generateChangelog generates a mock changelog
