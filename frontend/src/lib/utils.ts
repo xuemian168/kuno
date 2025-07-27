@@ -28,3 +28,21 @@ export function getFullApiUrl(path: string): string {
   
   return path
 }
+
+// Convert media URLs to accessible URLs
+export function getMediaUrl(mediaUrl: string): string {
+  if (!mediaUrl) return mediaUrl
+  
+  // If it's already a full URL, return as is
+  if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) {
+    return mediaUrl
+  }
+  
+  // For relative upload paths, prepend the API base URL
+  if (mediaUrl.startsWith('/uploads/')) {
+    const baseUrl = getBaseUrl()
+    return `${baseUrl}/api${mediaUrl}`
+  }
+  
+  return mediaUrl
+}

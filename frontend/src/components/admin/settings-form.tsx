@@ -41,6 +41,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     site_title: "",
     site_subtitle: "",
     footer_text: "",
+    icp_filing: "",
+    psb_filing: "",
     show_view_count: true,
     enable_sound_effects: true
   })
@@ -171,6 +173,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
           site_title: settingsData.site_title,
           site_subtitle: settingsData.site_subtitle,
           footer_text: settingsData.footer_text,
+          icp_filing: settingsData.icp_filing || "",
+          psb_filing: settingsData.psb_filing || "",
           show_view_count: settingsData.show_view_count ?? true,
           enable_sound_effects: settingsData.enable_sound_effects ?? true
         })
@@ -289,6 +293,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         site_title: formData.site_title,
         site_subtitle: formData.site_subtitle,
         footer_text: formData.footer_text,
+        icp_filing: formData.icp_filing,
+        psb_filing: formData.psb_filing,
         show_view_count: formData.show_view_count,
         enable_sound_effects: formData.enable_sound_effects,
         logo_url: settings?.logo_url || '',
@@ -354,6 +360,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         site_title: settings.site_title,
         site_subtitle: settings.site_subtitle,
         footer_text: settings.footer_text,
+        icp_filing: settings.icp_filing || "",
+        psb_filing: settings.psb_filing || "",
         show_view_count: settings.show_view_count ?? true,
         enable_sound_effects: settings.enable_sound_effects ?? true
       })
@@ -553,42 +561,44 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-            <TabsTrigger 
-              value="general" 
-              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200 gap-2"
-            >
-              <Settings className="h-4 w-4" />
-              {t('settings.basicSettings')}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="translations" 
-              className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
-            >
-              <Globe className="h-4 w-4" />
-              {locale === 'zh' ? '翻译设置' : 'Translation'}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="security" 
-              className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
-            >
-              <Shield className="h-4 w-4" />
-              {t('settings.security')}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="social" 
-              className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
-            >
-              <Share2 className="h-4 w-4" />
-              {t('settings.socialMedia')}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="system" 
-              className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
-            >
-              <Info className="h-4 w-4" />
-              {locale === 'zh' ? '系统信息' : 'System'}
-            </TabsTrigger>
+          <TabsList className="w-full bg-gray-100 dark:bg-gray-800 p-1 rounded-xl overflow-x-auto scrollbar-hide">
+            <div className="flex gap-1 min-w-fit">
+              <TabsTrigger 
+                value="general" 
+                className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200 gap-2 whitespace-nowrap flex-shrink-0"
+              >
+                <Settings className="h-4 w-4" />
+                {t('settings.basicSettings')}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="translations" 
+                className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0"
+              >
+                <Globe className="h-4 w-4" />
+                {locale === 'zh' ? '翻译设置' : 'Translation'}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="security" 
+                className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0"
+              >
+                <Shield className="h-4 w-4" />
+                {t('settings.security')}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="social" 
+                className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0"
+              >
+                <Share2 className="h-4 w-4" />
+                {t('settings.socialMedia')}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="system" 
+                className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0"
+              >
+                <Info className="h-4 w-4" />
+                {locale === 'zh' ? '系统信息' : 'System'}
+              </TabsTrigger>
+            </div>
           </TabsList>
 
           <TabsContent value="general" className="space-y-6">
@@ -643,6 +653,92 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     {t('settings.footerDescription')}
                   </p>
                 </div>
+
+                {/* China Compliance Section */}
+                <Card className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20 border-red-200 dark:border-red-800">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-2 text-red-800 dark:text-red-200">
+                      <span className="text-xl">🇨🇳</span>
+                      {t('settings.chinaCompliance')}
+                    </CardTitle>
+                    <CardDescription className="text-red-700 dark:text-red-300">
+                      {t('settings.chinaComplianceDescription')}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-6">
+                      {/* ICP Filing */}
+                      <div className="space-y-3">
+                        <Label htmlFor="icp_filing" className="text-base font-medium text-gray-700 dark:text-gray-300">{t('settings.icpFiling')}</Label>
+                        <Input
+                          id="icp_filing"
+                          value={formData.icp_filing}
+                          onChange={(e) => handleChange('icp_filing', e.target.value)}
+                          placeholder={t('settings.enterIcpFiling')}
+                          className="h-11 border-2 border-gray-200 dark:border-gray-700 focus:border-red-500 dark:focus:border-red-400 rounded-lg transition-colors"
+                        />
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {t('settings.icpFilingDescription')}
+                        </p>
+                      </div>
+
+                      {/* PSB Filing */}
+                      <div className="space-y-3">
+                        <Label htmlFor="psb_filing" className="text-base font-medium text-gray-700 dark:text-gray-300">{t('settings.psbFiling')}</Label>
+                        <Input
+                          id="psb_filing"
+                          value={formData.psb_filing}
+                          onChange={(e) => handleChange('psb_filing', e.target.value)}
+                          placeholder={t('settings.enterPsbFiling')}
+                          className="h-11 border-2 border-gray-200 dark:border-gray-700 focus:border-red-500 dark:focus:border-red-400 rounded-lg transition-colors"
+                        />
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {t('settings.psbFilingDescription')}
+                        </p>
+                      </div>
+
+                      {/* Combined Preview */}
+                      {(formData.icp_filing || formData.psb_filing) && (
+                        <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            {t('settings.filingPreview')}:
+                          </p>
+                          <div className="text-center text-sm text-gray-600 dark:text-gray-400 flex flex-wrap items-center justify-center gap-1">
+                            {formData.icp_filing && (
+                              <>
+                                <a 
+                                  href="https://beian.miit.gov.cn" 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="hover:underline"
+                                >
+                                  {formData.icp_filing}
+                                </a>
+                                {formData.psb_filing && <span className="mx-1">|</span>}
+                              </>
+                            )}
+                            {formData.psb_filing && (
+                              <a 
+                                href="http://www.beian.gov.cn" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 hover:underline"
+                              >
+                                <img 
+                                  src="/ga.png" 
+                                  alt="公安备案" 
+                                  className="w-3 h-3 inline-block"
+                                  style={{ objectFit: 'contain' }}
+                                />
+                                <span>{formData.psb_filing}</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
                 <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
                   <CardContent className="pt-6">

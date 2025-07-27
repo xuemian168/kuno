@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
 import { apiClient, MediaLibrary } from '@/lib/api'
+import { useTranslations } from 'next-intl'
 
 interface MediaUploadProps {
   onUploadComplete?: (media: MediaLibrary) => void
@@ -22,6 +23,7 @@ export default function MediaUpload({
   acceptedTypes = 'all',
   maxSize = 100 
 }: MediaUploadProps) {
+  const t = useTranslations()
   const [dragActive, setDragActive] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -44,7 +46,7 @@ export default function MediaUpload({
   const validateFile = (file: File): string | null => {
     // Check file size
     if (file.size > maxSize * 1024 * 1024) {
-      return `File size exceeds ${maxSize}MB limit`
+      return t('media.fileSizeExceeds', {maxSize})
     }
 
     // Check file type
@@ -121,7 +123,7 @@ export default function MediaUpload({
 
       onUploadComplete?.(media)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed')
+      setError(err instanceof Error ? err.message : t('status.uploadFailed'))
     } finally {
       setUploading(false)
       setTimeout(() => setUploadProgress(0), 1000)
@@ -150,7 +152,7 @@ export default function MediaUpload({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Upload className="h-5 w-5" />
-          Upload Media
+          {t('media.uploadMedia')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -171,10 +173,10 @@ export default function MediaUpload({
           >
             <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Drop files here or click to browse
+              {t('media.dropFilesHere')}
             </p>
             <p className="text-sm text-gray-500">
-              Supports {acceptedTypes === 'all' ? 'images and videos' : acceptedTypes} up to {maxSize}MB
+              {t('media.supportsUpTo100MB')}
             </p>
             <input
               ref={fileInputRef}
@@ -213,10 +215,10 @@ export default function MediaUpload({
 
             {selectedFile.type.startsWith('image/') && (
               <div className="space-y-2">
-                <Label htmlFor="alt">Alt Text (for accessibility)</Label>
+                <Label htmlFor="alt">{t('common.altText')}</Label>
                 <Input
                   id="alt"
-                  placeholder="Describe this image..."
+                  placeholder={t('placeholder.describeImage')}
                   value={alt}
                   onChange={(e) => setAlt(e.target.value)}
                 />
@@ -226,7 +228,7 @@ export default function MediaUpload({
             {uploading && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span>Uploading...</span>
+                  <span>{t('common.uploading')}...</span>
                   <span>{uploadProgress}%</span>
                 </div>
                 <Progress value={uploadProgress} />
@@ -239,14 +241,14 @@ export default function MediaUpload({
                 disabled={uploading}
                 className="flex-1"
               >
-                {uploading ? 'Uploading...' : 'Upload File'}
+                {uploading ? t('common.uploading') + '...' : t('common.uploadFile')}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
               >
-                Change File
+                {t('common.changeFile')}
               </Button>
             </div>
           </div>

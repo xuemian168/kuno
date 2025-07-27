@@ -65,6 +65,8 @@ export interface SiteSettings {
   site_title: string
   site_subtitle: string
   footer_text: string
+  icp_filing?: string
+  psb_filing?: string
   show_view_count?: boolean
   enable_sound_effects?: boolean
   logo_url?: string

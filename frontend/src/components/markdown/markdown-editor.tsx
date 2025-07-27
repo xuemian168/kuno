@@ -10,6 +10,7 @@ import MediaSelector from "@/components/admin/media-selector"
 import YouTubeEmbed from "@/components/youtube-embed"
 import { Eye, Edit3, Image, Video } from "lucide-react"
 import { MediaLibrary } from "@/lib/api"
+import { getMediaUrl } from "@/lib/utils"
 
 interface OnlineVideo {
   id: string
@@ -92,7 +93,7 @@ export function MarkdownEditor({
 
     if (type === 'media') {
       const media = item as MediaLibrary
-      const url = `http://localhost:8080/api${media.url}`
+      const url = getMediaUrl(media.url)
       
       if (media.media_type === 'image') {
         insertText = `![${media.alt || media.original_name}](${url})`

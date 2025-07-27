@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
+import { usePathname } from 'next/navigation'
 import { useSettings } from '@/contexts/settings-context'
 import { apiClient, SocialMedia } from '@/lib/api'
 import { 
@@ -36,7 +37,13 @@ const SOCIAL_ICONS: Record<string, any> = {
 export default function Footer() {
   const t = useTranslations()
   const { settings } = useSettings()
+  const pathname = usePathname()
   const [socialMedia, setSocialMedia] = useState<SocialMedia[]>([])
+  
+  // Simple static file path - middleware now excludes images from i18n routing
+  const getStaticPath = (filename: string) => {
+    return `/${filename}`
+  }
 
   useEffect(() => {
     const fetchSocialMedia = async () => {
@@ -87,8 +94,43 @@ export default function Footer() {
               {settings?.footer_text || '© 2025 xuemian168'}
             </div>
             
+            {/* Filing Numbers - ICP and PSB on the same line */}
+            {(settings?.icp_filing || settings?.psb_filing) && (
+              <div className="flex flex-wrap items-center justify-center gap-1 text-xs text-muted-foreground/60">
+                {settings?.icp_filing && (
+                  <>
+                    <a
+                      href="https://beian.miit.gov.cn"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-muted-foreground/80 transition-colors"
+                    >
+                      {settings.icp_filing}
+                    </a>
+                    {settings?.psb_filing && <span className="mx-1">|</span>}
+                  </>
+                )}
+                {settings?.psb_filing && (
+                  <a
+                    href="http://www.beian.gov.cn"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 hover:text-muted-foreground/80 transition-colors"
+                  >
+                    <img 
+                      src="/ga.png"
+                      alt="公安备案" 
+                      className="w-3 h-3 inline-block"
+                      style={{ objectFit: 'contain' }}
+                    />
+                    <span>{settings.psb_filing}</span>
+                  </a>
+                )}
+              </div>
+            )}
+            
             <a
-              href="https://github.com/xuemian168/i18n_blog"
+              href="https://github.com/ictrun/i18n_blog"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center space-x-1 text-xs text-muted-foreground/60 hover:text-muted-foreground/80 transition-colors"

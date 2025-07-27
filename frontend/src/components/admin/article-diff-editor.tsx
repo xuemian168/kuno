@@ -1322,8 +1322,12 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 size="sm"
                 onClick={() => setShowPreview(showPreview === 'none' ? 'both' : 'none')}
                 className="h-7 px-2"
+                title={showPreview === 'none' ? (locale === 'zh' ? '显示预览' : 'Show Preview') : (locale === 'zh' ? '隐藏预览' : 'Hide Preview')}
               >
                 {showPreview !== 'none' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="ml-1 text-xs">
+                  {showPreview === 'none' ? (locale === 'zh' ? '预览' : 'Preview') : (locale === 'zh' ? '编辑' : 'Edit')}
+                </span>
               </Button>
             </div>
           )}
@@ -1353,7 +1357,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                   }
                 }
               }}>
-                <SelectTrigger className="h-6 w-20 text-xs">
+                <SelectTrigger className="h-6 w-32 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1409,7 +1413,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                   }
                 }
               }}>
-                <SelectTrigger className="h-6 w-20 text-xs">
+                <SelectTrigger className="h-6 w-32 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

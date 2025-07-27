@@ -43,6 +43,8 @@ type SiteSettings struct {
 	SiteTitle   string                    `gorm:"default:'Blog'" json:"site_title"`
 	SiteSubtitle string                   `gorm:"default:'A minimalist space for thoughts and ideas'" json:"site_subtitle"`
 	FooterText  string                    `gorm:"default:'© 2025 xuemian168'" json:"footer_text"`
+	ICPFiling   string                    `gorm:"size:255" json:"icp_filing"`
+	PSBFiling   string                    `gorm:"size:255" json:"psb_filing"`
 	ShowViewCount bool                    `gorm:"default:true" json:"show_view_count"`
 	EnableSoundEffects bool               `gorm:"default:true" json:"enable_sound_effects"`
 	LogoURL     string                    `gorm:"size:255" json:"logo_url"`

@@ -5,6 +5,21 @@
 
 echo "Injecting runtime environment variables..."
 
+# Fix database directory permissions (resolves readonly database error)
+echo "Setting up database directory permissions..."
+mkdir -p /app/data
+chown -R appuser:appgroup /app/data
+chmod -R 755 /app/data
+
+# If database file exists, ensure it has proper permissions
+if [ -f /app/data/blog.db ]; then
+    chown appuser:appgroup /app/data/blog.db
+    chmod 644 /app/data/blog.db
+    echo "Fixed permissions for existing database file"
+else
+    echo "Database file will be created by backend with proper permissions"
+fi
+
 # Default API URL
 DEFAULT_API_URL="http://localhost:8080/api"
 

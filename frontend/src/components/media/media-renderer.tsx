@@ -1,6 +1,7 @@
 'use client'
 
 import { MediaLibrary } from '@/lib/api'
+import { getMediaUrl } from '@/lib/utils'
 import OptimizedImage from './optimized-image'
 import { VideoStructuredData } from '../seo/structured-data'
 
@@ -23,6 +24,7 @@ export default function MediaRenderer({
 }: MediaRendererProps) {
   const isVideo = media.media_type === 'video'
   const isImage = media.media_type === 'image'
+  const mediaUrl = getMediaUrl(media.url)
 
   if (isVideo) {
     return (
@@ -31,13 +33,13 @@ export default function MediaRenderer({
           <VideoStructuredData
             name={media.alt || media.original_name}
             description={media.alt || ''}
-            embedUrl={media.url}
-            url={media.url}
+            embedUrl={mediaUrl}
+            url={mediaUrl}
           />
         )}
         <div className={`relative aspect-video rounded-lg overflow-hidden ${className}`}>
           <video
-            src={media.url}
+            src={mediaUrl}
             controls
             className="absolute inset-0 w-full h-full object-cover"
             preload="metadata"
@@ -53,7 +55,7 @@ export default function MediaRenderer({
   if (isImage) {
     return (
       <OptimizedImage
-        src={media.url}
+        src={mediaUrl}
         alt={media.alt || media.original_name}
         className={className}
         includeStructuredData={includeStructuredData}

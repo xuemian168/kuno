@@ -64,6 +64,8 @@ func UpdateSettings(c *gin.Context) {
 		SiteTitle          string                           `json:"site_title"`
 		SiteSubtitle       string                           `json:"site_subtitle"`
 		FooterText         string                           `json:"footer_text"`
+		ICPFiling          string                           `json:"icp_filing"`
+		PSBFiling          string                           `json:"psb_filing"`
 		ShowViewCount      *bool                            `json:"show_view_count"`
 		EnableSoundEffects *bool                            `json:"enable_sound_effects"`
 		LogoURL            string                           `json:"logo_url"`
@@ -80,6 +82,8 @@ func UpdateSettings(c *gin.Context) {
 	settings.SiteTitle = input.SiteTitle
 	settings.SiteSubtitle = input.SiteSubtitle
 	settings.FooterText = input.FooterText
+	settings.ICPFiling = input.ICPFiling
+	settings.PSBFiling = input.PSBFiling
 	if input.ShowViewCount != nil {
 		settings.ShowViewCount = *input.ShowViewCount
 	}

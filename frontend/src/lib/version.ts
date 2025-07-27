@@ -85,7 +85,7 @@ export const APP_INFO = {
     deployment: ["Docker", "Nginx"]
   },
   author: "xuemian168",
-  repository: "https://github.com/xuemian168/i18n_blog",
+  repository: "https://github.com/ictrun/i18n_blog",
   license: "MIT",
   website: "https://blog.xuemian168.com"
 }

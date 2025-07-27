@@ -45,7 +45,7 @@ export function WordPressImport({ onImportComplete }: WordPressImportProps) {
     const file = event.target.files?.[0]
     if (file) {
       if (!file.name.toLowerCase().endsWith('.xml')) {
-        setError('Please select a valid XML file exported from WordPress')
+        setError(t('import.selectValidXmlFile'))
         setSelectedFile(null)
         return
       }
@@ -57,14 +57,14 @@ export function WordPressImport({ onImportComplete }: WordPressImportProps) {
 
   const handleImport = async () => {
     if (!selectedFile) {
-      setError('Please select a file first')
+      setError(t('import.selectFileFirst'))
       return
     }
 
     // Check if user is authenticated
     const authToken = localStorage.getItem('auth_token')
     if (!authToken) {
-      setError('You must be logged in to import content')
+      setError(t('import.mustBeLoggedIn'))
       return
     }
 
@@ -94,11 +94,11 @@ export function WordPressImport({ onImportComplete }: WordPressImportProps) {
 
       if (!response.ok) {
         const errorData = await response.json()
-        const errorMessage = errorData.error || 'Import failed'
+        const errorMessage = errorData.error || t('import.importFailed')
         
         // Provide more helpful error messages
         if (errorMessage.includes('XML syntax error') || errorMessage.includes('illegal character')) {
-          throw new Error('The WordPress export file contains invalid characters. The file has been automatically cleaned and should now import successfully. Please try again.')
+          throw new Error(t('import.invalidCharactersError'))
         }
         throw new Error(errorMessage)
       }
@@ -142,16 +142,16 @@ export function WordPressImport({ onImportComplete }: WordPressImportProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            WordPress Import
+            {t('import.wordpressImport')}
           </CardTitle>
           <CardDescription>
-            Import articles and categories from a WordPress WXR export file
+            {t('import.importDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* File Upload */}
           <div className="space-y-2">
-            <Label htmlFor="wordpress-file">Select WordPress Export File</Label>
+            <Label htmlFor="wordpress-file">{t('import.selectExportFile')}</Label>
             <Input
               id="wordpress-file"
               type="file"
@@ -161,7 +161,7 @@ export function WordPressImport({ onImportComplete }: WordPressImportProps) {
               className="cursor-pointer"
             />
             <p className="text-sm text-muted-foreground">
-              Upload a WordPress WXR (XML) export file. Make sure to export all content including posts and categories.
+              {t('import.uploadDescription')}
             </p>
           </div>
 
@@ -193,7 +193,7 @@ export function WordPressImport({ onImportComplete }: WordPressImportProps) {
               className="space-y-2"
             >
               <div className="flex items-center justify-between text-sm">
-                <span>Importing...</span>
+                <span>{t('import.importing')}</span>
                 <span>{progress}%</span>
               </div>
               <Progress value={progress} className="h-2" />
@@ -225,7 +225,7 @@ export function WordPressImport({ onImportComplete }: WordPressImportProps) {
               <Alert>
                 <CheckCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Import completed successfully!
+                  {t('import.importCompleted')}
                 </AlertDescription>
               </Alert>
               
@@ -235,7 +235,7 @@ export function WordPressImport({ onImportComplete }: WordPressImportProps) {
                     <div className="text-2xl font-bold text-green-600">
                       {importResult.imported_articles}
                     </div>
-                    <p className="text-xs text-muted-foreground">Articles Imported</p>
+                    <p className="text-xs text-muted-foreground">{t('import.articlesImported')}</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -243,7 +243,7 @@ export function WordPressImport({ onImportComplete }: WordPressImportProps) {
                     <div className="text-2xl font-bold text-blue-600">
                       {importResult.created_categories}
                     </div>
-                    <p className="text-xs text-muted-foreground">Categories Created</p>
+                    <p className="text-xs text-muted-foreground">{t('import.categoriesCreated')}</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -251,14 +251,14 @@ export function WordPressImport({ onImportComplete }: WordPressImportProps) {
                     <div className="text-2xl font-bold text-yellow-600">
                       {importResult.skipped_posts}
                     </div>
-                    <p className="text-xs text-muted-foreground">Posts Skipped</p>
+                    <p className="text-xs text-muted-foreground">{t('import.postsSkipped')}</p>
                   </CardContent>
                 </Card>
               </div>
 
               {importResult.errors && importResult.errors.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-destructive">Import Errors:</h4>
+                  <h4 className="text-sm font-medium text-destructive">{t('import.importErrors')}</h4>
                   <div className="space-y-1">
                     {importResult.errors.map((error, index) => (
                       <p key={index} className="text-xs text-destructive bg-destructive/10 p-2 rounded">
@@ -280,26 +280,26 @@ export function WordPressImport({ onImportComplete }: WordPressImportProps) {
             {importing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Importing...
+                {t('import.importing')}
               </>
             ) : (
               <>
                 <Upload className="mr-2 h-4 w-4" />
-                Import WordPress Content
+                {t('import.importWordPressContent')}
               </>
             )}
           </Button>
 
           {/* Instructions */}
           <div className="mt-6 p-4 bg-muted rounded-lg">
-            <h4 className="text-sm font-medium mb-2">Instructions:</h4>
+            <h4 className="text-sm font-medium mb-2">{t('import.instructions')}</h4>
             <ul className="text-xs text-muted-foreground space-y-1">
-              <li>• Export your WordPress content from WordPress Admin → Tools → Export</li>
-              <li>• Choose &quot;All content&quot; to include posts, pages, and categories</li>
-              <li>• Upload the downloaded XML file using the form above</li>
-              <li>• The import will create new categories if they don&apos;t exist</li>
-              <li>• Duplicate articles (same title) will be skipped</li>
-              <li>• Only published posts will be imported (pages are skipped)</li>
+              <li>• {t('import.instructionStep1')}</li>
+              <li>• {t('import.instructionStep2')}</li>
+              <li>• {t('import.instructionStep3')}</li>
+              <li>• {t('import.instructionStep4')}</li>
+              <li>• {t('import.instructionStep5')}</li>
+              <li>• {t('import.instructionStep6')}</li>
             </ul>
           </div>
         </CardContent>

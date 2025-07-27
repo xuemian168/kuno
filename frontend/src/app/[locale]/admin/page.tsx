@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { Plus, Edit, Trash2, Settings, Eye, BarChart3, Download, Check } from "lucide-react"
+import { Plus, Edit, Trash2, Settings, Eye, BarChart3, Download, Check, X } from "lucide-react"
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import { Button } from "@/components/ui/button"
@@ -201,7 +201,7 @@ export default function AdminPage({ params }: AdminPageProps) {
               {t('admin.dashboard')}
             </h1>
             <p className="text-lg text-muted-foreground">
-              Manage your blog content and categories
+              {t('admin.manageBlogContent')}
             </p>
           </div>
 
@@ -273,14 +273,16 @@ export default function AdminPage({ params }: AdminPageProps) {
               >
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium">
-                    {selectedArticles.size} {selectedArticles.size === 1 ? 'article' : 'articles'} selected
+                    {selectedArticles.size} {selectedArticles.size === 1 ? t('common.article') : t('common.articles')} {t('common.selected')}
                   </span>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => setSelectedArticles(new Set())}
+                    className="gap-1"
                   >
-                    Clear selection
+                    <X className="h-3 w-3" />
+                    {t('common.clearSelection')}
                   </Button>
                 </div>
                 <div className="flex gap-2">
@@ -290,7 +292,7 @@ export default function AdminPage({ params }: AdminPageProps) {
                     onClick={handleBulkExport}
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    Export Selected
+                    {t('common.exportSelected')}
                   </Button>
                   <Button
                     variant="outline"
@@ -300,7 +302,7 @@ export default function AdminPage({ params }: AdminPageProps) {
                     className="text-destructive hover:text-destructive"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    {bulkDeleting ? 'Deleting...' : 'Delete Selected'}
+                    {bulkDeleting ? t('common.deleting') + '...' : t('common.deleteSelected')}
                   </Button>
                 </div>
               </motion.div>
@@ -312,7 +314,7 @@ export default function AdminPage({ params }: AdminPageProps) {
               </div>
             ) : articles.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-muted-foreground">No articles found.</p>
+                <p className="text-muted-foreground">{t('admin.noArticlesFound')}</p>
               </div>
             ) : (
               <div className="grid gap-4">
@@ -323,7 +325,7 @@ export default function AdminPage({ params }: AdminPageProps) {
                       checked={selectedArticles.size === articles.length && articles.length > 0}
                       onCheckedChange={handleSelectAll}
                     />
-                    <span className="text-sm font-medium">Select All</span>
+                    <span className="text-sm font-medium">{t('common.selectAll')}</span>
                   </div>
                 )}
                 {articles.map((article, index) => (
@@ -394,7 +396,7 @@ export default function AdminPage({ params }: AdminPageProps) {
 
           {/* WordPress Import */}
           <div className="mb-12">
-            <h2 className="text-2xl font-bold mb-6">Content Import</h2>
+            <h2 className="text-2xl font-bold mb-6">{t('import.contentImport')}</h2>
             <WordPressImport onImportComplete={handleImportComplete} />
           </div>
 
@@ -414,7 +416,7 @@ export default function AdminPage({ params }: AdminPageProps) {
 
             {categories.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-muted-foreground">No categories found.</p>
+                <p className="text-muted-foreground">{t('admin.noCategoriesFound')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -82,7 +82,7 @@ export default function MediaPage({ params }: MediaPageProps) {
         setOnlineVideos(JSON.parse(savedOnlineVideos))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch media')
+      setError(err instanceof Error ? err.message : t('media.failedToFetchMedia'))
     } finally {
       setLoading(false)
     }
@@ -104,7 +104,7 @@ export default function MediaPage({ params }: MediaPageProps) {
   }
 
   const handleDeleteOnlineVideo = (videoUrl: string) => {
-    if (!confirm('Are you sure you want to remove this video?')) return
+    if (!confirm(t('media.confirmDeleteVideo'))) return
     
     const updatedVideos = onlineVideos.filter(v => v.url !== videoUrl)
     setOnlineVideos(updatedVideos)
@@ -144,13 +144,13 @@ export default function MediaPage({ params }: MediaPageProps) {
   }
 
   const handleDeleteMedia = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this media file?')) return
+    if (!confirm(t('media.confirmDeleteMedia'))) return
 
     try {
       await apiClient.deleteMedia(id)
       setMedia(prev => prev.filter(m => m.id !== id))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete media')
+      setError(err instanceof Error ? err.message : t('media.failedToDeleteMedia'))
     }
   }
 
@@ -162,7 +162,7 @@ export default function MediaPage({ params }: MediaPageProps) {
       setMedia(prev => prev.map(m => m.id === selectedMedia.id ? updated : m))
       setSelectedMedia(updated)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update media')
+      setError(err instanceof Error ? err.message : t('media.failedToUpdateMedia'))
     }
   }
 
@@ -303,15 +303,15 @@ export default function MediaPage({ params }: MediaPageProps) {
         {selectedType !== 'online' && (
           <div className="flex gap-4 items-center flex-wrap">
             <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium">Sort by:</Label>
+              <Label className="text-sm font-medium">{t('media.sortBy')}</Label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'created_at' | 'file_size' | 'name')}
                 className="px-3 py-1 text-sm border rounded-md bg-background"
               >
-                <option value="created_at">Date Added</option>
-                <option value="file_size">File Size</option>
-                <option value="name">Name</option>
+                <option value="created_at">{t('media.dateAdded')}</option>
+                <option value="file_size">{t('media.fileSize')}</option>
+                <option value="name">{t('media.name')}</option>
               </select>
               <Button
                 variant="outline"
@@ -324,30 +324,30 @@ export default function MediaPage({ params }: MediaPageProps) {
             </div>
 
             <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium">File Size:</Label>
+              <Label className="text-sm font-medium">{t('media.fileSizeFilter')}</Label>
               <select
                 value={fileSizeFilter}
                 onChange={(e) => setFileSizeFilter(e.target.value as 'all' | 'small' | 'medium' | 'large')}
                 className="px-3 py-1 text-sm border rounded-md bg-background"
               >
-                <option value="all">All Sizes</option>
-                <option value="small">Small (&lt; 1MB)</option>
-                <option value="medium">Medium (1-10MB)</option>
-                <option value="large">Large (&gt; 10MB)</option>
+                <option value="all">{t('media.allSizes')}</option>
+                <option value="small">{t('media.small')}</option>
+                <option value="medium">{t('media.medium')}</option>
+                <option value="large">{t('media.large')}</option>
               </select>
             </div>
 
             <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium">Date:</Label>
+              <Label className="text-sm font-medium">{t('media.dateFilter')}</Label>
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month')}
                 className="px-3 py-1 text-sm border rounded-md bg-background"
               >
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
+                <option value="all">{t('media.allTime')}</option>
+                <option value="today">{t('media.today')}</option>
+                <option value="week">{t('media.thisWeek')}</option>
+                <option value="month">{t('media.thisMonth')}</option>
               </select>
             </div>
           </div>
@@ -467,7 +467,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           className="cursor-pointer"
                         >
                           <Edit2 className="h-4 w-4 mr-2" />
-                          View Details
+                          {t('media.viewDetails')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={(e) => {
@@ -479,7 +479,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           className="cursor-pointer"
                         >
                           <ExternalLink className="h-4 w-4 mr-2" />
-                          Copy URL
+                          {t('media.copyUrl')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={(e) => {
@@ -491,7 +491,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           className="cursor-pointer"
                         >
                           <ExternalLink className="h-4 w-4 mr-2" />
-                          Open in New Tab
+                          {t('media.openInNewTab')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -504,7 +504,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           className="cursor-pointer"
                         >
                           <Edit2 className="h-4 w-4 mr-2" />
-                          Edit Alt Text
+                          {t('media.editAltText')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -516,7 +516,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           className="cursor-pointer text-destructive focus:text-destructive"
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Media
+                          {t('media.deleteMedia')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -597,7 +597,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           className="cursor-pointer"
                         >
                           <Play className="h-4 w-4 mr-2" />
-                          Play Video
+                          {t('media.playVideo')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={(e) => {
@@ -608,7 +608,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           className="cursor-pointer"
                         >
                           <ExternalLink className="h-4 w-4 mr-2" />
-                          Open in New Tab
+                          {t('media.openInNewTab')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -620,7 +620,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           className="cursor-pointer"
                         >
                           <Edit2 className="h-4 w-4 mr-2" />
-                          Edit Title
+                          {t('media.editTitle')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -632,7 +632,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           className="cursor-pointer text-destructive focus:text-destructive"
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Video
+                          {t('media.deleteVideo')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -726,17 +726,17 @@ export default function MediaPage({ params }: MediaPageProps) {
       <Dialog open={!!editingVideo} onOpenChange={() => setEditingVideo(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Video Title</DialogTitle>
+            <DialogTitle>{t('media.editVideoTitle')}</DialogTitle>
           </DialogHeader>
           {editingVideo && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-video-title">Video Title</Label>
+                <Label htmlFor="edit-video-title">{t('media.videoTitle')}</Label>
                 <Input
                   id="edit-video-title"
                   value={editingVideoTitle}
                   onChange={(e) => setEditingVideoTitle(e.target.value)}
-                  placeholder="Enter video title"
+                  placeholder={t('media.enterVideoTitle')}
                 />
               </div>
               <div className="p-3 bg-muted rounded-lg">
@@ -749,10 +749,10 @@ export default function MediaPage({ params }: MediaPageProps) {
               </div>
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={handleCancelVideoEdit}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button onClick={handleSaveVideoEdit}>
-                  Save Changes
+                  {t('media.saveChanges')}
                 </Button>
               </div>
             </div>

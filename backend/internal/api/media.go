@@ -100,7 +100,7 @@ func UploadMedia(c *gin.Context) {
 		FileSize:     header.Size,
 		MimeType:     contentType,
 		MediaType:    mediaType,
-		URL:          fmt.Sprintf("/api/uploads/%s/%s", subDir, fileName),
+		URL:          fmt.Sprintf("/uploads/%s/%s", subDir, fileName),
 		Alt:          alt,
 	}
 

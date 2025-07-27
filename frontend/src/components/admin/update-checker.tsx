@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -38,6 +39,7 @@ interface UpdateInfo {
 }
 
 export function UpdateChecker() {
+  const t = useTranslations()
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
   const [loading, setLoading] = useState(false)
@@ -66,7 +68,7 @@ export function UpdateChecker() {
     try {
       const authToken = localStorage.getItem('auth_token')
       if (!authToken) {
-        throw new Error('Authentication required')
+        throw new Error(t('system.authenticationRequired'))
       }
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/system/check-updates`, {
@@ -76,13 +78,13 @@ export function UpdateChecker() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to check for updates')
+        throw new Error(t('system.failedToCheckUpdates'))
       }
 
       const data = await response.json()
       setUpdateInfo(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to check for updates')
+      setError(err instanceof Error ? err.message : t('system.failedToCheckUpdates'))
     } finally {
       setLoading(false)
     }
@@ -92,7 +94,7 @@ export function UpdateChecker() {
     try {
       const authToken = localStorage.getItem('auth_token')
       if (!authToken) {
-        throw new Error('Authentication required')
+        throw new Error(t('system.authenticationRequired'))
       }
 
       await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/system/clear-cache`, {
@@ -105,7 +107,7 @@ export function UpdateChecker() {
       // Refresh update info
       await checkForUpdates()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to clear cache')
+      setError(err instanceof Error ? err.message : t('system.failedToClearCache'))
     }
   }
 
@@ -131,10 +133,10 @@ export function UpdateChecker() {
       <CardHeader className="bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/50 dark:to-indigo-900/50 border-b border-blue-200 dark:border-blue-700 pt-6 pb-4 px-4 rounded-t-lg flex flex-col justify-center min-h-[80px]">
         <CardTitle className="text-xl font-bold text-blue-800 dark:text-blue-200 flex items-center gap-2">
           <Package className="h-5 w-5" />
-          System Information & Updates
+          {t('system.systemInformation')}
         </CardTitle>
         <CardDescription className="text-blue-600 dark:text-blue-300">
-          View system information and check for available updates
+          {t('system.systemInfoDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
@@ -143,22 +145,22 @@ export function UpdateChecker() {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <Info className="h-4 w-4" />
-              Current System
+              {t('system.currentSystem')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Version:</span>
+                  <span className="text-sm text-muted-foreground">{t('system.version')}:</span>
                   <Badge variant="outline">{systemInfo.version}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Build Number:</span>
+                  <span className="text-sm text-muted-foreground">{t('system.buildNumber')}:</span>
                   <span className="text-sm font-mono">{systemInfo.build_number}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    Build Date:
+                    {t('system.buildDate')}:
                   </span>
                   <span className="text-sm">{systemInfo.build_date}</span>
                 </div>
@@ -167,14 +169,14 @@ export function UpdateChecker() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground flex items-center gap-1">
                     <GitCommit className="h-3 w-3" />
-                    Commit:
+                    {t('system.commit')}:
                   </span>
                   <span className="text-sm font-mono">{systemInfo.git_commit}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground flex items-center gap-1">
                     <GitBranch className="h-3 w-3" />
-                    Branch:
+                    {t('system.branch')}:
                   </span>
                   <span className="text-sm">{systemInfo.git_branch}</span>
                 </div>
@@ -190,7 +192,7 @@ export function UpdateChecker() {
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <Download className="h-4 w-4" />
-              Software Updates
+              {t('system.softwareUpdates')}
             </h3>
             <div className="flex gap-2">
               <Button
@@ -200,7 +202,7 @@ export function UpdateChecker() {
                 disabled={loading}
               >
                 <RefreshCw className="h-3 w-3 mr-1" />
-                Clear Cache
+                {t('system.clearCache')}
               </Button>
               <Button
                 onClick={checkForUpdates}
@@ -208,7 +210,7 @@ export function UpdateChecker() {
                 size="sm"
               >
                 <RefreshCw className={`h-3 w-3 mr-1 ${loading ? 'animate-spin' : ''}`} />
-                Check for Updates
+                {t('system.checkForUpdates')}
               </Button>
             </div>
           </div>
@@ -226,14 +228,14 @@ export function UpdateChecker() {
                 <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
                   <Download className="h-4 w-4" />
                   <AlertDescription className="font-medium">
-                    Update Available! Version {updateInfo.latest_version} is now available.
+                    {t('system.updateAvailable', { version: updateInfo.latest_version })}
                   </AlertDescription>
                 </Alert>
               ) : (
                 <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
                   <CheckCircle className="h-4 w-4" />
                   <AlertDescription className="font-medium">
-                    You are running the latest version ({updateInfo.current_version}).
+                    {t('system.upToDate', { version: updateInfo.current_version })}
                   </AlertDescription>
                 </Alert>
               )}
@@ -241,11 +243,11 @@ export function UpdateChecker() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Current Version:</span>
+                    <span className="text-sm text-muted-foreground">{t('system.currentVersion')}:</span>
                     <Badge variant="secondary">{updateInfo.current_version}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Latest Version:</span>
+                    <span className="text-sm text-muted-foreground">{t('system.latestVersion')}:</span>
                     <Badge variant={updateInfo.has_update ? "default" : "secondary"}>
                       {updateInfo.latest_version}
                     </Badge>
@@ -254,11 +256,11 @@ export function UpdateChecker() {
                 {updateInfo.release_date && updateInfo.image_size && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Release Date:</span>
+                      <span className="text-sm text-muted-foreground">{t('system.releaseDate')}:</span>
                       <span className="text-sm">{formatDate(updateInfo.release_date)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Image Size:</span>
+                      <span className="text-sm text-muted-foreground">{t('system.imageSize')}:</span>
                       <span className="text-sm">{formatFileSize(updateInfo.image_size)}</span>
                     </div>
                   </div>
@@ -267,7 +269,7 @@ export function UpdateChecker() {
 
               {updateInfo.has_update && updateInfo.changelog && updateInfo.changelog.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium">What&apos;s New:</h4>
+                  <h4 className="text-sm font-medium">{t('system.whatsNew')}</h4>
                   <ul className="text-sm space-y-1 text-muted-foreground">
                     {updateInfo.changelog.map((item, index) => (
                       <li key={index} className="flex items-start gap-2">
@@ -286,17 +288,17 @@ export function UpdateChecker() {
                     size="sm"
                     onClick={() => setShowUpdateCommand(!showUpdateCommand)}
                   >
-                    {showUpdateCommand ? 'Hide' : 'Show'} Update Commands
+                    {showUpdateCommand ? t('system.hideUpdateCommands') : t('system.showUpdateCommands')}
                   </Button>
                   
                   {showUpdateCommand && (
                     <div className="bg-muted rounded-lg p-4">
-                      <h4 className="text-sm font-medium mb-2">Update Commands:</h4>
+                      <h4 className="text-sm font-medium mb-2">{t('system.updateCommands')}</h4>
                       <pre className="text-xs whitespace-pre-wrap font-mono bg-background p-3 rounded border overflow-x-auto">
                         {updateInfo.update_command}
                       </pre>
                       <p className="text-xs text-muted-foreground mt-2">
-                        Copy and run these commands in your terminal to update the application.
+                        {t('system.copyCommandsHelp')}
                       </p>
                     </div>
                   )}
