@@ -10,7 +10,6 @@ import { Calendar, ArrowRight, Eye, Rss } from 'lucide-react'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import { apiClient, Article, Category } from '@/lib/api'
-import { Link } from '@/i18n/routing'
 import NextLink from 'next/link'
 import { WebsiteStructuredData } from '@/components/seo/structured-data'
 import { getBaseUrl } from '@/lib/utils'
@@ -98,7 +97,7 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-6xl font-bold mb-8 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent leading-tight">
               {siteSettings?.site_title || t('site.title')}
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -155,39 +154,39 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
-                  <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group">
-                    <CardHeader>
-                      <div className="flex items-center justify-between mb-2">
-                        <Badge variant="secondary">{article.category.name}</Badge>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {formatDate(article.created_at)}
-                          </div>
-                          {article.view_count !== undefined && siteSettings?.show_view_count !== false && (
+                  <NextLink href={`/${locale}/article/${article.id}`} className="block h-full">
+                    <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group">
+                      <CardHeader>
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant="secondary">{article.category.name}</Badge>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
                             <div className="flex items-center">
-                              <Eye className="h-4 w-4 mr-1" />
-                              {article.view_count}
+                              <Calendar className="h-4 w-4 mr-1" />
+                              {formatDate(article.created_at)}
                             </div>
-                          )}
+                            {article.view_count !== undefined && siteSettings?.show_view_count !== false && (
+                              <div className="flex items-center">
+                                <Eye className="h-4 w-4 mr-1" />
+                                {article.view_count}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <CardTitle className="group-hover:text-primary transition-colors">
-                        {article.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="mb-4">
-                        {article.summary}
-                      </CardDescription>
-                      <NextLink href={`/${locale}/article/${article.id}`}>
-                        <Button variant="ghost" className="w-full group-hover:bg-primary/10">
+                        <CardTitle className="group-hover:text-primary transition-colors">
+                          {article.title}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <CardDescription className="mb-4">
+                          {article.summary}
+                        </CardDescription>
+                        <div className="flex items-center text-primary font-medium">
                           Read More
                           <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                        </Button>
-                      </NextLink>
-                    </CardContent>
-                  </Card>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </NextLink>
                 </motion.div>
               ))}
             </div>
