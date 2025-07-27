@@ -52,6 +52,9 @@ func SetupRoutes() *gin.Engine {
 		// Social media links - public access
 		api.GET("/social-media", GetSocialMediaList)
 
+		// System information - public access
+		api.GET("/system/info", GetSystemInfo)
+
 		// Protected routes - require authentication
 		protected := api.Group("/")
 		protected.Use(auth.AuthMiddleware())
@@ -118,6 +121,13 @@ func SetupRoutes() *gin.Engine {
 					adminSocialMedia.PUT("/:id", UpdateSocialMedia)
 					adminSocialMedia.DELETE("/:id", DeleteSocialMedia)
 					adminSocialMedia.PUT("/order", UpdateSocialMediaOrder)
+				}
+
+				// System management
+				adminSystem := admin.Group("/system")
+				{
+					adminSystem.GET("/check-updates", CheckUpdates)
+					adminSystem.POST("/clear-cache", ClearUpdateCache)
 				}
 			}
 		}

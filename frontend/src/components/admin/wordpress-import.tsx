@@ -295,9 +295,9 @@ export function WordPressImport({ onImportComplete }: WordPressImportProps) {
             <h4 className="text-sm font-medium mb-2">Instructions:</h4>
             <ul className="text-xs text-muted-foreground space-y-1">
               <li>• Export your WordPress content from WordPress Admin → Tools → Export</li>
-              <li>• Choose "All content" to include posts, pages, and categories</li>
+              <li>• Choose &quot;All content&quot; to include posts, pages, and categories</li>
               <li>• Upload the downloaded XML file using the form above</li>
-              <li>• The import will create new categories if they don't exist</li>
+              <li>• The import will create new categories if they don&apos;t exist</li>
               <li>• Duplicate articles (same title) will be skipped</li>
               <li>• Only published posts will be imported (pages are skipped)</li>
             </ul>

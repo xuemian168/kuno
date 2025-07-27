@@ -23,6 +23,7 @@ import { getFullApiUrl } from "@/lib/utils"
 import { setSoundEnabled } from "@/lib/sound"
 import { NotificationDialog, useNotificationDialog } from "@/components/ui/notification-dialog"
 import { AboutDialog } from "@/components/admin/about-dialog"
+import { UpdateChecker } from "@/components/admin/update-checker"
 
 // Dynamic languages based on user configuration - will be set in component
 
@@ -470,7 +471,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-5 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
             <TabsTrigger 
               value="general" 
               className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200 gap-2"
@@ -498,6 +499,13 @@ export function SettingsForm({ locale }: SettingsFormProps) {
             >
               <Share2 className="h-4 w-4" />
               {t('settings.socialMedia')}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="system" 
+              className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
+            >
+              <Info className="h-4 w-4" />
+              {locale === 'zh' ? '系统信息' : 'System'}
             </TabsTrigger>
           </TabsList>
 
@@ -1138,6 +1146,10 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                 <SocialMediaManager />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="system" className="space-y-6">
+            <UpdateChecker />
           </TabsContent>
         </Tabs>
       </motion.div>

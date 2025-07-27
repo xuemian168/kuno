@@ -171,8 +171,8 @@ export default function AdminPage({ params }: AdminPageProps) {
     if (selectedArticles.size === 0) return
     
     try {
-      const articleIds = Array.from(selectedArticles).join(',')
-      await apiClient.exportArticles({ article_ids: articleIds, lang: locale })
+      const articleIds = Array.from(selectedArticles)
+      await apiClient.exportArticles({ articleIds: articleIds, lang: locale })
       setSelectedArticles(new Set())
     } catch (error) {
       console.error('Failed to export articles:', error)
