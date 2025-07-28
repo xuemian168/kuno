@@ -73,8 +73,7 @@ export function UpdateChecker() {
 
   const loadSystemInfo = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/system/info`)
-      const data = await response.json()
+      const data = await apiClient.getSystemInfo()
       setSystemInfo(data.system_info)
     } catch (err) {
       console.error('Failed to load system info:', err)
@@ -86,22 +85,7 @@ export function UpdateChecker() {
     setError(null)
     
     try {
-      const authToken = localStorage.getItem('auth_token')
-      if (!authToken) {
-        throw new Error(t('system.authenticationRequired'))
-      }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/system/check-updates`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error(t('system.failedToCheckUpdates'))
-      }
-
-      const data = await response.json()
+      const data = await apiClient.checkUpdates()
       setUpdateInfo(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('system.failedToCheckUpdates'))
@@ -112,18 +96,7 @@ export function UpdateChecker() {
 
   const clearCache = async () => {
     try {
-      const authToken = localStorage.getItem('auth_token')
-      if (!authToken) {
-        throw new Error(t('system.authenticationRequired'))
-      }
-
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/system/clear-cache`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      })
-
+      await apiClient.clearCache()
       // Refresh update info
       await checkForUpdates()
     } catch (err) {

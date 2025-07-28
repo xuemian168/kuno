@@ -658,6 +658,21 @@ class ApiClient {
       }
     }
   }
+
+  // System endpoints
+  async getSystemInfo(): Promise<{ system_info: any }> {
+    return this.request('/system/info')
+  }
+
+  async checkUpdates(): Promise<any> {
+    return this.request('/system/check-updates')
+  }
+
+  async clearCache(): Promise<{ message: string }> {
+    return this.request('/system/clear-cache', {
+      method: 'POST'
+    })
+  }
 }
 
 export const apiClient = new ApiClient()

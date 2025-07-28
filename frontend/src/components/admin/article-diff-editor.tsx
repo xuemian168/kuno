@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react"
 import { useRouter } from "@/i18n/routing"
 import { useTranslations } from 'next-intl'
+import { useTheme } from "next-themes"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -72,6 +73,7 @@ const adminInterfaceLanguages = [
 export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }: ArticleDiffEditorProps) {
   const router = useRouter()
   const t = useTranslations()
+  const { theme } = useTheme()
   const [loading, setLoading] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
@@ -1583,7 +1585,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 onModifiedChange={(value) => updateTranslation(targetLanguage, 'content', value)}
                 language="markdown"
                 height="100%"
-                theme="vs"
+                theme={theme === 'dark' ? 'vs-dark' : 'vs'}
                 className="h-full"
               />
             ) : (
@@ -1605,7 +1607,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                       onOriginalChange={(value) => updateTranslation(sourceLanguage, 'content', value)}
                       language="markdown"
                       height="100%"
-                      theme="vs"
+                      theme={theme === 'dark' ? 'vs-dark' : 'vs'}
                       className="h-full"
                       options={{ renderSideBySide: false }}
                     />
@@ -1629,7 +1631,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                       onModifiedChange={(value) => updateTranslation(targetLanguage, 'content', value)}
                       language="markdown"
                       height="100%"
-                      theme="vs"
+                      theme={theme === 'dark' ? 'vs-dark' : 'vs'}
                       className="h-full"
                       options={{ renderSideBySide: false }}
                     />
