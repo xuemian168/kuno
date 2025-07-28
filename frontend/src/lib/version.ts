@@ -1,8 +1,4 @@
 // 版本和构建信息
-// 在实际项目中，这些信息通常来自：
-// 1. package.json 的 version 字段
-// 2. 构建时的环境变量
-// 3. Git 信息（commit hash, build date 等）
 
 export interface AppVersion {
   name: string
@@ -85,7 +81,7 @@ export const APP_INFO = {
     deployment: ["Docker", "Nginx"]
   },
   author: "xuemian168",
-  repository: "https://github.com/ictrun/i18n_blog",
+  repository: "https://github.com/xuemian168/i18n_blog",
   license: "MIT",
-  website: "https://blog.xuemian168.com"
+  website: "https://www.ict.run/"
 }

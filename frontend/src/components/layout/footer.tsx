@@ -130,7 +130,7 @@ export default function Footer() {
             )}
             
             <a
-              href="https://github.com/ictrun/i18n_blog"
+              href="https://github.com/xuemian168/i18n_blog"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center space-x-1 text-xs text-muted-foreground/60 hover:text-muted-foreground/80 transition-colors"
