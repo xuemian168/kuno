@@ -73,7 +73,7 @@ export function UpdateChecker() {
 
   const loadSystemInfo = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/system/info`)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/system/info`)
       const data = await response.json()
       setSystemInfo(data.system_info)
     } catch (err) {
@@ -91,7 +91,7 @@ export function UpdateChecker() {
         throw new Error(t('system.authenticationRequired'))
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/system/check-updates`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/system/check-updates`, {
         headers: {
           'Authorization': `Bearer ${authToken}`
         }
@@ -117,7 +117,7 @@ export function UpdateChecker() {
         throw new Error(t('system.authenticationRequired'))
       }
 
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/system/clear-cache`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/system/clear-cache`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`
@@ -213,7 +213,7 @@ docker run -d \\
   --restart unless-stopped \\
   -p 80:80 \\
   -v blog-data:/app/data \\
-  -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \\
+  -e NEXT_PUBLIC_API_URL=https://qut.edu.kg/api \\
   -e DB_PATH=/app/data/blog.db \\
   ictrun/i18n_blog:latest
 
