@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Lock, User, Shield, AlertTriangle } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Lock, User, Shield, AlertTriangle, HelpCircle, Terminal, Copy } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { apiClient } from '@/lib/api'
 
@@ -26,6 +27,7 @@ export default function LoginPage({ params }: LoginPageProps) {
   const [isRecoveryMode, setIsRecoveryMode] = useState(false)
   const [recoveryMessage, setRecoveryMessage] = useState('')
   const [checkingRecovery, setCheckingRecovery] = useState(true)
+  const [copySuccess, setCopySuccess] = useState<string | null>(null)
   const { login } = useAuth()
   const router = useRouter()
 
@@ -59,6 +61,16 @@ export default function LoginPage({ params }: LoginPageProps) {
       setError(t('admin.invalidCredentials'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopySuccess(label)
+      setTimeout(() => setCopySuccess(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy text: ', err)
     }
   }
 
@@ -145,6 +157,200 @@ export default function LoginPage({ params }: LoginPageProps) {
                 {loading ? t('admin.signingin') : t('admin.signin')}
               </Button>
             </form>
+            
+            {/* Forgot Password Dialog */}
+            <div className="text-center">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="link" 
+                    className="text-sm text-muted-foreground hover:text-primary p-0 h-auto"
+                  >
+                    <HelpCircle className="h-3 w-3 mr-1" />
+                    {t('admin.forgotPassword')}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      {t('admin.passwordReset')}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {t('admin.passwordResetSteps')}
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4">
+                    <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+                      <AlertTriangle className="h-4 w-4 text-blue-600" />
+                      <AlertDescription className="text-blue-800 dark:text-blue-200">
+                        <div className="space-y-1">
+                          <p className="font-medium">{t('admin.passwordResetNote')}</p>
+                          <p className="text-sm">{t('admin.passwordResetWarning')}</p>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+
+                    {/* Step 1 */}
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-sm">{t('admin.passwordResetStep1')}</h4>
+                      <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md font-mono text-sm relative">
+                        <div className="flex justify-between items-start">
+                          <code>docker stop i18n_blog</code>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => copyToClipboard('docker stop i18n_blog', 'step1')}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        {copySuccess === 'step1' && (
+                          <span className="absolute -top-8 right-0 text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                            Copied!
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Step 2 */}
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-sm">{t('admin.passwordResetStep2')}</h4>
+                      <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md font-mono text-sm relative">
+                        <div className="flex justify-between items-start">
+                          <code className="whitespace-pre-wrap break-all">
+{`cd /opt/i18n_blog
+
+docker run -d \\
+    --name i18n_blog_recovery \\
+    --restart unless-stopped \\
+    -p 80:80 \\
+    -v /opt/i18n_blog/blog-data:/app/data \\
+    -e NEXT_PUBLIC_API_URL="http://localhost/api" \\
+    -e DB_PATH="/app/data/blog.db" \\
+    -e RECOVERY_MODE="true" \\
+    ictrun/i18n_blog:latest`}
+                          </code>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 flex-shrink-0"
+                            onClick={() => copyToClipboard(`cd /opt/i18n_blog
+
+docker run -d \\
+    --name i18n_blog_recovery \\
+    --restart unless-stopped \\
+    -p 80:80 \\
+    -v /opt/i18n_blog/blog-data:/app/data \\
+    -e NEXT_PUBLIC_API_URL="http://localhost/api" \\
+    -e DB_PATH="/app/data/blog.db" \\
+    -e RECOVERY_MODE="true" \\
+    ictrun/i18n_blog:latest`, 'step2')}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        {copySuccess === 'step2' && (
+                          <span className="absolute -top-8 right-0 text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                            Copied!
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Step 3 */}
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-sm">{t('admin.passwordResetStep3')}</h4>
+                      <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md font-mono text-sm relative">
+                        <div className="flex justify-between items-start">
+                          <code className="whitespace-pre-wrap">
+{`docker logs i18n_blog_recovery
+
+docker rm -f i18n_blog_recovery`}
+                          </code>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 flex-shrink-0"
+                            onClick={() => copyToClipboard(`docker logs i18n_blog_recovery
+
+docker rm -f i18n_blog_recovery`, 'step3')}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        {copySuccess === 'step3' && (
+                          <span className="absolute -top-8 right-0 text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                            Copied!
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Step 4 */}
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-sm">{t('admin.passwordResetStep4')}</h4>
+                      <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md font-mono text-sm relative">
+                        <div className="flex justify-between items-start">
+                          <code className="whitespace-pre-wrap break-all">
+{`docker run -d \\
+    --name i18n_blog \\
+    --restart unless-stopped \\
+    -p 80:80 \\
+    -v /opt/i18n_blog/blog-data:/app/data \\
+    -e NEXT_PUBLIC_API_URL="http://localhost/api" \\
+    -e DB_PATH="/app/data/blog.db" \\
+    -e RECOVERY_MODE="false" \\
+    ictrun/i18n_blog:latest`}
+                          </code>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 flex-shrink-0"
+                            onClick={() => copyToClipboard(`docker run -d \\
+    --name i18n_blog \\
+    --restart unless-stopped \\
+    -p 80:80 \\
+    -v /opt/i18n_blog/blog-data:/app/data \\
+    -e NEXT_PUBLIC_API_URL="http://localhost/api" \\
+    -e DB_PATH="/app/data/blog.db" \\
+    -e RECOVERY_MODE="false" \\
+    ictrun/i18n_blog:latest`, 'step4')}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        {copySuccess === 'step4' && (
+                          <span className="absolute -top-8 right-0 text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                            Copied!
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Step 5 */}
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-sm">{t('admin.passwordResetStep5')}</h4>
+                      <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-md border border-green-200 dark:border-green-800">
+                        <div className="text-sm font-mono">
+                          <p><strong>Username:</strong> admin</p>
+                          <p><strong>Password:</strong> xuemian168</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 6 */}
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-sm text-red-600 dark:text-red-400">
+                        {t('admin.passwordResetStep6')}
+                      </h4>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardContent>
         </Card>
       </motion.div>

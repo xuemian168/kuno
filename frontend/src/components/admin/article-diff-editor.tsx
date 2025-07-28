@@ -53,6 +53,7 @@ import MediaPicker from "./media-picker"
 import { MediaLibrary } from "@/lib/api"
 import { playSuccessSound, initializeSoundSettings } from "@/lib/sound"
 import { NotificationDialog, useNotificationDialog } from "@/components/ui/notification-dialog"
+import { MonacoTranslationEditor, MonacoTranslationEditorRef } from "./monaco-translation-editor"
 
 
 
@@ -98,6 +99,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   
   const sourceTextareaRef = useRef<HTMLTextAreaElement>(null)
   const targetTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const monacoEditorRef = useRef<MonacoTranslationEditorRef>(null)
   
   const [formData, setFormData] = useState({
     title: article?.title || "",
@@ -208,8 +210,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         continue
       }
       
-      // Check if this line contains media content that should be skipped
-      const isMediaContent = (line: string) => {
+      // Check if this line contains content that should not be translated
+      const isNonTranslatableContent = (line: string) => {
         // Skip image markdown: ![alt](src)
         if (/^!\[.*\]\(.*\)$/.test(line)) return true
         
@@ -221,11 +223,32 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         if (/<YouTubeEmbed\s+.*?\/>/.test(line)) return true
         if (/<BiliBiliEmbed\s+.*?\/>/.test(line)) return true
         
+        // Skip lines starting with warning symbols and similar special characters
+        if (/^[⚠️❗️💡🔥✅❌⭐️📝💻🎯🚀🔔📋📊⚡️🎉🛠️🔗📁📖📌]+/.test(line.trim())) return true
+        
+        // Skip markdown links: - [Text](URL)
+        if (/^\s*-\s*\[.*\]\(.*\)\s*$/.test(line)) return true
+        
+        // Skip broken/partial markdown links that might result from translation
+        if (/^\s*-\s*\[.*\]\(___/.test(line)) return true
+        if (/^\s*-\s*\[.*\]\($/.test(line)) return true
+        if (/^\s*-\s*\[.*\]\(https?:\/\//.test(line)) return true
+        
+        // Skip lines that look like partial markdown links
+        if (/^\s*-\s*\[.*\]\(\s*$/.test(line)) return true
+        if (/^\s*"\s*-\s*\[.*\]\(/.test(line)) return true
+        
+        // Skip standalone URLs
+        if (/^https?:\/\//.test(line.trim())) return true
+        
+        // Skip lines that contain common link domains (to catch partial translations)
+        if (/\b(docs\.docker\.com|github\.com|stackoverflow\.com|npmjs\.com|reactjs\.org)\b/.test(line)) return true
+        
         return false
       }
       
-      // Skip media content lines
-      if (isMediaContent(sourceLine)) {
+      // Skip non-translatable content lines
+      if (isNonTranslatableContent(sourceLine)) {
         continue
       }
       
@@ -287,6 +310,61 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     return () => clearTimeout(timer)
   }, [locale])
 
+  // Function to filter out non-translatable content before sending to translation service
+  const filterNonTranslatableContent = (text: string): { filtered: string; placeholders: Map<string, string> } => {
+    const lines = text.split('\n')
+    const placeholders = new Map<string, string>()
+    let placeholderIndex = 0
+    
+    const filteredLines = lines.map((line, index) => {
+      const trimmedLine = line.trim()
+      
+      // Check if line should not be translated
+      if (
+        // Special symbols at start
+        /^[⚠️❗️💡🔥✅❌⭐️📝💻🎯🚀🔔📋📊⚡️🎉🛠️🔗📁📖📌]+/.test(trimmedLine) ||
+        // Markdown links
+        /^\s*-\s*\[.*\]\(.*\)\s*$/.test(line) ||
+        // URLs
+        /^https?:\/\//.test(trimmedLine) ||
+        // Common domains
+        /\b(docs\.docker\.com|github\.com|stackoverflow\.com|npmjs\.com|reactjs\.org)\b/.test(line) ||
+        // Image markdown
+        /^!\[.*\]\(.*\)$/.test(trimmedLine) ||
+        // Video/embed tags
+        /<video\s+.*?>/.test(line) || line === '</video>' ||
+        line === '  Your browser does not support the video tag.' ||
+        /<YouTubeEmbed\s+.*?\/>/.test(line) ||
+        /<BiliBiliEmbed\s+.*?\/>/.test(line)
+      ) {
+        const placeholder = `[NOTR-${placeholderIndex}-KEEP]`
+        placeholderIndex++
+        placeholders.set(placeholder, line)
+        return placeholder
+      }
+      
+      return line
+    })
+    
+    return {
+      filtered: filteredLines.join('\n'),
+      placeholders
+    }
+  }
+  
+  // Function to restore non-translatable content after translation
+  const restoreNonTranslatableContent = (translatedText: string, placeholders: Map<string, string>): string => {
+    let result = translatedText
+    
+    placeholders.forEach((originalLine, placeholder) => {
+      // Use global replace with word boundary to ensure complete replacement
+      const regex = new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
+      result = result.replace(regex, originalLine)
+    })
+    
+    return result
+  }
+
   const handleAutoTranslate = async (field: 'title' | 'content' | 'summary' | 'all') => {
     if (!translationService.getActiveProvider()) {
       alert('Please configure a translation API in settings first')
@@ -300,37 +378,58 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       const defaultLang = article?.default_lang || 'zh'
 
       if (field === 'all') {
+        // Filter content before translation
+        const { filtered: filteredContent, placeholders: contentPlaceholders } = filterNonTranslatableContent(sourceTranslation.content)
+        
         // Translate all fields at once
         const result = await translationService.translateArticle(
           {
             title: sourceTranslation.title,
-            content: sourceTranslation.content,
+            content: filteredContent,
             summary: sourceTranslation.summary
           },
           sourceLanguage,
           targetLanguage
         )
 
+        // Restore non-translatable content
+        const restoredContent = restoreNonTranslatableContent(result.content, contentPlaceholders)
+
         if (targetLanguage === defaultLang) {
           setFormData(prev => ({
             ...prev,
             title: result.title,
-            content: result.content,
+            content: restoredContent,
             summary: result.summary
           }))
         } else {
           updateTranslation(targetLanguage, 'title', result.title)
-          updateTranslation(targetLanguage, 'content', result.content)
+          updateTranslation(targetLanguage, 'content', restoredContent)
           updateTranslation(targetLanguage, 'summary', result.summary)
         }
       } else {
         // Translate single field
         const sourceText = sourceTranslation[field]
-        const translatedText = await translationService.translate(
-          sourceText,
-          sourceLanguage,
-          targetLanguage
-        )
+        let translatedText: string
+        
+        if (field === 'content') {
+          // Filter content before translation
+          const { filtered, placeholders } = filterNonTranslatableContent(sourceText)
+          const rawTranslation = await translationService.translate(
+            filtered,
+            sourceLanguage,
+            targetLanguage
+          )
+          // Restore non-translatable content
+          translatedText = restoreNonTranslatableContent(rawTranslation, placeholders)
+        } else {
+          // For title and summary, translate directly
+          translatedText = await translationService.translate(
+            sourceText,
+            sourceLanguage,
+            targetLanguage
+          )
+        }
 
         if (targetLanguage === defaultLang) {
           setFormData(prev => ({ ...prev, [field]: translatedText }))
@@ -484,6 +583,10 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       updateTranslation(targetLanguage, 'summary', sourceTranslation.summary)
     } else if (activeField === 'content') {
       updateTranslation(targetLanguage, 'content', sourceTranslation.content)
+      // Also update Monaco editor if it's active - copy source to target
+      if (monacoEditorRef.current) {
+        monacoEditorRef.current.setModifiedValue(sourceTranslation.content)
+      }
     }
   }
 
@@ -501,6 +604,10 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       updateTranslation(targetLanguage, 'summary', sourceTranslation.summary)
     } else if (activeField === 'content') {
       updateTranslation(targetLanguage, 'content', sourceTranslation.content)
+      // Also update Monaco editor if it's active - copy source to target
+      if (monacoEditorRef.current) {
+        monacoEditorRef.current.setModifiedValue(sourceTranslation.content)
+      }
     }
     
     setShowCopyConfirm(false)
@@ -738,11 +845,16 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       }
     }
 
-    // Insert the markdown text into the active textarea
+    // Insert the markdown text
     if (editMode === 'single') {
       insertTextAtCursor('single', markdownText)
+    } else if (activeField === 'content') {
+      // Use Monaco editor for content field
+      if (monacoEditorRef.current) {
+        monacoEditorRef.current.insertTextAtCursor(markdownText)
+      }
     } else {
-      // In translation mode, insert into both source and target at the same relative position
+      // In translation mode for basic fields, insert into both source and target at the same relative position
       insertTextAtSamePosition(markdownText)
     }
   }
@@ -1362,7 +1474,173 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       {/* Main Editor Area */}
       {editMode === 'single' || activeField === 'seo' ? (
         renderSingleEditor()
+      ) : activeField === 'content' ? (
+        // Use Monaco Editor for content field
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Language Headers */}
+          <div className="h-9 border-b flex bg-muted/20">
+            <div className="flex-1 px-4 flex items-center justify-between border-r">
+              <div className="flex items-center gap-2">
+                <Select value={sourceLanguage} onValueChange={(value) => {
+                  setSourceLanguage(value)
+                  if (value === targetLanguage) {
+                    const otherLang = availableLanguages.find(lang => lang.code !== value)
+                    if (otherLang) {
+                      setTargetLanguage(otherLang.code)
+                    }
+                  }
+                }}>
+                  <SelectTrigger className="h-6 w-32 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableLanguages.map(lang => (
+                      <SelectItem key={lang.code} value={lang.code}>
+                        {lang.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="w-12 h-1 bg-secondary rounded-full overflow-hidden">
+                  <div 
+                    className={cn(
+                      "h-full transition-all",
+                      progress[sourceLanguage] === 100 ? "bg-green-500" : 
+                      progress[sourceLanguage] > 0 ? "bg-yellow-500" : "bg-muted"
+                    )}
+                    style={{ width: `${progress[sourceLanguage]}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 px-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Select value={targetLanguage} onValueChange={(value) => {
+                  setTargetLanguage(value)
+                  if (value === sourceLanguage) {
+                    const otherLang = availableLanguages.find(lang => lang.code !== value)
+                    if (otherLang) {
+                      setSourceLanguage(otherLang.code)
+                    }
+                  }
+                }}>
+                  <SelectTrigger className="h-6 w-32 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableLanguages.filter(lang => lang.code !== sourceLanguage).map(lang => (
+                      <SelectItem key={lang.code} value={lang.code}>
+                        {lang.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="w-12 h-1 bg-secondary rounded-full overflow-hidden">
+                  <div 
+                    className={cn(
+                      "h-full transition-all",
+                      progress[targetLanguage] === 100 ? "bg-green-500" : 
+                      progress[targetLanguage] > 0 ? "bg-yellow-500" : "bg-muted"
+                    )}
+                    style={{ width: `${progress[targetLanguage]}%` }}
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={copyToTarget}
+                  className="h-6 px-2 ml-1"
+                  title="Copy from source"
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAutoTranslate('content')}
+                  disabled={isTranslating || !hasTranslationProvider}
+                  className="h-6 px-2"
+                  title="Auto translate this field"
+                >
+                  {isTranslating ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Monaco Editor or Preview */}
+          <div className="flex-1 overflow-hidden">
+            {showPreview === 'none' ? (
+              <MonacoTranslationEditor
+                ref={monacoEditorRef}
+                originalValue={sourceTranslation.content}
+                modifiedValue={targetTranslation.content}
+                onOriginalChange={(value) => updateTranslation(sourceLanguage, 'content', value)}
+                onModifiedChange={(value) => updateTranslation(targetLanguage, 'content', value)}
+                language="markdown"
+                height="100%"
+                theme="vs"
+                className="h-full"
+              />
+            ) : (
+              <div className="h-full flex">
+                {/* Left Preview/Editor */}
+                <div className="flex-1 border-r">
+                  {showPreview === 'left' || showPreview === 'both' ? (
+                    <div className="p-4 h-full overflow-y-auto">
+                      {sourceTranslation.content ? (
+                        <MarkdownRenderer content={sourceTranslation.content} />
+                      ) : (
+                        <p className="text-muted-foreground">No content</p>
+                      )}
+                    </div>
+                  ) : (
+                    <MonacoTranslationEditor
+                      originalValue={sourceTranslation.content}
+                      modifiedValue=""
+                      onOriginalChange={(value) => updateTranslation(sourceLanguage, 'content', value)}
+                      language="markdown"
+                      height="100%"
+                      theme="vs"
+                      className="h-full"
+                      options={{ renderSideBySide: false }}
+                    />
+                  )}
+                </div>
+                
+                {/* Right Preview/Editor */}
+                <div className="flex-1">
+                  {showPreview === 'right' || showPreview === 'both' ? (
+                    <div className="p-4 h-full overflow-y-auto">
+                      {targetTranslation.content ? (
+                        <MarkdownRenderer content={targetTranslation.content} />
+                      ) : (
+                        <p className="text-muted-foreground">No content</p>
+                      )}
+                    </div>
+                  ) : (
+                    <MonacoTranslationEditor
+                      originalValue=""
+                      modifiedValue={targetTranslation.content}
+                      onModifiedChange={(value) => updateTranslation(targetLanguage, 'content', value)}
+                      language="markdown"
+                      height="100%"
+                      theme="vs"
+                      className="h-full"
+                      options={{ renderSideBySide: false }}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       ) : (
+        // Use original dual panel for basic fields
         <div className="flex-1 flex overflow-hidden">
         {/* Left Panel */}
         <div 
