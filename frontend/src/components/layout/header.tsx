@@ -3,18 +3,37 @@
 import { motion } from "framer-motion"
 import { LogOut } from "lucide-react"
 import { useTranslations } from 'next-intl'
+import { usePathname } from 'next/navigation'
 import ModeToggle from "@/components/mode-toggle"
 import LanguageSwitcher from "@/components/language-switcher"
 import { Button } from "@/components/ui/button"
 import { useSettings } from "@/contexts/settings-context"
 import { useAuth } from "@/contexts/auth-context"
 import { Link } from '@/i18n/routing'
-import { getFullApiUrl } from "@/lib/utils"
+import { getFullApiUrl, cn } from "@/lib/utils"
 
 export default function Header() {
   const t = useTranslations()
   const { settings } = useSettings()
   const { user, logout, isAuthenticated } = useAuth()
+  const pathname = usePathname()
+
+  // Function to check if a path is active
+  const isActivePath = (path: string) => {
+    if (path === '/') {
+      return pathname === '/' || pathname.match(/^\/[a-z]{2}$/) || pathname.match(/^\/[a-z]{2}\/$/)
+    }
+    if (path === '/admin') {
+      return pathname.includes('/admin')
+    }
+    if (path === '/rss') {
+      return pathname.includes('/rss')
+    }
+    if (path === '/media') {
+      return pathname.includes('/media')
+    }
+    return pathname.includes(path)
+  }
   
   return (
     <motion.header 
@@ -39,13 +58,23 @@ export default function Header() {
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
             <Link
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              className={cn(
+                "transition-colors hover:text-foreground/80",
+                isActivePath('/') 
+                  ? "text-foreground font-semibold border-b-2 border-primary pb-1" 
+                  : "text-foreground/60"
+              )}
               href="/"
             >
               {t('nav.home')}
             </Link>
             <Link
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              className={cn(
+                "transition-colors hover:text-foreground/80",
+                isActivePath('/rss') 
+                  ? "text-foreground font-semibold border-b-2 border-primary pb-1" 
+                  : "text-foreground/60"
+              )}
               href="/rss"
             >
               {t('rss.rssFeeds')}
@@ -53,13 +82,23 @@ export default function Header() {
             {isAuthenticated && user && (
               <>
                 <Link
-                  className="transition-colors hover:text-foreground/80 text-foreground/60"
+                  className={cn(
+                    "transition-colors hover:text-foreground/80",
+                    isActivePath('/admin') 
+                      ? "text-foreground font-semibold border-b-2 border-primary pb-1" 
+                      : "text-foreground/60"
+                  )}
                   href="/admin"
                 >
                   {t('nav.admin')}
                 </Link>
                 <Link
-                  className="transition-colors hover:text-foreground/80 text-foreground/60"
+                  className={cn(
+                    "transition-colors hover:text-foreground/80",
+                    isActivePath('/media') 
+                      ? "text-foreground font-semibold border-b-2 border-primary pb-1" 
+                      : "text-foreground/60"
+                  )}
                   href="/admin/media"
                 >
                   {t('admin.media')}
