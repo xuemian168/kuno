@@ -1,8 +1,12 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
+	"log"
 	"os"
+	"sync"
 	"time"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -14,12 +18,39 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func getJWTSecret() []byte {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		secret = "default-secret-key-change-in-production"
+var (
+	jwtSecret     []byte
+	jwtSecretOnce sync.Once
+)
+
+// generateSecureRandomKey generates a cryptographically secure random key
+func generateSecureRandomKey(length int) ([]byte, error) {
+	key := make([]byte, length)
+	_, err := rand.Read(key)
+	if err != nil {
+		return nil, err
 	}
-	return []byte(secret)
+	return key, nil
+}
+
+func getJWTSecret() []byte {
+	jwtSecretOnce.Do(func() {
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" {
+			// Generate a secure random key if not provided
+			randomKey, err := generateSecureRandomKey(32) // 256-bit key
+			if err != nil {
+				log.Fatal("Failed to generate JWT secret:", err)
+			}
+			jwtSecret = randomKey
+			log.Printf("Generated random JWT secret (base64): %s", base64.StdEncoding.EncodeToString(randomKey))
+			log.Println("WARNING: Using auto-generated JWT secret. Set JWT_SECRET environment variable for production use.")
+		} else {
+			jwtSecret = []byte(secret)
+			log.Println("Using JWT secret from environment variable")
+		}
+	})
+	return jwtSecret
 }
 
 func GenerateToken(userID uint, username string, isAdmin bool) (string, error) {

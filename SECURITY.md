@@ -88,7 +88,18 @@ NEXT_PUBLIC_API_URL=https://yourdomain.com/api
 
 # Database - Use volume with restricted permissions
 DB_PATH=/app/data/blog.db
+
+# JWT Secret - CRITICAL for production
+# Generate a secure secret: openssl rand -base64 32
+JWT_SECRET=your-very-secure-random-string-here
 ```
+
+**JWT Secret Security**:
+- **Always set in production** - Auto-generated secrets change on restart
+- **Use strong secrets** - At least 32 characters, randomly generated
+- **Keep it secret** - Never commit to version control
+- **Rotate periodically** - Change every 90 days or after personnel changes
+- **Example generation**: `openssl rand -base64 32`
 
 ### HTTPS Configuration
 

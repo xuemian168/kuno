@@ -13,6 +13,7 @@ LICENSE
 .idea/
 *.swp
 *.swo
+docs/
 *~
 
 # OS generated files

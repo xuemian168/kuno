@@ -136,6 +136,7 @@ docker run -d \
     -e DB_PATH="/app/data/blog.db" \
     -e GIN_MODE="release" \
     -e NODE_ENV="production" \
+    -e JWT_SECRET="your-secure-secret-key" \
     ictrun/i18n_blog:latest
 ```
 
@@ -145,6 +146,10 @@ docker run -d \
   - 局域网访问：`http://192.168.1.100/api`（使用实际 IP）
   - 公网域名：`https://yourdomain.com/api`
   - 端口非 80：`http://localhost:8080/api`
+- `JWT_SECRET` - **生产环境强烈建议设置**
+  - 用于签名 JWT 令牌的密钥
+  - 如未设置，系统会自动生成随机密钥（重启后会改变）
+  - 建议使用至少 32 字符的复杂字符串
 
 **目录说明**：
 - `/opt/i18n_blog/` - 应用主目录

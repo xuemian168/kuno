@@ -145,6 +145,7 @@ docker run -d \
   -e DB_PATH="/app/data/blog.db" \
   -e GIN_MODE="release" \
   -e NODE_ENV="production" \
+  -e JWT_SECRET="your-secure-secret-key" \
   ictrun/i18n_blog:latest
 ```
 
@@ -154,6 +155,10 @@ docker run -d \
   - LAN access: `http://192.168.1.100/api` (use your actual IP)
   - Public domain: `https://yourdomain.com/api`
   - Non-80 port: `http://localhost:8080/api`
+- `JWT_SECRET` - **Strongly recommended for production**
+  - Secret key for signing JWT tokens
+  - If not set, a random key is auto-generated (changes on restart)
+  - Use a complex string of at least 32 characters
 
 **Directory Structure**:
 - `/opt/i18n_blog/` - Application main directory
@@ -235,6 +240,7 @@ docker run -d \
 | `GIN_MODE` | `release` | Go Gin mode (release/debug) |
 | `NODE_ENV` | `production` | Node.js environment |
 | `RECOVERY_MODE` | `false` | Password recovery mode |
+| `JWT_SECRET` | *(auto-generated)* | JWT signing secret (recommended for production) |
 
 #### First Time Setup
 
