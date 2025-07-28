@@ -12,15 +12,6 @@ import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { apiClient, SocialMedia } from '@/lib/api'
-import { NotificationDialog, useNotificationDialog } from '@/components/ui/notification-dialog'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { 
   Plus, 
   Edit2, 
@@ -81,7 +72,6 @@ interface SocialMediaFormData {
 
 export function SocialMediaManager() {
   const t = useTranslations()
-  const notification = useNotificationDialog()
   const [socialMediaList, setSocialMediaList] = useState<SocialMedia[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -98,11 +88,6 @@ export function SocialMediaManager() {
   const [reorderTimeout, setReorderTimeout] = useState<NodeJS.Timeout | null>(null)
   const [draggedItem, setDraggedItem] = useState<SocialMedia | null>(null)
   const [draggedOverIndex, setDraggedOverIndex] = useState<number | null>(null)
-  const [deleteDialog, setDeleteDialog] = useState({
-    open: false,
-    item: null as SocialMedia | null
-  })
-  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     fetchSocialMedia()
@@ -180,49 +165,34 @@ export function SocialMediaManager() {
           ...formData,
           display_order: socialMediaList.length
         })
-        notification.showSuccess(t('settings.socialMediaAdded'))
+        alert(t('settings.socialMediaAdded'))
       } else if (editingId) {
         await apiClient.updateSocialMedia(editingId, formData)
-        notification.showSuccess(t('settings.socialMediaUpdated'))
+        alert(t('settings.socialMediaUpdated'))
       }
 
       await fetchSocialMedia()
       handleCancel()
     } catch (error) {
       console.error('Failed to save social media:', error)
-      notification.showError(
-        'Failed to save',
-        'Failed to save social media link. Please try again.'
-      )
+      setError('Failed to save social media link')
     } finally {
       setSaving(false)
     }
   }
 
-  const handleDelete = (item: SocialMedia) => {
-    setDeleteDialog({
-      open: true,
-      item: item
-    })
-  }
+  const handleDelete = async (id: number) => {
+    if (!confirm(t('settings.confirmDeleteSocialMedia'))) {
+      return
+    }
 
-  const handleConfirmDelete = async () => {
-    if (!deleteDialog.item) return
-
-    setDeleting(true)
     try {
-      await apiClient.deleteSocialMedia(deleteDialog.item.id)
-      notification.showSuccess(t('settings.socialMediaDeleted'))
+      await apiClient.deleteSocialMedia(id)
+      alert(t('settings.socialMediaDeleted'))
       await fetchSocialMedia()
-      setDeleteDialog({ open: false, item: null })
     } catch (error) {
       console.error('Failed to delete social media:', error)
-      notification.showError(
-        'Delete failed',
-        'Failed to delete social media link. Please try again.'
-      )
-    } finally {
-      setDeleting(false)
+      alert('Failed to delete social media link')
     }
   }
 
@@ -500,7 +470,7 @@ export function SocialMediaManager() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDelete(item)}
+                      onClick={() => handleDelete(item.id)}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -528,75 +498,6 @@ export function SocialMediaManager() {
           </>
         )}
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, item: null })}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
-                <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
-              </div>
-              <DialogTitle className="text-lg font-semibold">
-                {t('settings.confirmDeleteSocialMedia')}
-              </DialogTitle>
-            </div>
-            <DialogDescription className="text-sm text-muted-foreground mt-3">
-              This action cannot be undone. This will permanently delete the social media link.
-            </DialogDescription>
-          </DialogHeader>
-
-          {deleteDialog.item && (
-            <div className="space-y-4">
-              <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
-                <AlertDescription className="text-sm">
-                  <span className="font-medium">About to delete: </span>
-                  <span className="font-mono text-sm bg-muted px-1 py-0.5 rounded">
-                    {deleteDialog.item.platform} - {deleteDialog.item.url}
-                  </span>
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
-
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialog({ open: false, item: null })}
-              disabled={deleting}
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={deleting}
-              className="gap-2"
-            >
-              {deleting ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-4 w-4" />
-                  {t('common.delete')}
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Notification Dialog */}
-      <NotificationDialog
-        open={notification.open}
-        onOpenChange={notification.hideNotification}
-        type={notification.type}
-        title={notification.title}
-        description={notification.description}
-      />
     </div>
   )
 }

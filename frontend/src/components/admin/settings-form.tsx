@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, SiteSettings, SiteSettingsTranslation } from "@/lib/api"
 import { useSettings } from "@/contexts/settings-context"
-import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react"
+import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle, AlertTriangle } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { translationService, TranslationConfig, SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation"
@@ -166,9 +166,6 @@ export function SettingsForm({ locale }: SettingsFormProps) {
   
   // About dialog state
   const [showAboutDialog, setShowAboutDialog] = useState(false)
-  
-  // China compliance section state
-  const [chinaComplianceExpanded, setChinaComplianceExpanded] = useState(false)
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -663,33 +660,16 @@ export function SettingsForm({ locale }: SettingsFormProps) {
 
                 {/* China Compliance Section */}
                 <Card className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20 border-red-200 dark:border-red-800">
-                  <CardHeader 
-                    className="pb-4 cursor-pointer"
-                    onClick={() => setChinaComplianceExpanded(!chinaComplianceExpanded)}
-                  >
-                    <CardTitle className="flex items-center justify-between text-red-800 dark:text-red-200">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">🇨🇳</span>
-                        {t('settings.chinaCompliance')}
-                      </div>
-                      {chinaComplianceExpanded ? (
-                        <ChevronDown className="h-5 w-5 transition-transform" />
-                      ) : (
-                        <ChevronRight className="h-5 w-5 transition-transform" />
-                      )}
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-2 text-red-800 dark:text-red-200">
+                      <span className="text-xl">🇨🇳</span>
+                      {t('settings.chinaCompliance')}
                     </CardTitle>
                     <CardDescription className="text-red-700 dark:text-red-300">
                       {t('settings.chinaComplianceDescription')}
                     </CardDescription>
                   </CardHeader>
-                  {chinaComplianceExpanded && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <CardContent className="space-y-4">
+                  <CardContent className="space-y-4">
                     <div className="space-y-6">
                       {/* ICP Filing */}
                       <div className="space-y-3">
@@ -760,14 +740,12 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                           </div>
                         </div>
                       )}
-                        </div>
-                      </CardContent>
-                    </motion.div>
-                  )}
+                    </div>
+                  </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
-                  <CardContent className="py-4">
+                  <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div className={`p-2 rounded-lg ${formData.show_view_count ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-800'} transition-colors`}>
@@ -786,19 +764,17 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center">
-                        <Switch
-                          id="show_view_count"
-                          checked={formData.show_view_count}
-                          onCheckedChange={(checked: boolean) => handleChange('show_view_count', checked)}
-                        />
-                      </div>
+                      <Switch
+                        id="show_view_count"
+                        checked={formData.show_view_count}
+                        onCheckedChange={(checked: boolean) => handleChange('show_view_count', checked)}
+                      />
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800">
-                  <CardContent className="py-4">
+                  <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div className={`p-2 rounded-lg ${formData.enable_sound_effects ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-800'} transition-colors`}>
@@ -817,13 +793,11 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center">
-                        <Switch
-                          id="enable_sound_effects"
-                          checked={formData.enable_sound_effects}
-                          onCheckedChange={(checked: boolean) => handleChange('enable_sound_effects', checked)}
-                        />
-                      </div>
+                      <Switch
+                        id="enable_sound_effects"
+                        checked={formData.enable_sound_effects}
+                        onCheckedChange={(checked: boolean) => handleChange('enable_sound_effects', checked)}
+                      />
                     </div>
                   </CardContent>
                 </Card>

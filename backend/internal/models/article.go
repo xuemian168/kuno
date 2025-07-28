@@ -1,8 +1,8 @@
 package models
 
 import (
-	"gorm.io/gorm"
 	"time"
+	"gorm.io/gorm"
 )
 
 type Article struct {
@@ -17,13 +17,13 @@ type Article struct {
 	Translations []ArticleTranslation `gorm:"foreignKey:ArticleID" json:"translations,omitempty"`
 	ViewCount    uint                 `gorm:"default:0" json:"view_count"`
 	// SEO Fields
-	SEOTitle       string         `gorm:"size:255" json:"seo_title"`
-	SEODescription string         `gorm:"size:500" json:"seo_description"`
-	SEOKeywords    string         `gorm:"size:255" json:"seo_keywords"`
-	SEOSlug        string         `gorm:"size:255;index" json:"seo_slug"`
-	CreatedAt      time.Time      `json:"created_at"`
-	UpdatedAt      time.Time      `json:"updated_at"`
-	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
+	SEOTitle       string             `gorm:"size:255" json:"seo_title"`
+	SEODescription string             `gorm:"size:500" json:"seo_description"`
+	SEOKeywords    string             `gorm:"size:255" json:"seo_keywords"`
+	SEOSlug        string             `gorm:"size:255;index" json:"seo_slug"`
+	CreatedAt      time.Time          `json:"created_at"`
+	UpdatedAt      time.Time          `json:"updated_at"`
+	DeletedAt      gorm.DeletedAt     `gorm:"index" json:"-"`
 }
 
 type Category struct {
@@ -39,39 +39,39 @@ type Category struct {
 }
 
 type SiteSettings struct {
-	ID                 uint                      `gorm:"primaryKey" json:"id"`
-	SiteTitle          string                    `gorm:"default:'Blog'" json:"site_title"`
-	SiteSubtitle       string                    `gorm:"default:'A minimalist space for thoughts and ideas'" json:"site_subtitle"`
-	FooterText         string                    `gorm:"default:'© 2025 xuemian168'" json:"footer_text"`
-	ICPFiling          string                    `gorm:"size:255" json:"icp_filing"`
-	PSBFiling          string                    `gorm:"size:255" json:"psb_filing"`
-	ShowViewCount      bool                      `gorm:"default:true" json:"show_view_count"`
-	EnableSoundEffects bool                      `gorm:"default:true" json:"enable_sound_effects"`
-	LogoURL            string                    `gorm:"size:255" json:"logo_url"`
-	FaviconURL         string                    `gorm:"size:255" json:"favicon_url"`
-	Translations       []SiteSettingsTranslation `gorm:"foreignKey:SettingsID" json:"translations,omitempty"`
-	CreatedAt          time.Time                 `json:"created_at"`
-	UpdatedAt          time.Time                 `json:"updated_at"`
+	ID          uint                      `gorm:"primaryKey" json:"id"`
+	SiteTitle   string                    `gorm:"default:'Blog'" json:"site_title"`
+	SiteSubtitle string                   `gorm:"default:'A minimalist space for thoughts and ideas'" json:"site_subtitle"`
+	FooterText  string                    `gorm:"default:'© 2025 xuemian168'" json:"footer_text"`
+	ICPFiling   string                    `gorm:"size:255" json:"icp_filing"`
+	PSBFiling   string                    `gorm:"size:255" json:"psb_filing"`
+	ShowViewCount bool                    `gorm:"default:true" json:"show_view_count"`
+	EnableSoundEffects bool               `gorm:"default:true" json:"enable_sound_effects"`
+	LogoURL     string                    `gorm:"size:255" json:"logo_url"`
+	FaviconURL  string                    `gorm:"size:255" json:"favicon_url"`
+	Translations []SiteSettingsTranslation `gorm:"foreignKey:SettingsID" json:"translations,omitempty"`
+	CreatedAt   time.Time                 `json:"created_at"`
+	UpdatedAt   time.Time                 `json:"updated_at"`
 }
 
 type SiteSettingsTranslation struct {
-	ID           uint      `gorm:"primaryKey" json:"id"`
-	SettingsID   uint      `gorm:"not null;index" json:"settings_id"`
-	Language     string    `gorm:"not null;size:10;index" json:"language"`
-	SiteTitle    string    `gorm:"not null" json:"site_title"`
-	SiteSubtitle string    `gorm:"not null" json:"site_subtitle"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID         uint      `gorm:"primaryKey" json:"id"`
+	SettingsID uint      `gorm:"not null;index" json:"settings_id"`
+	Language   string    `gorm:"not null;size:10;index" json:"language"`
+	SiteTitle  string    `gorm:"not null" json:"site_title"`
+	SiteSubtitle string  `gorm:"not null" json:"site_subtitle"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 type User struct {
-	ID        uint           `gorm:"primaryKey" json:"id"`
-	Username  string         `gorm:"unique;not null" json:"username"`
-	Password  string         `gorm:"not null" json:"-"`
-	IsAdmin   bool           `gorm:"default:true" json:"is_admin"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	Username    string         `gorm:"unique;not null" json:"username"`
+	Password    string         `gorm:"not null" json:"-"`
+	IsAdmin     bool           `gorm:"default:true" json:"is_admin"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 type ArticleTranslation struct {
@@ -97,12 +97,12 @@ type CategoryTranslation struct {
 
 // ArticleView tracks unique visitors for each article
 type ArticleView struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	ArticleID   uint      `gorm:"not null;index" json:"article_id"`
-	IPAddress   string    `gorm:"not null;size:45" json:"ip_address"`
-	UserAgent   string    `gorm:"size:500" json:"user_agent"`
-	Fingerprint string    `gorm:"size:64;index" json:"fingerprint"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID         uint      `gorm:"primaryKey" json:"id"`
+	ArticleID  uint      `gorm:"not null;index" json:"article_id"`
+	IPAddress  string    `gorm:"not null;size:45" json:"ip_address"`
+	UserAgent  string    `gorm:"size:500" json:"user_agent"`
+	Fingerprint string   `gorm:"size:64;index" json:"fingerprint"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 // SocialMedia represents social media links

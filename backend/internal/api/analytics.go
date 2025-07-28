@@ -1,41 +1,41 @@
 package api
 
 import (
+	"net/http"
+	"time"
 	"blog-backend/internal/database"
 	"blog-backend/internal/models"
 	"github.com/gin-gonic/gin"
-	"net/http"
-	"time"
 )
 
 type AnalyticsResponse struct {
-	TotalViews     int64               `json:"total_views"`
-	TotalArticles  int64               `json:"total_articles"`
-	ViewsToday     int64               `json:"views_today"`
-	ViewsThisWeek  int64               `json:"views_this_week"`
-	ViewsThisMonth int64               `json:"views_this_month"`
-	TopArticles    []ArticleViewStats  `json:"top_articles"`
-	RecentViews    []DailyViewStats    `json:"recent_views"`
-	CategoryStats  []CategoryViewStats `json:"category_stats"`
+	TotalViews      int64                    `json:"total_views"`
+	TotalArticles   int64                    `json:"total_articles"`
+	ViewsToday      int64                    `json:"views_today"`
+	ViewsThisWeek   int64                    `json:"views_this_week"`
+	ViewsThisMonth  int64                    `json:"views_this_month"`
+	TopArticles     []ArticleViewStats       `json:"top_articles"`
+	RecentViews     []DailyViewStats         `json:"recent_views"`
+	CategoryStats   []CategoryViewStats      `json:"category_stats"`
 }
 
 type ArticleViewStats struct {
-	ID        uint   `json:"id"`
-	Title     string `json:"title"`
-	ViewCount uint   `json:"view_count"`
-	Category  string `json:"category"`
-	CreatedAt string `json:"created_at"`
+	ID          uint   `json:"id"`
+	Title       string `json:"title"`
+	ViewCount   uint   `json:"view_count"`
+	Category    string `json:"category"`
+	CreatedAt   string `json:"created_at"`
 }
 
 type DailyViewStats struct {
-	Date  string `json:"date"`
-	Views int64  `json:"views"`
+	Date   string `json:"date"`
+	Views  int64  `json:"views"`
 }
 
 type CategoryViewStats struct {
-	Category     string `json:"category"`
-	ViewCount    int64  `json:"view_count"`
-	ArticleCount int64  `json:"article_count"`
+	Category   string `json:"category"`
+	ViewCount  int64  `json:"view_count"`
+	ArticleCount int64 `json:"article_count"`
 }
 
 func GetAnalytics(c *gin.Context) {
@@ -52,23 +52,23 @@ func GetAnalytics(c *gin.Context) {
 	// Get total views and articles
 	var totalViews int64
 	database.DB.Model(&models.Article{}).Select("COALESCE(SUM(view_count), 0)").Scan(&totalViews)
-
+	
 	var totalArticles int64
 	database.DB.Model(&models.Article{}).Count(&totalArticles)
 
 	// Get views for different time periods
 	var viewsToday, viewsThisWeek, viewsThisMonth int64
-
+	
 	// Views today
 	database.DB.Model(&models.ArticleView{}).
 		Where("created_at >= ?", today).
 		Count(&viewsToday)
-
+	
 	// Views this week
 	database.DB.Model(&models.ArticleView{}).
 		Where("created_at >= ?", weekAgo).
 		Count(&viewsThisWeek)
-
+	
 	// Views this month
 	database.DB.Model(&models.ArticleView{}).
 		Where("created_at >= ?", monthAgo).
@@ -107,7 +107,7 @@ func GetAnalytics(c *gin.Context) {
 	// Get daily view stats for the last 30 days
 	var recentViews []DailyViewStats
 	thirtyDaysAgo := today.AddDate(0, 0, -30)
-
+	
 	rows, err := database.DB.Raw(`
 		SELECT DATE(created_at) as date, COUNT(*) as views 
 		FROM article_views 
@@ -115,7 +115,7 @@ func GetAnalytics(c *gin.Context) {
 		GROUP BY DATE(created_at) 
 		ORDER BY date DESC
 	`, thirtyDaysAgo).Rows()
-
+	
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -177,14 +177,14 @@ func GetArticleAnalytics(c *gin.Context) {
 	if lang == "" {
 		lang = "zh" // Default language
 	}
-
+	
 	// Get article basic info with language support
 	var article models.Article
 	if err := database.DB.Preload("Category").Preload("Translations").First(&article, articleID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
 		return
 	}
-
+	
 	// Apply translation if needed
 	if lang != "zh" && lang != "" {
 		applyTranslation(&article, lang)
@@ -199,7 +199,7 @@ func GetArticleAnalytics(c *gin.Context) {
 	// Get daily views for this article in the last 30 days
 	var dailyViews []DailyViewStats
 	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
-
+	
 	rows, err := database.DB.Raw(`
 		SELECT DATE(created_at) as date, COUNT(*) as views 
 		FROM article_views 
@@ -207,7 +207,7 @@ func GetArticleAnalytics(c *gin.Context) {
 		GROUP BY DATE(created_at) 
 		ORDER BY date DESC
 	`, articleID, thirtyDaysAgo).Rows()
-
+	
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -220,11 +220,11 @@ func GetArticleAnalytics(c *gin.Context) {
 
 	// Get recent visitors (last 10)
 	var recentVisitors []struct {
-		IPAddress string    `json:"ip_address"`
-		UserAgent string    `json:"user_agent"`
-		CreatedAt time.Time `json:"created_at"`
+		IPAddress   string    `json:"ip_address"`
+		UserAgent   string    `json:"user_agent"`
+		CreatedAt   time.Time `json:"created_at"`
 	}
-
+	
 	database.DB.Model(&models.ArticleView{}).
 		Select("ip_address, user_agent, created_at").
 		Where("article_id = ?", articleID).
@@ -233,11 +233,11 @@ func GetArticleAnalytics(c *gin.Context) {
 		Scan(&recentVisitors)
 
 	response := gin.H{
-		"article":         article,
-		"unique_visitors": uniqueVisitors,
-		"total_views":     article.ViewCount,
-		"daily_views":     dailyViews,
-		"recent_visitors": recentVisitors,
+		"article":          article,
+		"unique_visitors":  uniqueVisitors,
+		"total_views":      article.ViewCount,
+		"daily_views":      dailyViews,
+		"recent_visitors":  recentVisitors,
 	}
 
 	c.JSON(http.StatusOK, response)

@@ -173,35 +173,6 @@ export interface MediaListResponse {
   limit: number
 }
 
-// Helper function to extract filename from Content-Disposition header
-function extractFilenameFromContentDisposition(contentDisposition: string | null): string | null {
-  if (!contentDisposition) return null
-  
-  // First try to extract RFC 5987 format: filename*=UTF-8''encoded_filename
-  const rfc5987Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/)
-  if (rfc5987Match) {
-    try {
-      return decodeURIComponent(rfc5987Match[1])
-    } catch (e) {
-      console.warn('Failed to decode RFC 5987 filename:', e)
-    }
-  }
-  
-  // Fallback to simple format: filename="filename"
-  const simpleMatch = contentDisposition.match(/filename="([^"]+)"/)
-  if (simpleMatch) {
-    return simpleMatch[1]
-  }
-  
-  // Last resort: filename=filename (without quotes)
-  const unquotedMatch = contentDisposition.match(/filename=([^;]+)/)
-  if (unquotedMatch) {
-    return unquotedMatch[1].trim()
-  }
-  
-  return null
-}
-
 class ApiClient {
   private token: string | null = null
 
@@ -588,29 +559,7 @@ class ApiClient {
         
         // Extract filename from Content-Disposition header
         const contentDisposition = response.headers.get('Content-Disposition')
-        let filename = extractFilenameFromContentDisposition(contentDisposition)
-        
-        // If no filename from header, try to get article info and generate filename
-        if (!filename) {
-          try {
-            // Fetch article info to get the title
-            const articleResponse = await fetch(`${this.getBaseUrl()}/articles/${id}?lang=${params?.lang || 'zh'}`, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            })
-            if (articleResponse.ok) {
-              const articleData = await articleResponse.json()
-              // Sanitize the title for use as filename
-              const safeTitle = this.sanitizeFilename(articleData.title || `article-${id}`)
-              filename = `${safeTitle}.md`
-            } else {
-              filename = `article-${id}.md`
-            }
-          } catch (error) {
-            filename = `article-${id}.md`
-          }
-        }
+        const filename = contentDisposition?.match(/filename="(.+)"/)?.[1] || `article-${id}.md`
         link.download = filename
         
         document.body.appendChild(link)
@@ -708,28 +657,6 @@ class ApiClient {
         throw new Error(`Export failed: ${response.status} ${response.statusText} - ${errorText}`)
       }
     }
-  }
-
-  // Helper method to sanitize filename for client-side use
-  private sanitizeFilename(filename: string): string {
-    // Replace invalid characters with underscores
-    const invalidChars = /[/\\:*?"<>|]/g
-    let result = filename.replace(invalidChars, '_')
-    
-    // Trim spaces and dots from the end
-    result = result.replace(/[ .]+$/, '')
-    
-    // Limit filename length to 100 characters
-    if (result.length > 100) {
-      result = result.substring(0, 100)
-    }
-    
-    // Ensure filename is not empty
-    if (result === '' || result === '_') {
-      result = 'untitled'
-    }
-    
-    return result
   }
 }
 

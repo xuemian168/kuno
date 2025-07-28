@@ -1,16 +1,16 @@
 package api
 
 import (
-	"blog-backend/internal/database"
-	"blog-backend/internal/models"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"blog-backend/internal/database"
+	"blog-backend/internal/models"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 const (
@@ -229,7 +229,7 @@ func DeleteMedia(c *gin.Context) {
 func ServeMedia(c *gin.Context) {
 	subDir := c.Param("subdir")
 	fileName := c.Param("filename")
-
+	
 	// Validate subdirectory
 	if subDir != "images" && subDir != "videos" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid media type"})
@@ -237,7 +237,7 @@ func ServeMedia(c *gin.Context) {
 	}
 
 	filePath := filepath.Join(UploadDir, subDir, fileName)
-
+	
 	// Check if file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
