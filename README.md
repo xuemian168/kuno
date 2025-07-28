@@ -1,3 +1,5 @@
+[中文](./README_CN.md) | English
+
 # I18N Blog
 
 A full-stack blog application with Go backend and Next.js frontend, containerized with Docker for easy deployment.
@@ -419,61 +421,7 @@ docker-compose -f docker-compose.prod.yml up --build -d
 
 ## Architecture
 
-### Backend (Go)
-- **Framework**: Gin
-- **Database**: SQLite (with GORM)
-- **Port**: 8080
-
-### Frontend (Next.js)
-- **Framework**: Next.js 14 with TypeScript
-- **UI**: shadcn/ui + Tailwind CSS
-- **Animation**: Framer Motion
-- **Port**: 3000
-
-### Database
-- **SQLite**: File-based database stored in Docker volume
-- **Location**: `./data/blog.db`
-- **Migrations**: Automatic on startup
-
-## API Endpoints
-
-### Articles
-- `GET /api/articles` - List all articles
-- `POST /api/articles` - Create article
-- `GET /api/articles/:id` - Get article by ID
-- `PUT /api/articles/:id` - Update article
-- `DELETE /api/articles/:id` - Delete article
-- `POST /api/articles/import` - Import markdown
-
-### Categories
-- `GET /api/categories` - List all categories
-- `POST /api/categories` - Create category
-- `GET /api/categories/:id` - Get category by ID
-- `PUT /api/categories/:id` - Update category
-- `DELETE /api/categories/:id` - Delete category
-
-### Settings
-- `GET /api/settings` - Get site settings
-- `PUT /api/settings` - Update site settings
-
-## Configuration
-
-### Environment Variables
-
-The application uses a unified configuration approach. Copy `.env.example` to `.env` and modify as needed:
-
-```bash
-# Backend Configuration
-DB_PATH=./data/blog.db
-GIN_MODE=release
-PORT=8080
-RECOVERY_MODE=false
-
-# Frontend Configuration
-NEXT_PUBLIC_API_URL=https://yourdomain.com/api
-NODE_ENV=production
-PORT=3000
-```
+![structure](./docs/structure.png))
 
 #### Important Configuration Notes
 

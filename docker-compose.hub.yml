@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  i18n-blog:
+    image: ictrun/i18n_blog:latest
+    container_name: ${CONTAINER_NAME:-i18n-blog}
+    restart: ${RESTART_POLICY:-unless-stopped}
+    ports:
+      - "${HOST_PORT:-80}:80"
+    volumes:
+      - blog-data:/app/data
+      - blog-uploads:/app/backend/uploads
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - DB_PATH=${DB_PATH:-/app/data/blog.db}
+      - GIN_MODE=${GIN_MODE:-release}
+      - NODE_ENV=${NODE_ENV:-production}
+      - RECOVERY_MODE=${RECOVERY_MODE:-false}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/api/categories"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  blog-data:
+    driver: local
+  blog-uploads:
+    driver: local
