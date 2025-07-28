@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import {
   Dialog,
@@ -21,9 +21,11 @@ import {
   ExternalLink,
   Calendar,
   Hash,
-  Zap
+  Zap,
+  RefreshCw
 } from "lucide-react"
 import { getAppVersion, APP_INFO } from "@/lib/version"
+import { apiClient } from "@/lib/api"
 
 interface AboutDialogProps {
   open: boolean
@@ -31,14 +33,53 @@ interface AboutDialogProps {
   locale: string
 }
 
+interface SystemInfo {
+  version: string
+  build_date: string
+  git_commit: string
+  git_branch: string
+  build_number: string
+}
 
 export function AboutDialog({ open, onOpenChange, locale }: AboutDialogProps) {
   const t = locale === 'zh'
-  const versionInfo = getAppVersion()
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
+  const [loading, setLoading] = useState(false)
+  const fallbackVersionInfo = getAppVersion()
+
+  // Load system info from API when dialog opens
+  useEffect(() => {
+    const loadSystemInfo = async () => {
+      if (!open) return
+      
+      setLoading(true)
+      try {
+        const data = await apiClient.getSystemInfo()
+        setSystemInfo(data.system_info)
+      } catch (err) {
+        console.error('Failed to load system info:', err)
+        // Fallback to local version info if API fails
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadSystemInfo()
+  }, [open])
+
+  // Use system info from API if available, otherwise fallback to local version
+  const versionInfo = systemInfo ? {
+    name: APP_INFO.name,
+    version: systemInfo.version || fallbackVersionInfo.version,
+    build: systemInfo.build_number || fallbackVersionInfo.build,
+    buildDate: systemInfo.build_date || fallbackVersionInfo.buildDate,
+    commit: systemInfo.git_commit || fallbackVersionInfo.commit,
+    branch: systemInfo.git_branch || fallbackVersionInfo.branch
+  } : fallbackVersionInfo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-violet-50 via-blue-50 to-cyan-50 dark:from-violet-950/30 dark:via-blue-950/30 dark:to-cyan-950/30 border border-violet-200 dark:border-violet-800">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-violet-50 via-blue-50 to-cyan-50 dark:from-slate-800/95 dark:via-slate-700/95 dark:to-slate-800/95 border border-violet-200 dark:border-slate-600 backdrop-blur-sm">
         <DialogHeader className="text-center pb-6">
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 via-blue-500 to-cyan-500 shadow-2xl">
             <motion.div
@@ -57,12 +98,16 @@ export function AboutDialog({ open, onOpenChange, locale }: AboutDialogProps) {
           
           <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent text-center">
             {versionInfo.name}
+            {loading && (
+              <RefreshCw className="h-4 w-4 animate-spin ml-2 inline-block text-violet-600" />
+            )}
           </DialogTitle>
           
           <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
             <Badge variant="secondary" className="bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300">
               <Star className="h-3 w-3 mr-1" />
               v{versionInfo.version}
+              {loading && !systemInfo && <RefreshCw className="h-2 w-2 animate-spin ml-1" />}
             </Badge>
             <Badge variant="outline" className="border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300">
               <Hash className="h-3 w-3 mr-1" />
@@ -75,12 +120,17 @@ export function AboutDialog({ open, onOpenChange, locale }: AboutDialogProps) {
             {versionInfo.commit && (
               <Badge variant="outline" className="border-green-300 dark:border-green-700 text-green-700 dark:text-green-300">
                 <Github className="h-3 w-3 mr-1" />
-                {versionInfo.commit}
+                {versionInfo.commit.substring(0, 7)}
               </Badge>
             )}
             {versionInfo.branch && versionInfo.branch !== 'main' && (
               <Badge variant="outline" className="border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300">
                 {versionInfo.branch}
+              </Badge>
+            )}
+            {systemInfo && (
+              <Badge variant="outline" className="border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300">
+                {t ? '服务器同步' : 'Server Synced'}
               </Badge>
             )}
           </div>
@@ -94,7 +144,7 @@ export function AboutDialog({ open, onOpenChange, locale }: AboutDialogProps) {
             </p>
           </div>
 
-          <Separator className="bg-gradient-to-r from-transparent via-violet-300 to-transparent" />
+          <Separator className="bg-gradient-to-r from-transparent via-violet-300 dark:via-slate-500 to-transparent" />
 
           {/* Features */}
           <div>
@@ -109,7 +159,7 @@ export function AboutDialog({ open, onOpenChange, locale }: AboutDialogProps) {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="flex items-center gap-3 p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-violet-200/50 dark:border-violet-800/50"
+                  className="flex items-center gap-3 p-3 bg-white/80 dark:bg-slate-700/60 rounded-lg border border-violet-200/60 dark:border-slate-600/60"
                 >
                   <span className="text-lg">{feature.split(' ')[0]}</span>
                   <span className="text-sm text-muted-foreground">{feature.substring(feature.indexOf(' ') + 1)}</span>
@@ -118,7 +168,7 @@ export function AboutDialog({ open, onOpenChange, locale }: AboutDialogProps) {
             </div>
           </div>
 
-          <Separator className="bg-gradient-to-r from-transparent via-blue-300 to-transparent" />
+          <Separator className="bg-gradient-to-r from-transparent via-blue-300 dark:via-slate-500 to-transparent" />
 
           {/* Tech Stack */}
           <div>
@@ -166,7 +216,7 @@ export function AboutDialog({ open, onOpenChange, locale }: AboutDialogProps) {
             </div>
           </div>
 
-          <Separator className="bg-gradient-to-r from-transparent via-cyan-300 to-transparent" />
+          <Separator className="bg-gradient-to-r from-transparent via-cyan-300 dark:via-slate-500 to-transparent" />
 
           {/* Footer Info */}
           <div className="text-center space-y-4">
@@ -196,7 +246,7 @@ export function AboutDialog({ open, onOpenChange, locale }: AboutDialogProps) {
           </div>
         </div>
         
-        <div className="flex justify-center mt-8 pt-6 border-t border-violet-200 dark:border-violet-800">
+        <div className="flex justify-center mt-8 pt-6 border-t border-violet-200 dark:border-slate-600">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}

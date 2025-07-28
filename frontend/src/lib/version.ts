@@ -82,6 +82,6 @@ export const APP_INFO = {
   },
   author: "xuemian168",
   repository: "https://github.com/xuemian168/i18n_blog",
-  license: "MIT",
+  license: "Apache-2.0",
   website: "https://www.ict.run/"
 }

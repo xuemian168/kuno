@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, SiteSettings, SiteSettingsTranslation } from "@/lib/api"
 import { useSettings } from "@/contexts/settings-context"
-import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle, AlertTriangle } from "lucide-react"
+import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle, AlertTriangle, ChevronDown } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { translationService, TranslationConfig, SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation"
@@ -70,6 +70,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     confirmPassword: ''
   })
   const [passwordChanging, setPasswordChanging] = useState(false)
+  const [showChinaCompliance, setShowChinaCompliance] = useState(false)
 
   // Password strength calculation
   const calculatePasswordStrength = (password: string) => {
@@ -660,15 +661,34 @@ export function SettingsForm({ locale }: SettingsFormProps) {
 
                 {/* China Compliance Section */}
                 <Card className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20 border-red-200 dark:border-red-800">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-red-800 dark:text-red-200">
-                      <span className="text-xl">🇨🇳</span>
-                      {t('settings.chinaCompliance')}
-                    </CardTitle>
-                    <CardDescription className="text-red-700 dark:text-red-300">
-                      {t('settings.chinaComplianceDescription')}
-                    </CardDescription>
+                  <CardHeader className="pb-4 cursor-pointer" onClick={() => setShowChinaCompliance(!showChinaCompliance)}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2 text-red-800 dark:text-red-200">
+                          <span className="text-xl">🇨🇳</span>
+                          {t('settings.chinaCompliance')}
+                        </CardTitle>
+                        <CardDescription className="text-red-700 dark:text-red-300">
+                          {t('settings.chinaComplianceDescription')}
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowChinaCompliance(!showChinaCompliance)
+                        }}
+                      >
+                        {showChinaCompliance ? (
+                          <ChevronDown className="h-4 w-4 rotate-180 transition-transform" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 transition-transform" />
+                        )}
+                      </Button>
+                    </div>
                   </CardHeader>
+                  {showChinaCompliance && (
                   <CardContent className="space-y-4">
                     <div className="space-y-6">
                       {/* ICP Filing */}
@@ -742,65 +762,68 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                       )}
                     </div>
                   </CardContent>
+                  )}
                 </Card>
 
-                <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className={`p-2 rounded-lg ${formData.show_view_count ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-800'} transition-colors`}>
-                          {formData.show_view_count ? (
-                            <Eye className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                          ) : (
-                            <EyeOff className="h-5 w-5 text-gray-400" />
-                          )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
+                    <CardContent className="pt-6 pb-6">
+                      <div className="flex items-center justify-between h-full">
+                        <div className="flex items-center space-x-3">
+                          <div className={`p-2 rounded-lg ${formData.show_view_count ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-800'} transition-colors`}>
+                            {formData.show_view_count ? (
+                              <Eye className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            ) : (
+                              <EyeOff className="h-5 w-5 text-gray-400" />
+                            )}
+                          </div>
+                          <div>
+                            <Label htmlFor="show_view_count" className="text-base font-medium cursor-pointer">
+                              {t('settings.showViewCount')}
+                            </Label>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {t('settings.viewCountDescription')}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <Label htmlFor="show_view_count" className="text-base font-medium cursor-pointer">
-                            {t('settings.showViewCount')}
-                          </Label>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {t('settings.viewCountDescription')}
-                          </p>
-                        </div>
+                        <Switch
+                          id="show_view_count"
+                          checked={formData.show_view_count}
+                          onCheckedChange={(checked: boolean) => handleChange('show_view_count', checked)}
+                        />
                       </div>
-                      <Switch
-                        id="show_view_count"
-                        checked={formData.show_view_count}
-                        onCheckedChange={(checked: boolean) => handleChange('show_view_count', checked)}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className={`p-2 rounded-lg ${formData.enable_sound_effects ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-800'} transition-colors`}>
-                          {formData.enable_sound_effects ? (
-                            <Volume2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                          ) : (
-                            <VolumeX className="h-5 w-5 text-gray-400" />
-                          )}
+                  <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800">
+                    <CardContent className="pt-6 pb-6">
+                      <div className="flex items-center justify-between h-full">
+                        <div className="flex items-center space-x-3">
+                          <div className={`p-2 rounded-lg ${formData.enable_sound_effects ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-800'} transition-colors`}>
+                            {formData.enable_sound_effects ? (
+                              <Volume2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                            ) : (
+                              <VolumeX className="h-5 w-5 text-gray-400" />
+                            )}
+                          </div>
+                          <div>
+                            <Label htmlFor="enable_sound_effects" className="text-base font-medium cursor-pointer">
+                              {locale === 'zh' ? '启用音效' : 'Enable Sound Effects'}
+                            </Label>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {locale === 'zh' ? '保存成功时播放提示音' : 'Play notification sound when saving successfully'}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <Label htmlFor="enable_sound_effects" className="text-base font-medium cursor-pointer">
-                            {locale === 'zh' ? '启用音效' : 'Enable Sound Effects'}
-                          </Label>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {locale === 'zh' ? '保存成功时播放提示音' : 'Play notification sound when saving successfully'}
-                          </p>
-                        </div>
+                        <Switch
+                          id="enable_sound_effects"
+                          checked={formData.enable_sound_effects}
+                          onCheckedChange={(checked: boolean) => handleChange('enable_sound_effects', checked)}
+                        />
                       </div>
-                      <Switch
-                        id="enable_sound_effects"
-                        checked={formData.enable_sound_effects}
-                        onCheckedChange={(checked: boolean) => handleChange('enable_sound_effects', checked)}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </div>
               </CardContent>
             </Card>
 

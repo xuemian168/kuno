@@ -1303,6 +1303,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           size="sm"
           onClick={() => setEditMode(editMode === 'single' ? 'translation' : 'single')}
           className="h-8 gap-2"
+          disabled={editMode === 'translation'}
+          title={editMode === 'translation' ? (locale === 'zh' ? '简单编辑器暂时不可用' : 'Simple editor temporarily unavailable') : ''}
         >
           {editMode === 'single' ? (
             <>
@@ -1311,7 +1313,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             </>
           ) : (
             <>
-              <FileText className="h-4 w-4" />
+              <FileText className="h-4 w-4 opacity-50" />
               {t('article.simpleEditor')}
             </>
           )}
