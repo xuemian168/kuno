@@ -7,6 +7,7 @@ A full-stack blog application with Go backend and Next.js frontend, containerize
 ## Features
 
 - 📝 **Blog Management**: Create, edit, and delete articles
+- 🌍 **Multi-language Support**: 70+ languages interface
 - 🏷️ **Category System**: Organize posts by categories  
 - 🌙 **Dark Mode**: Toggle between light and dark themes
 - 📱 **Responsive Design**: Mobile-first responsive layout
@@ -16,28 +17,148 @@ A full-stack blog application with Go backend and Next.js frontend, containerize
 - 🖋️ **Markdown Editor**: Rich text editing with live preview
 - 🐳 **Docker Ready**: One-click deployment with Docker
 
+### 🌐 Supported Languages
+
+The system supports interface switching for 70+ languages:
+
+**Core Languages** (Required):
+- 🇨🇳 中文 (Chinese)
+- 🇬🇧 English
+
+**Asian Languages**:
+- 🇯🇵 日本語 (Japanese)
+- 🇰🇷 한국어 (Korean)
+- 🇹🇭 ไทย (Thai)
+- 🇻🇳 Tiếng Việt (Vietnamese)
+- 🇮🇩 Bahasa Indonesia
+- 🇲🇾 Bahasa Melayu
+- 🇵🇭 Filipino (Tagalog)
+- 🇲🇲 မြန်မာ (Myanmar)
+- 🇰🇭 ខ្មែរ (Khmer)
+- 🇱🇦 ລາວ (Lao)
+
+**European Languages**:
+- 🇪🇸 Español (Spanish)
+- 🇫🇷 Français (French)
+- 🇩🇪 Deutsch (German)
+- 🇷🇺 Русский (Russian)
+- 🇵🇹 Português (Portuguese)
+- 🇮🇹 Italiano (Italian)
+- 🇳🇱 Nederlands (Dutch)
+- 🇸🇪 Svenska (Swedish)
+- 🇩🇰 Dansk (Danish)
+- 🇳🇴 Norsk (Norwegian)
+- 🇫🇮 Suomi (Finnish)
+- 🇵🇱 Polski (Polish)
+- 🇨🇿 Čeština (Czech)
+- 🇸🇰 Slovenčina (Slovak)
+- 🇭🇺 Magyar (Hungarian)
+- 🇷🇴 Română (Romanian)
+- 🇧🇬 Български (Bulgarian)
+- 🇭🇷 Hrvatski (Croatian)
+- 🇷🇸 Српски (Serbian)
+- 🇸🇮 Slovenščina (Slovenian)
+- 🇪🇪 Eesti (Estonian)
+- 🇱🇻 Latviešu (Latvian)
+- 🇱🇹 Lietuvių (Lithuanian)
+- 🇺🇦 Українська (Ukrainian)
+- 🇧🇾 Беларуская (Belarusian)
+- 🇹🇷 Türkçe (Turkish)
+- 🇬🇷 Ελληνικά (Greek)
+- 🇦🇱 Shqip (Albanian)
+- 🇦🇲 Հայերեն (Armenian)
+- 🇦🇿 Azərbaycan (Azerbaijani)
+- 🇬🇪 ქართული (Georgian)
+
+**Middle Eastern & African Languages**:
+- 🇸🇦 العربية (Arabic)
+- 🇮🇱 עברית (Hebrew)
+- 🇮🇷 فارسی (Persian)
+- 🇵🇰 اردو (Urdu)
+- 🇪🇹 አማርኛ (Amharic)
+- 🇰🇪 Kiswahili (Swahili)
+- 🇿🇦 isiZulu (Zulu)
+- 🇿🇦 Afrikaans
+
+**South Asian Languages**:
+- 🇮🇳 हिन्दी (Hindi)
+- 🇧🇩 বাংলা (Bengali)
+- 🇮🇳 தமிழ் (Tamil)
+- 🇮🇳 తెలుగు (Telugu)
+- 🇮🇳 മലയാളം (Malayalam)
+- 🇮🇳 ಕನ್ನಡ (Kannada)
+- 🇮🇳 ગુજરાતી (Gujarati)
+- 🇮🇳 ਪੰਜਾਬੀ (Punjabi)
+- 🇮🇳 मराठी (Marathi)
+- 🇳🇵 नेपाली (Nepali)
+- 🇱🇰 සිංහල (Sinhala)
+
+**Pacific Languages**:
+- 🇳🇿 Te Reo Māori (Maori)
+- 🇼🇸 Gagana Samoa (Samoan)
+- 🇹🇴 Lea Fakatonga (Tongan)
+- 🇫🇯 Na Vosa Vakaviti (Fijian)
+
+**Other Regional Languages**:
+- 🇮🇪 Gaeilge (Irish)
+- 🇮🇸 Íslenska (Icelandic)
+- 🇲🇹 Malti (Maltese)
+- 🇪🇸 Euskera (Basque)
+- 🇪🇸 Català (Catalan)
+
 ## Quick Start
 
 ### 🚀 One-Click Deployment (Recommended)
 
-Deploy directly from Docker Hub without cloning the repository:
+Create a dedicated directory and deploy:
 
 ```bash
+# 1. Create dedicated directory (recommended: /opt)
+sudo mkdir -p /opt/i18n_blog
+cd /opt/i18n_blog
+
+# 2. Download and execute deployment script
 curl -sSL https://raw.githubusercontent.com/xuemian168/i18n_blog/main/deploy-from-hub.sh -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
 ```
 
-> **Note**: Interactive scripts should not be piped directly to bash. Download and execute locally to ensure proper functionality.
+> **Important Notes**:
+> - Do not use `curl | bash` as it will cause syntax errors
+> - Deploy in `/opt/i18n_blog` to avoid cluttering the home directory
 
-Or manually with Docker:
+### Manual Deployment
 
 ```bash
+# 1. Create dedicated directory
+sudo mkdir -p /opt/i18n_blog
+cd /opt/i18n_blog
+
+# 2. Create data directory
+mkdir -p ./blog-data
+
+# 3. Run container
 docker run -d \
   --name i18n_blog \
+  --restart unless-stopped \
   -p 80:80 \
-  -v $(pwd)/blog-data:/app/data \
-  -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
+  -v /opt/i18n_blog/blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL="http://localhost/api" \
+  -e DB_PATH="/app/data/blog.db" \
+  -e GIN_MODE="release" \
+  -e NODE_ENV="production" \
   ictrun/i18n_blog:latest
 ```
+
+**⚠️ Important Configuration**:
+- `NEXT_PUBLIC_API_URL` - **MUST be modified according to your network environment**
+  - Local access: `http://localhost/api` or `http://127.0.0.1/api`
+  - LAN access: `http://192.168.1.100/api` (use your actual IP)
+  - Public domain: `https://yourdomain.com/api`
+  - Non-80 port: `http://localhost:8080/api`
+
+**Directory Structure**:
+- `/opt/i18n_blog/` - Application main directory
+- `/opt/i18n_blog/blog-data/` - Data storage (database and uploads)
+- `/opt/i18n_blog/deploy.sh` - Deployment script (one-click method)
 
 ### 🛠️ Development Setup
 
@@ -83,11 +204,15 @@ docker-compose -f docker-compose.hub.yml up -d
 #### Option 2: Direct Docker Run
 
 ```bash
+# Create dedicated directory
+cd /opt/i18n_blog
+
+# Run container with bind mount (modify NEXT_PUBLIC_API_URL!)
 docker run -d \
   --name i18n_blog \
   --restart unless-stopped \
   -p 80:80 \
-  -v blog-data:/app/data \
+  -v /opt/i18n_blog/blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL=https://your-api-domain.com/api \
   -e DB_PATH=/app/data/blog.db \
   ictrun/i18n_blog:latest
@@ -128,8 +253,9 @@ docker ps | grep i18n_blog
 # View logs
 docker logs i18n_blog
 
-# Backup data
-docker cp i18n_blog:/app/data ./backup-data
+# Backup data (from /opt/i18n_blog)
+cd /opt/i18n_blog
+sudo tar -czf blog-backup-$(date +%Y%m%d).tar.gz ./blog-data
 
 # Stop and remove
 docker stop i18n_blog
@@ -151,6 +277,7 @@ mkdir -p ./backups/$(date +%Y%m%d_%H%M%S)
 docker run --rm -v blog-data:/data -v $(pwd)/backups/$(date +%Y%m%d_%H%M%S):/backup alpine sh -c "cd /data && tar czf /backup/blog-data-backup.tar.gz ."
 
 # Or if using bind mount, simply copy the directory
+cd /opt/i18n_blog
 cp -r ./blog-data ./backups/$(date +%Y%m%d_%H%M%S)/
 ```
 
@@ -178,11 +305,12 @@ docker run -d \
   ictrun/i18n_blog:latest
 
 # If using bind mount
+cd /opt/i18n_blog
 docker run -d \
   --name i18n_blog \
   --restart unless-stopped \
   -p 80:80 \
-  -v $(pwd)/blog-data:/app/data \
+  -v /opt/i18n_blog/blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
   -e DB_PATH=/app/data/blog.db \
   ictrun/i18n_blog:latest
@@ -484,20 +612,25 @@ docker system prune -f
 
 If you forget the admin password, follow these steps to reset it safely:
 
-#### Step 1: Stop the Application
+#### Step 1: Stop the Container
 ```bash
-./stop.sh
+docker stop i18n_blog
 ```
 
 #### Step 2: Enable Recovery Mode
-Edit your `.env` file and set:
+Navigate to the application directory and run with recovery mode:
 ```bash
-RECOVERY_MODE=true
-```
+cd /opt/i18n_blog
 
-#### Step 3: Attempt to Start (Password Reset)
-```bash
-./start.sh
+docker run -d \
+  --name i18n_blog_recovery \
+  --restart unless-stopped \
+  -p 80:80 \
+  -v /opt/i18n_blog/blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL="http://localhost/api" \
+  -e DB_PATH="/app/data/blog.db" \
+  -e RECOVERY_MODE="true" \
+  ictrun/i18n_blog:latest
 ```
 
 The system will:
@@ -505,23 +638,35 @@ The system will:
 - Display the reset credentials in the logs
 - **Refuse to start** for security reasons
 
-#### Step 4: Disable Recovery Mode
-Edit your `.env` file and set:
+#### Step 3: Check Reset Result
 ```bash
-RECOVERY_MODE=false
+# View logs to confirm password reset
+docker logs i18n_blog_recovery
+
+# Remove recovery container
+docker rm -f i18n_blog_recovery
 ```
 
-#### Step 5: Start Application and Login
+#### Step 4: Start Blog Normally
 ```bash
-./start.sh
+# Run with normal mode
+docker run -d \
+  --name i18n_blog \
+  --restart unless-stopped \
+  -p 80:80 \
+  -v /opt/i18n_blog/blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL="http://localhost/api" \
+  -e DB_PATH="/app/data/blog.db" \
+  -e RECOVERY_MODE="false" \
+  ictrun/i18n_blog:latest
 ```
 
-Now you can login with:
+#### Step 5: Login with New Password
 - **Username**: `admin`
 - **Password**: `xuemian168`
 
 #### Step 6: Change Password Immediately
-1. Login to the admin panel at `http://localhost:3000/admin`
+1. Login to the admin panel at `http://localhost/admin`
 2. Go to **Settings** → **Security Settings**
 3. Change your password to a secure one
 
@@ -539,9 +684,6 @@ Now you can login with:
 
 **Problem**: System won't start after enabling recovery mode
 **Solution**: This is intentional. Check the logs to confirm password was reset, then disable recovery mode.
-
-**Problem**: Can't find the `.env` file
-**Solution**: Copy `.env.example` to `.env` first, then modify the `RECOVERY_MODE` setting.
 
 **Problem**: Recovery mode doesn't reset password
 **Solution**: Ensure the environment variable is set correctly (`RECOVERY_MODE=true`) and check Docker logs for error messages.

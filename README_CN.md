@@ -7,7 +7,7 @@
 ## 🌟 特性
 
 - 📝 支持 Markdown 编辑和实时预览
-- 🌍 多语言国际化支持 (中文/英文/日文)
+- 🌍 多语言国际化支持（70+ 种语言）
 - 🎨 现代化界面设计，支持深色/浅色主题
 - 📱 响应式设计，完美适配移动端
 - 🐳 Docker 容器化部署，开箱即用
@@ -15,36 +15,141 @@
 - 📊 文章分类管理
 - 🔍 SEO 优化支持
 
+### 🌐 支持的语言
+
+系统支持以下 70+ 种语言的文章语言切换：
+
+**核心语言**（必需）：
+- 🇨🇳 中文 (Chinese)
+- 🇬🇧 English
+
+**亚洲语言**：
+- 🇯🇵 日本語 (Japanese)
+- 🇰🇷 한국어 (Korean)
+- 🇹🇭 ไทย (Thai)
+- 🇻🇳 Tiếng Việt (Vietnamese)
+- 🇮🇩 Bahasa Indonesia
+- 🇲🇾 Bahasa Melayu
+- 🇵🇭 Filipino (Tagalog)
+- 🇲🇲 မြန်မာ (Myanmar)
+- 🇰🇭 ខ្មែរ (Khmer)
+- 🇱🇦 ລາວ (Lao)
+
+**欧洲语言**：
+- 🇪🇸 Español (Spanish)
+- 🇫🇷 Français (French)
+- 🇩🇪 Deutsch (German)
+- 🇷🇺 Русский (Russian)
+- 🇵🇹 Português (Portuguese)
+- 🇮🇹 Italiano (Italian)
+- 🇳🇱 Nederlands (Dutch)
+- 🇸🇪 Svenska (Swedish)
+- 🇩🇰 Dansk (Danish)
+- 🇳🇴 Norsk (Norwegian)
+- 🇫🇮 Suomi (Finnish)
+- 🇵🇱 Polski (Polish)
+- 🇨🇿 Čeština (Czech)
+- 🇸🇰 Slovenčina (Slovak)
+- 🇭🇺 Magyar (Hungarian)
+- 🇷🇴 Română (Romanian)
+- 🇧🇬 Български (Bulgarian)
+- 🇭🇷 Hrvatski (Croatian)
+- 🇷🇸 Српски (Serbian)
+- 🇸🇮 Slovenščina (Slovenian)
+- 🇪🇪 Eesti (Estonian)
+- 🇱🇻 Latviešu (Latvian)
+- 🇱🇹 Lietuvių (Lithuanian)
+- 🇺🇦 Українська (Ukrainian)
+- 🇧🇾 Беларуская (Belarusian)
+- 🇹🇷 Türkçe (Turkish)
+- 🇬🇷 Ελληνικά (Greek)
+- 🇦🇱 Shqip (Albanian)
+- 🇦🇲 Հայերեն (Armenian)
+- 🇦🇿 Azərbaycan (Azerbaijani)
+- 🇬🇪 ქართული (Georgian)
+
+**中东和非洲语言**：
+- 🇸🇦 العربية (Arabic)
+- 🇮🇱 עברית (Hebrew)
+- 🇮🇷 فارسی (Persian)
+- 🇵🇰 اردو (Urdu)
+- 🇪🇹 አማርኛ (Amharic)
+- 🇰🇪 Kiswahili (Swahili)
+- 🇿🇦 isiZulu (Zulu)
+- 🇿🇦 Afrikaans
+
+**南亚语言**：
+- 🇮🇳 हिन्दी (Hindi)
+- 🇧🇩 বাংলা (Bengali)
+- 🇮🇳 தமிழ் (Tamil)
+- 🇮🇳 తెలుగు (Telugu)
+- 🇮🇳 മലയാളം (Malayalam)
+- 🇮🇳 ಕನ್ನಡ (Kannada)
+- 🇮🇳 ગુજરાતી (Gujarati)
+- 🇮🇳 ਪੰਜਾਬੀ (Punjabi)
+- 🇮🇳 मराठी (Marathi)
+- 🇳🇵 नेपाली (Nepali)
+- 🇱🇰 සිංහල (Sinhala)
+
+**太平洋地区语言**：
+- 🇳🇿 Te Reo Māori (Maori)
+- 🇼🇸 Gagana Samoa (Samoan)
+- 🇹🇴 Lea Fakatonga (Tongan)
+- 🇫🇯 Na Vosa Vakaviti (Fijian)
+
 ## 🚀 快速部署
 
 ### 方法一：一键部署（推荐）
 
-复制以下命令到终端直接运行：
+创建专用目录并部署：
 
 ```bash
+# 1. 创建专用目录（推荐使用 /opt）
+sudo mkdir -p /opt/i18n_blog
+cd /opt/i18n_blog
+
+# 2. 下载并执行部署脚本
 curl -sSL https://raw.githubusercontent.com/xuemian168/i18n_blog/main/deploy-from-hub.sh -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
 ```
 
-**重要提示**：不要使用 `curl | bash` 的方式，这会导致语法错误。
+**重要提示**：
+- 不要使用 `curl | bash` 的方式，这会导致语法错误
+- 建议在 `/opt/i18n_blog` 目录下部署，避免污染用户主目录
 
 ### 方法二：手动部署
 
 ```bash
-# 1. 创建数据目录
+# 1. 创建专用目录
+sudo mkdir -p /opt/i18n_blog
+cd /opt/i18n_blog
+
+# 2. 创建数据目录
 mkdir -p ./blog-data
 
-# 2. 运行容器
+# 3. 运行容器
 docker run -d \
     --name i18n_blog \
     --restart unless-stopped \
     -p 80:80 \
-    -v $(pwd)/blog-data:/app/data \
+    -v /opt/i18n_blog/blog-data:/app/data \
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \
     -e DB_PATH="/app/data/blog.db" \
     -e GIN_MODE="release" \
     -e NODE_ENV="production" \
     ictrun/i18n_blog:latest
 ```
+
+**⚠️ 重要配置说明**：
+- `NEXT_PUBLIC_API_URL` - **必须根据你的实际网络环境修改**
+  - 本地访问：`http://localhost/api` 或 `http://127.0.0.1/api`
+  - 局域网访问：`http://192.168.1.100/api`（使用实际 IP）
+  - 公网域名：`https://yourdomain.com/api`
+  - 端口非 80：`http://localhost:8080/api`
+
+**目录说明**：
+- `/opt/i18n_blog/` - 应用主目录
+- `/opt/i18n_blog/blog-data/` - 数据存储目录（包含数据库和上传文件）
+- `/opt/i18n_blog/deploy.sh` - 部署脚本（方法一）
 
 ## 📋 环境要求
 
@@ -109,14 +214,17 @@ docker rm -f i18n_blog
 
 ## 📊 数据备份
 
-博客数据存储在 `./blog-data` 目录中，建议定期备份：
+博客数据存储在 `/opt/i18n_blog/blog-data` 目录中，建议定期备份：
 
 ```bash
+# 进入应用目录
+cd /opt/i18n_blog
+
 # 备份数据
-tar -czf blog-backup-$(date +%Y%m%d).tar.gz ./blog-data
+sudo tar -czf blog-backup-$(date +%Y%m%d).tar.gz ./blog-data
 
 # 恢复数据
-tar -xzf blog-backup-20241201.tar.gz
+sudo tar -xzf blog-backup-20241201.tar.gz
 ```
 
 ## 🔄 更新博客
@@ -129,12 +237,15 @@ docker rm i18n_blog
 # 拉取最新镜像
 docker pull ictrun/i18n_blog:latest
 
-# 重新运行（使用之前的命令）
+# 进入应用目录
+cd /opt/i18n_blog
+
+# 重新运行（注意修改 NEXT_PUBLIC_API_URL）
 docker run -d \
     --name i18n_blog \
     --restart unless-stopped \
     -p 80:80 \
-    -v $(pwd)/blog-data:/app/data \
+    -v /opt/i18n_blog/blog-data:/app/data \
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \
     ictrun/i18n_blog:latest
 ```
@@ -151,13 +262,15 @@ docker stop i18n_blog
 ```
 
 #### 步骤 2：启用恢复模式
-使用恢复模式重新运行容器：
+进入应用目录并使用恢复模式重新运行容器：
 ```bash
+cd /opt/i18n_blog
+
 docker run -d \
     --name i18n_blog_recovery \
     --restart unless-stopped \
     -p 80:80 \
-    -v $(pwd)/blog-data:/app/data \
+    -v /opt/i18n_blog/blog-data:/app/data \
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \
     -e DB_PATH="/app/data/blog.db" \
     -e RECOVERY_MODE="true" \
@@ -185,7 +298,7 @@ docker run -d \
     --name i18n_blog \
     --restart unless-stopped \
     -p 80:80 \
-    -v $(pwd)/blog-data:/app/data \
+    -v /opt/i18n_blog/blog-data:/app/data \
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \
     -e DB_PATH="/app/data/blog.db" \
     -e RECOVERY_MODE="false" \
@@ -216,7 +329,7 @@ docker run -d \
 A: 修改 `-p 80:80` 为其他端口，如 `-p 8080:80`，然后通过 http://localhost:8080 访问。
 
 **Q: 如何备份文章数据？**
-A: 文章数据保存在 `./blog-data` 目录中，定期备份此目录即可。
+A: 文章数据保存在 `/opt/i18n_blog/blog-data` 目录中，定期备份此目录即可。
 
 **Q: 如何自定义域名？**
 A: 修改 `NEXT_PUBLIC_API_URL` 环境变量为你的域名，如 `https://yourdomain.com/api`。
