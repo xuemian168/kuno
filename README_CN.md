@@ -348,3 +348,6 @@ A: 确保环境变量设置正确 (`RECOVERY_MODE=true`)，并检查 Docker 日�
 1. 查看容器日志：`docker logs i18n_blog`
 2. 访问项目主页：https://github.com/xuemian168/i18n_blog
 3. 提交 Issue 获取帮助
+
+## License
+[Apache License 2.0](./LICENSE)
