@@ -82,12 +82,12 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
   }
 
   const siteUrl = getSiteUrl()
-  // Import routing config to get default locale
-  const { routing } = require('@/i18n/routing')
-  const articleUrl = locale === routing.defaultLocale 
+  // Use default locale from routing config
+  const defaultLocale = 'zh' // Default locale from routing config
+  const articleUrl = locale === defaultLocale 
     ? `${siteUrl}/article/${id}` 
     : `${siteUrl}/${locale}/article/${id}`
-  const homeUrl = locale === routing.defaultLocale ? siteUrl : `${siteUrl}/${locale}`
+  const homeUrl = locale === defaultLocale ? siteUrl : `${siteUrl}/${locale}`
 
   const breadcrumbItems = [
     { name: t('nav.home'), url: homeUrl },

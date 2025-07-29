@@ -113,7 +113,7 @@ export default function ShareBar({ url, title, description, className = '' }: Sh
       </button>
 
       {/* Native Share for mobile */}
-      {typeof window !== 'undefined' && navigator.share && (
+      {typeof window !== 'undefined' && typeof navigator.share === 'function' && (
         <>
           <div className="h-4 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
           <button
