@@ -7,6 +7,7 @@
   },
   "admin": {
     "login": "管理员登录",
+    "analytics": "数据分析",
     "username": "用户名",
     "password": "密码",
     "signin": "登录",
@@ -534,5 +535,39 @@
     "homeTitle": "首页 - 极简博客",
     "articleTitle": "文章 - 极简博客",
     "adminTitle": "管理后台 - 极简博客"
+  },
+  "share": {
+    "title": "分享",
+    "shareArticle": "分享文章",
+    "shareDescription": "在社交媒体上分享这篇文章或复制链接",
+    "twitter": "Twitter",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "whatsapp": "WhatsApp",
+    "telegram": "Telegram",
+    "email": "邮件",
+    "copyLink": "复制链接",
+    "copied": "已复制！",
+    "moreOptions": "更多选项",
+    "shareViaSystem": "通过系统分享",
+    "enjoyedArticle": "喜欢这篇文章吗？",
+    "shareWithFriends": "分享给你的朋友和同事吧！",
+    "shareLabel": "分享："
+  },
+  "embed": {
+    "title": "嵌入",
+    "embedArticle": "嵌入文章",
+    "embedDescription": "复制下面的代码以在您的网站上嵌入这篇文章",
+    "width": "宽度",
+    "height": "高度 (px)",
+    "theme": "主题",
+    "lightTheme": "浅色",
+    "darkTheme": "深色",
+    "embedCode": "嵌入代码",
+    "copyCode": "复制代码",
+    "copied": "已复制！",
+    "previewUrl": "预览链接",
+    "autoAdjustNote": "如果宽度设置为100%，嵌入的文章将自动适应您的容器宽度。",
+    "readOnOriginalSite": "在原网站阅读 →"
   }
 }

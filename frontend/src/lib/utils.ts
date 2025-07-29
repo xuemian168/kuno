@@ -11,6 +11,30 @@ export function getBaseUrl(): string {
   return apiBaseUrl.replace('/api', '') // Remove /api suffix
 }
 
+// Get the frontend website URL
+export function getSiteUrl(): string {
+  // In browser, use window.location
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.host}`
+  }
+  
+  // In server-side rendering, try to get from environment or fall back to API URL logic
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL
+  }
+  
+  // Fallback to deriving from API URL
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
+  const baseUrl = apiBaseUrl.replace('/api', '')
+  
+  // If API is on a different port (like 8080), assume frontend is on port 3000 in dev
+  if (baseUrl.includes(':8080')) {
+    return baseUrl.replace(':8080', ':3000')
+  }
+  
+  return baseUrl
+}
+
 // Convert relative API URLs to absolute URLs
 export function getFullApiUrl(path: string): string {
   if (!path) return path

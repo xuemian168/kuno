@@ -13,7 +13,10 @@ import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import { apiClient, Article } from '@/lib/api'
 import { ArticleStructuredData, BreadcrumbStructuredData } from '@/components/seo/structured-data'
-import { getBaseUrl } from '@/lib/utils'
+import { getBaseUrl, getSiteUrl } from '@/lib/utils'
+import EmbedCodeGenerator from '@/components/embed-code-generator'
+import SocialShare from '@/components/social-share'
+import ShareBar from '@/components/share-bar'
 
 interface ArticlePageClientProps {
   id: string
@@ -78,11 +81,13 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
     notFound()
   }
 
-  const baseUrl = getBaseUrl()
-  const articleUrl = locale === 'zh' 
-    ? `${baseUrl}/article/${id}` 
-    : `${baseUrl}/${locale}/article/${id}`
-  const homeUrl = locale === 'zh' ? baseUrl : `${baseUrl}/${locale}`
+  const siteUrl = getSiteUrl()
+  // Import routing config to get default locale
+  const { routing } = require('@/i18n/routing')
+  const articleUrl = locale === routing.defaultLocale 
+    ? `${siteUrl}/article/${id}` 
+    : `${siteUrl}/${locale}/article/${id}`
+  const homeUrl = locale === routing.defaultLocale ? siteUrl : `${siteUrl}/${locale}`
 
   const breadcrumbItems = [
     { name: t('nav.home'), url: homeUrl },
@@ -111,8 +116,8 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
           transition={{ duration: 0.5 }}
           className="space-y-8"
         >
-          {/* Back Button */}
-          <div className="flex items-center">
+          {/* Back Button and Share Actions */}
+          <div className="flex items-center justify-between">
             <Button
               variant="ghost"
               onClick={() => router.push('/')}
@@ -121,6 +126,14 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
               <ArrowLeft className="h-4 w-4" />
               {t('common.back')}
             </Button>
+            <div className="flex items-center gap-2">
+              <SocialShare 
+                url={articleUrl} 
+                title={article.title} 
+                description={article.summary || ''} 
+              />
+              <EmbedCodeGenerator articleId={id} articleTitle={article.title} />
+            </div>
           </div>
 
           {/* Article Header */}
@@ -148,6 +161,15 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
                 {article.summary}
               </p>
             )}
+            
+            {/* Share Bar */}
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <ShareBar 
+                url={articleUrl} 
+                title={article.title} 
+                description={article.summary || ''} 
+              />
+            </div>
           </header>
 
           {/* Article Content */}
@@ -157,6 +179,18 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
               includeStructuredData={true}
             />
           </article>
+
+          {/* Share Call-to-Action */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 text-center space-y-4">
+            <p className="text-lg font-medium">{t('share.enjoyedArticle')}</p>
+            <p className="text-sm text-muted-foreground">{t('share.shareWithFriends')}</p>
+            <ShareBar 
+              url={articleUrl} 
+              title={article.title} 
+              description={article.summary || ''} 
+              className="justify-center"
+            />
+          </div>
 
           {/* Article Footer */}
           <footer className="border-t pt-8">

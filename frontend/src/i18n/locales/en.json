@@ -533,5 +533,39 @@
     "homeTitle": "Home - Minimalist Blog",
     "articleTitle": "Article - Minimalist Blog",
     "adminTitle": "Admin Panel - Minimalist Blog"
+  },
+  "share": {
+    "title": "Share",
+    "shareArticle": "Share Article",
+    "shareDescription": "Share this article on social media or copy the link",
+    "twitter": "Twitter",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "whatsapp": "WhatsApp",
+    "telegram": "Telegram",
+    "email": "Email",
+    "copyLink": "Copy link",
+    "copied": "Copied!",
+    "moreOptions": "More options",
+    "shareViaSystem": "Share via System",
+    "enjoyedArticle": "Enjoyed this article?",
+    "shareWithFriends": "Share it with your friends and colleagues!",
+    "shareLabel": "Share:"
+  },
+  "embed": {
+    "title": "Embed",
+    "embedArticle": "Embed Article",
+    "embedDescription": "Copy the code below to embed this article on your website",
+    "width": "Width",
+    "height": "Height (px)",
+    "theme": "Theme",
+    "lightTheme": "Light",
+    "darkTheme": "Dark",
+    "embedCode": "Embed Code",
+    "copyCode": "Copy Code",
+    "copied": "Copied!",
+    "previewUrl": "Preview URL",
+    "autoAdjustNote": "The embedded article will automatically adjust to your container width if set to 100%.",
+    "readOnOriginalSite": "Read on original site →"
   }
 }

@@ -312,6 +312,13 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     return () => clearTimeout(timer)
   }, [locale])
 
+  // Set initial category when categories are loaded
+  useEffect(() => {
+    if (categories.length > 0 && formData.category_id === 0) {
+      setFormData(prev => ({ ...prev, category_id: categories[0].id }))
+    }
+  }, [categories])
+
   // Function to filter out non-translatable content before sending to translation service
   const filterNonTranslatableContent = (text: string): { filtered: string; placeholders: Map<string, string> } => {
     const lines = text.split('\n')
@@ -1279,21 +1286,28 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         <div className="flex-1" />
 
         {/* Category */}
-        <Select
-          value={formData.category_id.toString()}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, category_id: parseInt(value) }))}
-        >
-          <SelectTrigger className="w-32 h-8 text-xs">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id.toString()}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {categories.length > 0 && (
+          <Select
+            value={formData.category_id > 0 ? formData.category_id.toString() : categories[0]?.id.toString() || ""}
+            onValueChange={(value) => {
+              const categoryId = parseInt(value)
+              if (categoryId !== formData.category_id) {
+                setFormData(prev => ({ ...prev, category_id: categoryId }))
+              }
+            }}
+          >
+            <SelectTrigger className="w-32 h-8 text-xs">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id.toString()}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         <div className="mx-2 h-4 w-px bg-border" />
 
@@ -1486,11 +1500,13 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             <div className="flex-1 px-4 flex items-center justify-between border-r">
               <div className="flex items-center gap-2">
                 <Select value={sourceLanguage} onValueChange={(value) => {
-                  setSourceLanguage(value)
-                  if (value === targetLanguage) {
-                    const otherLang = availableLanguages.find(lang => lang.code !== value)
-                    if (otherLang) {
-                      setTargetLanguage(otherLang.code)
+                  if (value !== sourceLanguage) {
+                    setSourceLanguage(value)
+                    if (value === targetLanguage) {
+                      const otherLang = availableLanguages.find(lang => lang.code !== value)
+                      if (otherLang) {
+                        setTargetLanguage(otherLang.code)
+                      }
                     }
                   }
                 }}>
@@ -1498,7 +1514,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableLanguages.map(lang => (
+                    {availableLanguages.filter(lang => lang.code !== targetLanguage).map(lang => (
                       <SelectItem key={lang.code} value={lang.code}>
                         {lang.name}
                       </SelectItem>
@@ -1520,11 +1536,13 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             <div className="flex-1 px-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Select value={targetLanguage} onValueChange={(value) => {
-                  setTargetLanguage(value)
-                  if (value === sourceLanguage) {
-                    const otherLang = availableLanguages.find(lang => lang.code !== value)
-                    if (otherLang) {
-                      setSourceLanguage(otherLang.code)
+                  if (value !== targetLanguage) {
+                    setTargetLanguage(value)
+                    if (value === sourceLanguage) {
+                      const otherLang = availableLanguages.find(lang => lang.code !== value)
+                      if (otherLang) {
+                        setSourceLanguage(otherLang.code)
+                      }
                     }
                   }
                 }}>
@@ -1655,12 +1673,14 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           <div className="h-9 border-b px-4 flex items-center justify-between bg-muted/20">
             <div className="flex items-center gap-2">
               <Select value={sourceLanguage} onValueChange={(value) => {
-                setSourceLanguage(value)
-                // If target language is the same as new source language, switch target to the other language
-                if (value === targetLanguage) {
-                  const otherLang = availableLanguages.find(lang => lang.code !== value)
-                  if (otherLang) {
-                    setTargetLanguage(otherLang.code)
+                if (value !== sourceLanguage) {
+                  setSourceLanguage(value)
+                  // If target language is the same as new source language, switch target to the other language
+                  if (value === targetLanguage) {
+                    const otherLang = availableLanguages.find(lang => lang.code !== value)
+                    if (otherLang) {
+                      setTargetLanguage(otherLang.code)
+                    }
                   }
                 }
               }}>
@@ -1668,7 +1688,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableLanguages.map(lang => (
+                  {availableLanguages.filter(lang => lang.code !== targetLanguage).map(lang => (
                     <SelectItem key={lang.code} value={lang.code}>
                       {lang.name}
                     </SelectItem>
@@ -1711,12 +1731,14 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           <div className="h-9 border-b px-4 flex items-center justify-between bg-muted/20">
             <div className="flex items-center gap-2">
               <Select value={targetLanguage} onValueChange={(value) => {
-                setTargetLanguage(value)
-                // If source language is the same as new target language, switch source to the other language
-                if (value === sourceLanguage) {
-                  const otherLang = availableLanguages.find(lang => lang.code !== value)
-                  if (otherLang) {
-                    setSourceLanguage(otherLang.code)
+                if (value !== targetLanguage) {
+                  setTargetLanguage(value)
+                  // If source language is the same as new target language, switch source to the other language
+                  if (value === sourceLanguage) {
+                    const otherLang = availableLanguages.find(lang => lang.code !== value)
+                    if (otherLang) {
+                      setSourceLanguage(otherLang.code)
+                    }
                   }
                 }
               }}>

@@ -492,5 +492,39 @@
     "homeTitle": "ホーム - ミニマリストブログ",
     "articleTitle": "記事 - ミニマリストブログ",
     "adminTitle": "管理パネル - ミニマリストブログ"
+  },
+  "share": {
+    "title": "共有",
+    "shareArticle": "記事を共有",
+    "shareDescription": "この記事をソーシャルメディアで共有するか、リンクをコピーしてください",
+    "twitter": "Twitter",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "whatsapp": "WhatsApp",
+    "telegram": "Telegram",
+    "email": "メール",
+    "copyLink": "リンクをコピー",
+    "copied": "コピーしました！",
+    "moreOptions": "その他のオプション",
+    "shareViaSystem": "システムで共有",
+    "enjoyedArticle": "この記事は気に入りましたか？",
+    "shareWithFriends": "友達や同僚と共有しましょう！",
+    "shareLabel": "共有："
+  },
+  "embed": {
+    "title": "埋め込み",
+    "embedArticle": "記事を埋め込む",
+    "embedDescription": "この記事をウェブサイトに埋め込むには、以下のコードをコピーしてください",
+    "width": "幅",
+    "height": "高さ (px)",
+    "theme": "テーマ",
+    "lightTheme": "ライト",
+    "darkTheme": "ダーク",
+    "embedCode": "埋め込みコード",
+    "copyCode": "コードをコピー",
+    "copied": "コピーしました！",
+    "previewUrl": "プレビューURL",
+    "autoAdjustNote": "幅を100%に設定すると、埋め込まれた記事はコンテナの幅に自動的に調整されます。",
+    "readOnOriginalSite": "元のサイトで読む →"
   }
 }
