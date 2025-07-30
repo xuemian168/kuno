@@ -1,8 +1,17 @@
 中文 | [English](./README.md)
 
-# I18N 博客系统
+# EchoPaper
 
 一个现代化的多语言博客平台，支持一键 Docker 部署。
+
+![echopaper](./docs/echopaper.png)
+
+-	Echo  - “信息的共鸣、数据的回响”
+-	Paper - “内容、知识、博客、发布”
+
+## 测试站
+[QUT.EDU.KG](https://qut.edu.kg/)
+
 
 ## 🌟 特性
 
@@ -105,39 +114,39 @@
 
 ```bash
 # 1. 创建专用目录（推荐使用 /opt）
-sudo mkdir -p /opt/i18n_blog
-cd /opt/i18n_blog
+sudo mkdir -p /opt/EchoPaper
+cd /opt/EchoPaper
 
 # 2. 下载并执行部署脚本
-curl -sSL https://raw.githubusercontent.com/xuemian168/i18n_blog/main/deploy-from-hub.sh -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
+curl -sSL https://raw.githubusercontent.com/xuemian168/EchoPaper/main/deploy-from-hub.sh -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
 ```
 
 **重要提示**：
 - 不要使用 `curl | bash` 的方式，这会导致语法错误
-- 建议在 `/opt/i18n_blog` 目录下部署，避免污染用户主目录
+- 建议在 `/opt/EchoPaper` 目录下部署，避免污染用户主目录
 
 ### 方法二：手动部署
 
 ```bash
 # 1. 创建专用目录
-sudo mkdir -p /opt/i18n_blog
-cd /opt/i18n_blog
+sudo mkdir -p /opt/EchoPaper
+cd /opt/EchoPaper
 
 # 2. 创建数据目录
 mkdir -p ./blog-data
 
 # 3. 运行容器
 docker run -d \
-    --name i18n_blog \
+    --name EchoPaper \
     --restart unless-stopped \
     -p 80:80 \
-    -v /opt/i18n_blog/blog-data:/app/data \
+    -v /opt/EchoPaper/blog-data:/app/data \
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \
     -e DB_PATH="/app/data/blog.db" \
     -e GIN_MODE="release" \
     -e NODE_ENV="production" \
     -e JWT_SECRET="your-secure-secret-key" \
-    ictrun/i18n_blog:latest
+    ictrun/echopaper:latest
 ```
 
 **⚠️ 重要配置说明**：
@@ -152,9 +161,9 @@ docker run -d \
   - 建议使用至少 32 字符的复杂字符串
 
 **目录说明**：
-- `/opt/i18n_blog/` - 应用主目录
-- `/opt/i18n_blog/blog-data/` - 数据存储目录（包含数据库和上传文件）
-- `/opt/i18n_blog/deploy.sh` - 部署脚本（方法一）
+- `/opt/EchoPaper/` - 应用主目录
+- `/opt/EchoPaper/blog-data/` - 数据存储目录（包含数据库和上传文件）
+- `/opt/EchoPaper/deploy.sh` - 部署脚本（方法一）
 
 ## 📋 环境要求
 
@@ -199,31 +208,31 @@ docker run -d \
 
 ```bash
 # 查看运行状态
-docker ps | grep i18n_blog
+docker ps | grep EchoPaper
 
 # 查看日志
-docker logs i18n_blog
+docker logs EchoPaper
 
 # 停止博客
-docker stop i18n_blog
+docker stop EchoPaper
 
 # 启动博客
-docker start i18n_blog
+docker start EchoPaper
 
 # 重启博客
-docker restart i18n_blog
+docker restart EchoPaper
 
 # 删除容器（注意：会丢失数据）
-docker rm -f i18n_blog
+docker rm -f EchoPaper
 ```
 
 ## 📊 数据备份
 
-博客数据存储在 `/opt/i18n_blog/blog-data` 目录中，建议定期备份：
+博客数据存储在 `/opt/EchoPaper/blog-data` 目录中，建议定期备份：
 
 ```bash
 # 进入应用目录
-cd /opt/i18n_blog
+cd /opt/EchoPaper
 
 # 备份数据
 sudo tar -czf blog-backup-$(date +%Y%m%d).tar.gz ./blog-data
@@ -236,23 +245,23 @@ sudo tar -xzf blog-backup-20241201.tar.gz
 
 ```bash
 # 停止当前容器
-docker stop i18n_blog
-docker rm i18n_blog
+docker stop EchoPaper
+docker rm EchoPaper
 
 # 拉取最新镜像
-docker pull ictrun/i18n_blog:latest
+docker pull ictrun/echopaper:latest
 
 # 进入应用目录
-cd /opt/i18n_blog
+cd /opt/EchoPaper
 
 # 重新运行（注意修改 NEXT_PUBLIC_API_URL）
 docker run -d \
-    --name i18n_blog \
+    --name EchoPaper \
     --restart unless-stopped \
     -p 80:80 \
-    -v /opt/i18n_blog/blog-data:/app/data \
+    -v /opt/EchoPaper/blog-data:/app/data \
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \
-    ictrun/i18n_blog:latest
+    ictrun/echopaper:latest
 ```
 
 ## 🔐 密码重置
@@ -263,23 +272,23 @@ docker run -d \
 
 #### 步骤 1：停止容器
 ```bash
-docker stop i18n_blog
+docker stop EchoPaper
 ```
 
 #### 步骤 2：启用恢复模式
 进入应用目录并使用恢复模式重新运行容器：
 ```bash
-cd /opt/i18n_blog
+cd /opt/EchoPaper
 
 docker run -d \
-    --name i18n_blog_recovery \
+    --name EchoPaper_recovery \
     --restart unless-stopped \
     -p 80:80 \
-    -v /opt/i18n_blog/blog-data:/app/data \
+    -v /opt/EchoPaper/blog-data:/app/data \
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \
     -e DB_PATH="/app/data/blog.db" \
     -e RECOVERY_MODE="true" \
-    ictrun/i18n_blog:latest
+    ictrun/echopaper:latest
 ```
 
 系统会：
@@ -290,24 +299,24 @@ docker run -d \
 #### 步骤 3：查看重置结果
 ```bash
 # 查看日志确认密码已重置
-docker logs i18n_blog_recovery
+docker logs EchoPaper_recovery
 
 # 删除恢复模式容器
-docker rm -f i18n_blog_recovery
+docker rm -f EchoPaper_recovery
 ```
 
 #### 步骤 4：正常启动博客
 ```bash
 # 使用正常模式重新启动
 docker run -d \
-    --name i18n_blog \
+    --name EchoPaper \
     --restart unless-stopped \
     -p 80:80 \
-    -v /opt/i18n_blog/blog-data:/app/data \
+    -v /opt/EchoPaper/blog-data:/app/data \
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \
     -e DB_PATH="/app/data/blog.db" \
     -e RECOVERY_MODE="false" \
-    ictrun/i18n_blog:latest
+    ictrun/echopaper:latest
 ```
 
 #### 步骤 5：使用新密码登录
@@ -334,7 +343,7 @@ docker run -d \
 A: 修改 `-p 80:80` 为其他端口，如 `-p 8080:80`，然后通过 http://localhost:8080 访问。
 
 **Q: 如何备份文章数据？**
-A: 文章数据保存在 `/opt/i18n_blog/blog-data` 目录中，定期备份此目录即可。
+A: 文章数据保存在 `/opt/EchoPaper/blog-data` 目录中，定期备份此目录即可。
 
 **Q: 如何自定义域名？**
 A: 修改 `NEXT_PUBLIC_API_URL` 环境变量为你的域名，如 `https://yourdomain.com/api`。
@@ -345,9 +354,14 @@ A: 确保环境变量设置正确 (`RECOVERY_MODE=true`)，并检查 Docker 日�
 ## 📞 技术支持
 
 如果遇到问题，请：
-1. 查看容器日志：`docker logs i18n_blog`
-2. 访问项目主页：https://github.com/xuemian168/i18n_blog
+1. 查看容器日志：`docker logs EchoPaper`
+2. 访问项目主页：https://github.com/xuemian168/EchoPaper
 3. 提交 Issue 获取帮助
+
+## 赞助
+本项目由 [TIKHUB.IO](https://tikhub.io/) 提供支持
+TikHub.io 是一家提供优质数据接口服务的供应商。致力于为开发者、创作者及企业提供一站式 海外社交媒体数据 API 和工具服务平台。它面向全球用户，支持自定义扩展并构建社区驱动的生态体系。
+![Tikhub_LOGO](./docs/tikhub.png)
 
 ## License
 [Apache License 2.0](./LICENSE)

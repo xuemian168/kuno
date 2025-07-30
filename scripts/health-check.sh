@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# I18N Blog Health Check Script
+# EchoPaper Health Check Script
 # Usage: ./scripts/health-check.sh [container-name] [--verbose]
 
 set -e
 
 # Configuration
-DEFAULT_CONTAINER="i18n_blog"
+DEFAULT_CONTAINER="EchoPaper"
 VERBOSE=false
 
 # Colors for output
@@ -22,7 +22,7 @@ if [[ "$2" == "--verbose" ]] || [[ "$1" == "--verbose" ]]; then
     VERBOSE=true
 fi
 
-echo -e "${BLUE}🏥 I18N Blog Health Check${NC}"
+echo -e "${BLUE}🏥 EchoPaper Health Check${NC}"
 echo -e "${BLUE}📦 Container: ${CONTAINER}${NC}"
 echo ""
 

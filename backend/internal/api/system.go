@@ -57,8 +57,8 @@ var (
 	dockerHubCache  *UpdateInfo
 	cacheExpiry     time.Time
 	cacheDuration   = 1 * time.Hour // Cache for 1 hour
-	dockerHubAPIURL = "https://hub.docker.com/v2/repositories/ictrun/i18n_blog/tags"
-	dockerImageName = "ictrun/i18n_blog"
+	dockerHubAPIURL = "https://hub.docker.com/v2/repositories/ictrun/echopaper/tags"
+	dockerImageName = "ictrun/echopaper"
 )
 
 // GetSystemInfo returns current system information
@@ -145,28 +145,28 @@ func fetchLatestVersion(currentVersion string) (*UpdateInfo, error) {
 // findLatestVersion finds the latest semantic version from Docker tags
 func findLatestVersion(tags []DockerHubTag) string {
 	var versions []Version
-	
+
 	for _, tag := range tags {
 		// Skip non-version tags like "latest", "dev", etc.
 		if tag.Name == "latest" || tag.Name == "dev" || strings.Contains(tag.Name, "beta") {
 			continue
 		}
-		
+
 		version, err := parseVersion(tag.Name)
 		if err == nil {
 			versions = append(versions, version)
 		}
 	}
-	
+
 	if len(versions) == 0 {
 		return ""
 	}
-	
+
 	// Sort versions to find the latest
 	sort.Slice(versions, func(i, j int) bool {
 		return compareVersions(versions[i], versions[j]) > 0
 	})
-	
+
 	return versions[0].Raw
 }
 
@@ -195,7 +195,7 @@ func createUpdateInfo(currentVersion, latestVersion string, isSimulated bool) (*
 	if hasUpdate {
 		updateInfo.UpdateCommand = generateUpdateCommand()
 		updateInfo.Changelog = generateChangelog(currentVer, latestVer)
-		
+
 		// Add note if this is simulated data
 		if isSimulated {
 			updateInfo.Changelog = append([]string{"📝 Note: Update check uses 'latest' tag - version-based updates not available"}, updateInfo.Changelog...)
@@ -232,12 +232,12 @@ docker run --rm -v blog-data:/data -v $(pwd)/backups/$(date +%%Y%%m%%d_%%H%%M%%S
 docker pull %s:latest
 
 # 3. Stop and remove the old container
-docker stop i18n_blog
-docker rm i18n_blog
+docker stop EchoPaper
+docker rm EchoPaper
 
 # 4. Start the new container
 docker run -d \
-  --name i18n_blog \
+  --name EchoPaper \
   --restart unless-stopped \
   -p 80:80 \
   -v blog-data:/app/data \
@@ -246,8 +246,8 @@ docker run -d \
   %s:latest
 
 # 5. Verify the upgrade
-docker ps | grep i18n_blog
-docker logs i18n_blog
+docker ps | grep EchoPaper
+docker logs EchoPaper
 
 ## 🐳 Docker Compose Deployment
 

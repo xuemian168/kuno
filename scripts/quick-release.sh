@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Quick Release Script for I18N Blog
+# Quick Release Script for EchoPaper
 # Usage: ./scripts/quick-release.sh <version>
 # This script creates a tag and triggers GitHub Actions for automated release
 
@@ -75,9 +75,26 @@ git pull origin main
 if [ -f "frontend/package.json" ]; then
     echo -e "${YELLOW}📝 Updating package.json version...${NC}"
     cd frontend
-    npm version ${VERSION#v} --no-git-tag-version
-    cd ..
-    git add frontend/package.json
+    
+    # Get current version from package.json
+    CURRENT_VERSION=$(node -p "require('./package.json').version")
+    TARGET_VERSION="${VERSION#v}"
+    
+    echo "Current version: $CURRENT_VERSION"
+    echo "Target version: $TARGET_VERSION"
+    
+    # Only update if versions are different
+    if [ "$CURRENT_VERSION" != "$TARGET_VERSION" ]; then
+        echo "Updating version from $CURRENT_VERSION to $TARGET_VERSION"
+        npm version $TARGET_VERSION --no-git-tag-version
+        cd ..
+        git add frontend/package.json
+    else
+        echo "Version is already $TARGET_VERSION, skipping update"
+        cd ..
+    fi
+else
+    echo -e "${YELLOW}⚠️  frontend/package.json not found, skipping version update${NC}"
 fi
 
 # Create and push tag
@@ -99,8 +116,8 @@ echo -e "${GREEN}✅ Tag ${VERSION} pushed to GitHub${NC}"
 echo -e "${BLUE}🔄 GitHub Actions will automatically build and release to Docker Hub${NC}"
 echo ""
 echo -e "${BLUE}📋 Check progress at:${NC}"
-echo -e "   https://github.com/xuemian168/i18n_blog/actions"
+echo -e "   https://github.com/xuemian168/EchoPaper/actions"
 echo ""
 echo -e "${BLUE}📦 Once completed, the image will be available at:${NC}"
-echo -e "   docker pull ictrun/i18n_blog:${VERSION}"
-echo -e "   docker pull ictrun/i18n_blog:latest"
+echo -e "   docker pull ictrun/echopaper:${VERSION}"
+echo -e "   docker pull ictrun/echopaper:latest"

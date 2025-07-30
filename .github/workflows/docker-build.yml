@@ -15,7 +15,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: ictrun/i18n_blog
+  IMAGE_NAME: ictrun/echopaper
 
 jobs:
   build:
@@ -52,7 +52,7 @@ jobs:
           type=raw,value=latest,enable={{is_default_branch}}
           type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
         labels: |
-          org.opencontainers.image.title=I18N Blog
+          org.opencontainers.image.title=EchoPaper
           org.opencontainers.image.description=A multilingual blog system with Go backend and Next.js frontend
           org.opencontainers.image.vendor=xuemian168
           org.opencontainers.image.licenses=MIT

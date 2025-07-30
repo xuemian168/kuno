@@ -111,15 +111,15 @@ ENV GIT_BRANCH=${NEXT_PUBLIC_GIT_BRANCH}
 
 # Add metadata labels
 LABEL maintainer="xuemian168" \
-      org.opencontainers.image.title="I18N Blog" \
+      org.opencontainers.image.title="EchoPaper" \
       org.opencontainers.image.description="A multilingual blog system with Go backend and Next.js frontend" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.created="${BUILD_DATE}" \
-      org.opencontainers.image.source="https://github.com/xuemian168/i18n_blog" \
+      org.opencontainers.image.source="https://github.com/xuemian168/EchoPaper" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.vendor="xuemian168" \
       org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.documentation="https://github.com/xuemian168/i18n_blog#readme"
+      org.opencontainers.image.documentation="https://github.com/xuemian168/EchoPaper#readme"
 
 # Expose port
 EXPOSE 80

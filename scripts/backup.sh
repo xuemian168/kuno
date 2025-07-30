@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# I18N Blog Backup Script
+# EchoPaper Backup Script
 # Usage: ./scripts/backup.sh [container-name] [backup-dir]
 
 set -e
 
 # Configuration
-DEFAULT_CONTAINER="i18n_blog"
+DEFAULT_CONTAINER="EchoPaper"
 DEFAULT_BACKUP_DIR="./backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
@@ -22,7 +22,7 @@ CONTAINER=${1:-$DEFAULT_CONTAINER}
 BACKUP_DIR=${2:-$DEFAULT_BACKUP_DIR}
 BACKUP_PATH="${BACKUP_DIR}/${TIMESTAMP}"
 
-echo -e "${BLUE}💾 I18N Blog Backup Utility${NC}"
+echo -e "${BLUE}💾 EchoPaper Backup Utility${NC}"
 echo -e "${BLUE}📦 Container: ${CONTAINER}${NC}"
 echo -e "${BLUE}📂 Backup to: ${BACKUP_PATH}${NC}"
 echo ""
@@ -82,7 +82,7 @@ docker exec ${CONTAINER} env > "${BACKUP_PATH}/environment.txt"
 
 # Create backup manifest
 cat > "${BACKUP_PATH}/backup_manifest.txt" << EOF
-I18N Blog Backup Manifest
+EchoPaper Backup Manifest
 ========================
 
 Backup Date: $(date)

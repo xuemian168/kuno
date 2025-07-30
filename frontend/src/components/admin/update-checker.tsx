@@ -154,7 +154,7 @@ echo "✅ Backup completed"`
           title: 'pullLatestImage',
           description: 'pullLatestImageDesc',
           command: `# Pull latest image
-docker pull ictrun/i18n_blog:latest
+docker pull ictrun/echopaper:latest
 
 echo "✅ Latest image pulled"`
         },
@@ -163,8 +163,8 @@ echo "✅ Latest image pulled"`
           title: 'stopOldContainer',
           description: 'stopOldContainerDesc',
           command: `# Stop and remove old container
-docker stop i18n_blog 2>/dev/null || echo "Container not running"
-docker rm i18n_blog 2>/dev/null || echo "Container not found"
+docker stop EchoPaper 2>/dev/null || echo "Container not running"
+docker rm EchoPaper 2>/dev/null || echo "Container not found"
 
 echo "✅ Old container removed"`
         },
@@ -182,13 +182,13 @@ docker run --rm -v blog-data:/data alpine sh -c "ls -la /data/ && if [ -f /data/
           description: 'startNewContainerDesc',
           command: `# Start new container with data volume
 docker run -d \\
-  --name i18n_blog \\
+  --name EchoPaper \\
   --restart unless-stopped \\
   -p 80:80 \\
   -v blog-data:/app/data \\
   -e NEXT_PUBLIC_API_URL=https://qut.edu.kg/api \\
   -e DB_PATH=/app/data/blog.db \\
-  ictrun/i18n_blog:latest
+  ictrun/echopaper:latest
 
 echo "✅ New container started"`
         },
@@ -200,15 +200,15 @@ echo "✅ New container started"`
 sleep 15
 
 # Check container status
-docker ps | grep i18n_blog
+docker ps | grep EchoPaper
 
 # Check container logs
 echo "📋 Container logs:"
-docker logs --tail=20 i18n_blog
+docker logs --tail=20 EchoPaper
 
 # Verify data is accessible
 echo "📊 Verifying data:"
-docker exec i18n_blog ls -la /app/data/`
+docker exec EchoPaper ls -la /app/data/`
         }
       ],
       docker_compose: [

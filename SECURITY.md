@@ -11,7 +11,7 @@ We release patches for security vulnerabilities. Which versions are eligible for
 
 ## Reporting a Vulnerability
 
-We take the security of I18N Blog seriously. If you have discovered a security vulnerability in our project, we appreciate your help in disclosing it to us in a responsible manner.
+We take the security of EchoPaper seriously. If you have discovered a security vulnerability in our project, we appreciate your help in disclosing it to us in a responsible manner.
 
 ### Reporting Process
 
@@ -178,7 +178,7 @@ In case of a security incident:
 
 For security concerns, please contact:
 - Email:  xuemian888@gmail.com
-- GitHub Security Advisories: [Create private advisory](https://github.com/xuemian168/i18n_blog/security/advisories/new)
+- GitHub Security Advisories: [Create private advisory](https://github.com/xuemian168/EchoPaper/security/advisories/new)
 
 ## Acknowledgments
 

@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Docker Hub Build and Push Script for I18N Blog
+# Docker Hub Build and Push Script for EchoPaper
 # Usage: ./scripts/build-and-push.sh [tag] [registry]
 
 set -e
 
 # Configuration
 DEFAULT_REGISTRY="ictrun"
-IMAGE_NAME="i18n_blog"
+IMAGE_NAME="EchoPaper"
 DEFAULT_TAG="latest"
 
 # Parse arguments
@@ -22,7 +22,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🐳 Building and pushing I18N Blog to Docker Hub${NC}"
+echo -e "${BLUE}🐳 Building and pushing EchoPaper to Docker Hub${NC}"
 echo -e "${BLUE}📦 Image: ${FULL_IMAGE}${NC}"
 echo ""
 

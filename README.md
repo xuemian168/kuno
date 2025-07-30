@@ -1,6 +1,6 @@
 [中文](./README_CN.md) | English
 
-# I18N Blog
+# EchoPaper
 
 A full-stack blog application with Go backend and Next.js frontend, containerized with Docker for easy deployment.
 
@@ -114,39 +114,39 @@ Create a dedicated directory and deploy:
 
 ```bash
 # 1. Create dedicated directory (recommended: /opt)
-sudo mkdir -p /opt/i18n_blog
-cd /opt/i18n_blog
+sudo mkdir -p /opt/EchoPaper
+cd /opt/EchoPaper
 
 # 2. Download and execute deployment script
-curl -sSL https://raw.githubusercontent.com/xuemian168/i18n_blog/main/deploy-from-hub.sh -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
+curl -sSL https://raw.githubusercontent.com/xuemian168/EchoPaper/main/deploy-from-hub.sh -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
 ```
 
 > **Important Notes**:
 > - Do not use `curl | bash` as it will cause syntax errors
-> - Deploy in `/opt/i18n_blog` to avoid cluttering the home directory
+> - Deploy in `/opt/EchoPaper` to avoid cluttering the home directory
 
 ### Manual Deployment
 
 ```bash
 # 1. Create dedicated directory
-sudo mkdir -p /opt/i18n_blog
-cd /opt/i18n_blog
+sudo mkdir -p /opt/EchoPaper
+cd /opt/EchoPaper
 
 # 2. Create data directory
 mkdir -p ./blog-data
 
 # 3. Run container
 docker run -d \
-  --name i18n_blog \
+  --name EchoPaper \
   --restart unless-stopped \
   -p 80:80 \
-  -v /opt/i18n_blog/blog-data:/app/data \
+  -v /opt/EchoPaper/blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL="http://localhost/api" \
   -e DB_PATH="/app/data/blog.db" \
   -e GIN_MODE="release" \
   -e NODE_ENV="production" \
   -e JWT_SECRET="your-secure-secret-key" \
-  ictrun/i18n_blog:latest
+  ictrun/echopaper:latest
 ```
 
 **⚠️ Important Configuration**:
@@ -161,9 +161,9 @@ docker run -d \
   - Use a complex string of at least 32 characters
 
 **Directory Structure**:
-- `/opt/i18n_blog/` - Application main directory
-- `/opt/i18n_blog/blog-data/` - Data storage (database and uploads)
-- `/opt/i18n_blog/deploy.sh` - Deployment script (one-click method)
+- `/opt/EchoPaper/` - Application main directory
+- `/opt/EchoPaper/blog-data/` - Data storage (database and uploads)
+- `/opt/EchoPaper/deploy.sh` - Deployment script (one-click method)
 
 ### 🛠️ Development Setup
 
@@ -196,7 +196,7 @@ docker run -d \
 
 ```bash
 # Download the compose file
-curl -O https://raw.githubusercontent.com/xuemian168/i18n_blog/main/docker-compose.hub.yml
+curl -O https://raw.githubusercontent.com/xuemian168/EchoPaper/main/docker-compose.hub.yml
 
 # Configure environment
 cp .env.hub.example .env
@@ -210,24 +210,24 @@ docker-compose -f docker-compose.hub.yml up -d
 
 ```bash
 # Create dedicated directory
-cd /opt/i18n_blog
+cd /opt/EchoPaper
 
 # Run container with bind mount (modify NEXT_PUBLIC_API_URL!)
 docker run -d \
-  --name i18n_blog \
+  --name EchoPaper \
   --restart unless-stopped \
   -p 80:80 \
-  -v /opt/i18n_blog/blog-data:/app/data \
+  -v /opt/EchoPaper/blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL=https://your-api-domain.com/api \
   -e DB_PATH=/app/data/blog.db \
-  ictrun/i18n_blog:latest
+  ictrun/echopaper:latest
 ```
 
 #### Available Tags
 
-- `ictrun/i18n_blog:latest` - Latest stable release
-- `ictrun/i18n_blog:v1.0.0` - Specific version
-- `ictrun/i18n_blog:develop` - Development branch
+- `ictrun/echopaper:latest` - Latest stable release
+- `ictrun/echopaper:v1.0.0` - Specific version
+- `ictrun/echopaper:develop` - Development branch
 
 ### 🔧 Configuration
 
@@ -254,18 +254,18 @@ docker run -d \
 
 ```bash
 # Check status
-docker ps | grep i18n_blog
+docker ps | grep EchoPaper
 
 # View logs
-docker logs i18n_blog
+docker logs EchoPaper
 
-# Backup data (from /opt/i18n_blog)
-cd /opt/i18n_blog
+# Backup data (from /opt/EchoPaper)
+cd /opt/EchoPaper
 sudo tar -czf blog-backup-$(date +%Y%m%d).tar.gz ./blog-data
 
 # Stop and remove
-docker stop i18n_blog
-docker rm i18n_blog
+docker stop EchoPaper
+docker rm EchoPaper
 ```
 
 ## 🔄 Upgrade Instructions
@@ -283,52 +283,52 @@ mkdir -p ./backups/$(date +%Y%m%d_%H%M%S)
 docker run --rm -v blog-data:/data -v $(pwd)/backups/$(date +%Y%m%d_%H%M%S):/backup alpine sh -c "cd /data && tar czf /backup/blog-data-backup.tar.gz ."
 
 # Or if using bind mount, simply copy the directory
-cd /opt/i18n_blog
+cd /opt/EchoPaper
 cp -r ./blog-data ./backups/$(date +%Y%m%d_%H%M%S)/
 ```
 
 #### Step 2: Pull the Latest Image
 ```bash
-docker pull ictrun/i18n_blog:latest
+docker pull ictrun/echopaper:latest
 ```
 
 #### Step 3: Stop and Remove the Old Container
 ```bash
-docker stop i18n_blog
-docker rm i18n_blog
+docker stop EchoPaper
+docker rm EchoPaper
 ```
 
 #### Step 4: Start the New Container
 ```bash
 # If using named volume (recommended)
 docker run -d \
-  --name i18n_blog \
+  --name EchoPaper \
   --restart unless-stopped \
   -p 80:80 \
   -v blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
   -e DB_PATH=/app/data/blog.db \
-  ictrun/i18n_blog:latest
+  ictrun/echopaper:latest
 
 # If using bind mount
-cd /opt/i18n_blog
+cd /opt/EchoPaper
 docker run -d \
-  --name i18n_blog \
+  --name EchoPaper \
   --restart unless-stopped \
   -p 80:80 \
-  -v /opt/i18n_blog/blog-data:/app/data \
+  -v /opt/EchoPaper/blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
   -e DB_PATH=/app/data/blog.db \
-  ictrun/i18n_blog:latest
+  ictrun/echopaper:latest
 ```
 
 #### Step 5: Verify the Upgrade
 ```bash
 # Check container status
-docker ps | grep i18n_blog
+docker ps | grep EchoPaper
 
 # Check logs for any errors
-docker logs i18n_blog
+docker logs EchoPaper
 
 # Test the application
 curl -f http://localhost/api/categories || echo "API check failed"
@@ -378,7 +378,7 @@ docker-compose down && docker-compose up -d
 docker image prune -f
 
 # Or remove specific old images
-docker images | grep i18n_blog | grep -v latest | awk '{print $3}' | xargs docker rmi 2>/dev/null || true
+docker images | grep EchoPaper | grep -v latest | awk '{print $3}' | xargs docker rmi 2>/dev/null || true
 ```
 
 #### Step 5: Verify the Upgrade
@@ -408,8 +408,8 @@ set -e
 echo "🚀 Starting Docker deployment upgrade..."
 
 # Configuration
-CONTAINER_NAME="i18n_blog"
-IMAGE_NAME="ictrun/i18n_blog:latest"
+CONTAINER_NAME="EchoPaper"
+IMAGE_NAME="ictrun/echopaper:latest"
 BACKUP_DIR="./backups/$(date +%Y%m%d_%H%M%S)"
 
 # Create backup
@@ -500,19 +500,19 @@ If an upgrade fails, you can rollback to the previous version:
 #### For Docker Deployment
 ```bash
 # Stop the failed container
-docker stop i18n_blog && docker rm i18n_blog
+docker stop EchoPaper && docker rm EchoPaper
 
 # Restore from backup (if needed)
 docker run --rm -v blog-data:/data -v $(pwd)/backups/BACKUP_DATE:/backup alpine sh -c "cd /data && tar xzf /backup/blog-data-backup.tar.gz"
 
 # Run the previous image version
 docker run -d \
-  --name i18n_blog \
+  --name EchoPaper \
   --restart unless-stopped \
   -p 80:80 \
   -v blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
-  ictrun/i18n_blog:PREVIOUS_TAG
+  ictrun/echopaper:PREVIOUS_TAG
 ```
 
 #### For Docker Compose Deployment
@@ -620,23 +620,23 @@ If you forget the admin password, follow these steps to reset it safely:
 
 #### Step 1: Stop the Container
 ```bash
-docker stop i18n_blog
+docker stop EchoPaper
 ```
 
 #### Step 2: Enable Recovery Mode
 Navigate to the application directory and run with recovery mode:
 ```bash
-cd /opt/i18n_blog
+cd /opt/EchoPaper
 
 docker run -d \
-  --name i18n_blog_recovery \
+  --name EchoPaper_recovery \
   --restart unless-stopped \
   -p 80:80 \
-  -v /opt/i18n_blog/blog-data:/app/data \
+  -v /opt/EchoPaper/blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL="http://localhost/api" \
   -e DB_PATH="/app/data/blog.db" \
   -e RECOVERY_MODE="true" \
-  ictrun/i18n_blog:latest
+  ictrun/echopaper:latest
 ```
 
 The system will:
@@ -647,24 +647,24 @@ The system will:
 #### Step 3: Check Reset Result
 ```bash
 # View logs to confirm password reset
-docker logs i18n_blog_recovery
+docker logs EchoPaper_recovery
 
 # Remove recovery container
-docker rm -f i18n_blog_recovery
+docker rm -f EchoPaper_recovery
 ```
 
 #### Step 4: Start Blog Normally
 ```bash
 # Run with normal mode
 docker run -d \
-  --name i18n_blog \
+  --name EchoPaper \
   --restart unless-stopped \
   -p 80:80 \
-  -v /opt/i18n_blog/blog-data:/app/data \
+  -v /opt/EchoPaper/blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL="http://localhost/api" \
   -e DB_PATH="/app/data/blog.db" \
   -e RECOVERY_MODE="false" \
-  ictrun/i18n_blog:latest
+  ictrun/echopaper:latest
 ```
 
 #### Step 5: Login with New Password
@@ -736,7 +736,7 @@ npm start
 3. **Build failures**: Clear Docker cache with `docker system prune -f`
 4. **Deployment script errors**: 
    - **Issue**: `curl | bash` fails with "syntax error near unexpected token 'fi'"
-   - **Solution**: Download script first: `curl -sSL https://raw.githubusercontent.com/xuemian168/i18n_blog/main/deploy-from-hub.sh -o deploy.sh && chmod +x deploy.sh && ./deploy.sh`
+   - **Solution**: Download script first: `curl -sSL https://raw.githubusercontent.com/xuemian168/EchoPaper/main/deploy-from-hub.sh -o deploy.sh && chmod +x deploy.sh && ./deploy.sh`
    - **Reason**: Interactive scripts require local execution, not piped execution
 5. **API URL issues**:
    - **Issue**: Frontend shows "Request URL: http://localhost:8080/api/..." even when `NEXT_PUBLIC_API_URL` is set
@@ -768,6 +768,11 @@ docker-compose logs -f frontend
 - Update Nginx configuration for your domain
 - Set up backup for the SQLite database
 - Configure monitoring and logging
+
+## Sponsorship
+This project is sponsored by [TIKHUB.IO](https://tikhub.io/)
+TikHub.io is a provider of high-quality data interface services. It is committed to providing a one-stop overseas social media data API and tool service platform for developers, creators, and enterprises. It faces global users, supports custom extensions, and builds a community-driven ecosystem.
+![Tikhub_LOGO](./docs/tikhub.png)
 
 ## License
 

@@ -1,14 +1,15 @@
 package api
 
 import (
+	"blog-backend/internal/database"
+	"blog-backend/internal/models"
 	"encoding/xml"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-	"blog-backend/internal/database"
-	"blog-backend/internal/models"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -44,10 +45,10 @@ func GetRSSFeed(c *gin.Context) {
 	if lang == "" {
 		lang = "zh" // Default language
 	}
-	
+
 	categoryID := c.Query("category_id")
 	limit := c.Query("limit")
-	
+
 	// Parse limit, default to 20
 	limitInt := 20
 	if limit != "" {
@@ -69,7 +70,7 @@ func GetRSSFeed(c *gin.Context) {
 	// Build query for articles
 	query := database.DB.Preload("Category").Preload("Translations").
 		Order("created_at DESC").Limit(limitInt)
-	
+
 	if categoryID != "" {
 		query = query.Where("category_id = ?", categoryID)
 	}
@@ -87,7 +88,7 @@ func GetRSSFeed(c *gin.Context) {
 	// Set appropriate headers
 	c.Header("Content-Type", "application/rss+xml; charset=utf-8")
 	c.Header("Cache-Control", "public, max-age=3600") // Cache for 1 hour
-	
+
 	c.XML(http.StatusOK, rss)
 }
 
@@ -122,7 +123,7 @@ func generateRSSFeed(articles []models.Article, settings models.SiteSettings, la
 		Description:   settings.SiteSubtitle,
 		Language:      lang,
 		LastBuildDate: time.Now().Format(time.RFC1123Z),
-		Generator:     "Blog RSS Generator v1.0",
+		Generator:     "EchoPaper RSS Generator v1.0",
 		Items:         make([]Item, 0, len(articles)),
 	}
 
@@ -133,7 +134,7 @@ func generateRSSFeed(articles []models.Article, settings models.SiteSettings, la
 
 		// Generate article URL
 		articleURL := fmt.Sprintf("%s/%s/article/%d", baseURL, lang, article.ID)
-		
+
 		// Create RSS item
 		item := Item{
 			Title:       article.Title,
@@ -142,7 +143,7 @@ func generateRSSFeed(articles []models.Article, settings models.SiteSettings, la
 			PubDate:     article.CreatedAt.Format(time.RFC1123Z),
 			GUID:        articleURL,
 		}
-		
+
 		if article.Category.Name != "" {
 			item.Category = article.Category.Name
 		}
@@ -161,15 +162,15 @@ func generateItemDescription(article models.Article) string {
 	if article.Summary != "" {
 		return article.Summary
 	}
-	
+
 	// If no summary, use first 200 characters of content
 	content := strings.ReplaceAll(article.Content, "\n", " ")
 	content = strings.TrimSpace(content)
-	
+
 	if len(content) > 200 {
 		content = content[:200] + "..."
 	}
-	
+
 	return content
 }
 
@@ -178,7 +179,7 @@ func applySiteSettingsTranslation(settings *models.SiteSettings, lang string) {
 	if lang == "zh" || lang == "" {
 		return // Default language, no translation needed
 	}
-	
+
 	for _, translation := range settings.Translations {
 		if translation.Language == lang {
 			if translation.SiteTitle != "" {
@@ -200,11 +201,11 @@ func getBaseURL(c *gin.Context) string {
 	if c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https" {
 		scheme = "https"
 	}
-	
+
 	host := c.Request.Host
 	if forwardedHost := c.GetHeader("X-Forwarded-Host"); forwardedHost != "" {
 		host = forwardedHost
 	}
-	
+
 	return fmt.Sprintf("%s://%s", scheme, host)
 }

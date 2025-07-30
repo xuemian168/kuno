@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: ictrun/i18n_blog
+  IMAGE_NAME: ictrun/echopaper
 
 jobs:
   release:
@@ -53,7 +53,7 @@ jobs:
             type=semver,pattern={{major}}
             type=raw,value=latest
           labels: |
-            org.opencontainers.image.title=I18N Blog
+            org.opencontainers.image.title=EchoPaper
             org.opencontainers.image.description=A multilingual blog system with Go backend and Next.js frontend
             org.opencontainers.image.vendor=xuemian168
             org.opencontainers.image.licenses=MIT
@@ -106,7 +106,7 @@ jobs:
           
           ### One-click deployment:
           \`\`\`bash
-          curl -sSL https://raw.githubusercontent.com/xuemian168/i18n_blog/main/deploy-from-hub.sh | bash
+          curl -sSL https://raw.githubusercontent.com/xuemian168/EchoPaper/main/deploy-from-hub.sh | bash
           \`\`\`
           
           ### Docker Compose:
@@ -129,7 +129,7 @@ jobs:
           ### Manual Docker run:
           \`\`\`bash
           docker run -d \\
-            --name i18n_blog \\
+            --name EchoPaper \\
             -p 80:80 \\
             -v blog-data:/app/data \\
             -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \\
@@ -141,13 +141,13 @@ jobs:
           - **Version**: ${{ steps.extract_version.outputs.version }}
           - **Build Date**: ${{ steps.build_info.outputs.BUILD_DATE }}
           - **Git Commit**: ${{ steps.build_info.outputs.GIT_COMMIT }}
-          - **Docker Hub**: https://hub.docker.com/r/ictrun/i18n_blog
+          - **Docker Hub**: https://hub.docker.com/r/ictrun/echopaper
           
           ## 🔗 Links
           
-          - [Docker Hub Repository](https://hub.docker.com/r/ictrun/i18n_blog)
-          - [Documentation](https://github.com/xuemian168/i18n_blog/blob/main/README.md)
-          - [Deployment Guide](https://github.com/xuemian168/i18n_blog/blob/main/DOCKER_DEPLOYMENT.md)
+          - [Docker Hub Repository](https://hub.docker.com/r/ictrun/echopaper)
+          - [Documentation](https://github.com/xuemian168/EchoPaper/blob/main/README.md)
+          - [Deployment Guide](https://github.com/xuemian168/EchoPaper/blob/main/DOCKER_DEPLOYMENT.md)
           EOF
 
       - name: Check if release exists
@@ -203,8 +203,8 @@ jobs:
           if [ "${{ needs.release.result }}" == "success" ]; then
             echo "✅ Release ${{ github.ref_name }} completed successfully!"
             echo "🐳 Docker image: ${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
-            echo "📦 Available at: https://hub.docker.com/r/ictrun/i18n_blog"
-            echo "📋 GitHub Release: https://github.com/xuemian168/i18n_blog/releases/tag/${{ github.ref_name }}"
+            echo "📦 Available at: https://hub.docker.com/r/ictrun/echopaper"
+            echo "📋 GitHub Release: https://github.com/xuemian168/EchoPaper/releases/tag/${{ github.ref_name }}"
           else
             echo "❌ Release ${{ github.ref_name }} failed!"
           fi

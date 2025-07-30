@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# I18N Blog Restore Script
+# EchoPaper Restore Script
 # Usage: ./scripts/restore.sh [container-name] [backup-file] [--force]
 
 set -e
 
 # Configuration
-DEFAULT_CONTAINER="i18n_blog"
+DEFAULT_CONTAINER="EchoPaper"
 
 # Colors for output
 RED='\033[0;31m'
@@ -31,7 +31,7 @@ if [ -z "$BACKUP_FILE" ]; then
     exit 1
 fi
 
-echo -e "${BLUE}🔄 I18N Blog Restore Utility${NC}"
+echo -e "${BLUE}🔄 EchoPaper Restore Utility${NC}"
 echo -e "${BLUE}📦 Container: ${CONTAINER}${NC}"
 echo -e "${BLUE}📁 Backup file: ${BACKUP_FILE}${NC}"
 echo ""

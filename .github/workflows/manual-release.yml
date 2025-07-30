@@ -20,7 +20,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: ictrun/i18n_blog
+  IMAGE_NAME: ictrun/echopaper
 
 jobs:
   validate:
@@ -112,7 +112,7 @@ jobs:
             type=raw,value=${{ needs.validate.outputs.tag }}
             type=raw,value=latest
           labels: |
-            org.opencontainers.image.title=I18N Blog
+            org.opencontainers.image.title=EchoPaper
             org.opencontainers.image.description=A multilingual blog system with Go backend and Next.js frontend
             org.opencontainers.image.vendor=xuemian168
             org.opencontainers.image.licenses=MIT
@@ -160,11 +160,11 @@ jobs:
             
             ```bash
             # One-click deployment
-            curl -sSL https://raw.githubusercontent.com/xuemian168/i18n_blog/main/deploy-from-hub.sh | bash
+            curl -sSL https://raw.githubusercontent.com/xuemian168/EchoPaper/main/deploy-from-hub.sh | bash
             
             # Or with specific version
             docker run -d \
-              --name i18n_blog \
+              --name EchoPaper \
               -p 80:80 \
               -v blog-data:/app/data \
               -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
@@ -199,7 +199,7 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "🐳 **Docker Image**: \`${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "📦 **Docker Hub**: https://hub.docker.com/r/ictrun/i18n_blog" >> $GITHUB_STEP_SUMMARY
+            echo "📦 **Docker Hub**: https://hub.docker.com/r/ictrun/echopaper" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Release failed!" >> $GITHUB_STEP_SUMMARY
           fi

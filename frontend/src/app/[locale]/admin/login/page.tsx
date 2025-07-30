@@ -197,12 +197,12 @@ export default function LoginPage({ params }: LoginPageProps) {
                       <h4 className="font-semibold text-sm">{t('admin.passwordResetStep1')}</h4>
                       <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md font-mono text-sm relative">
                         <div className="flex justify-between items-start">
-                          <code>docker stop i18n_blog</code>
+                          <code>docker stop EchoPaper</code>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="h-6 w-6 p-0"
-                            onClick={() => copyToClipboard('docker stop i18n_blog', 'step1')}
+                            onClick={() => copyToClipboard('docker stop EchoPaper', 'step1')}
                           >
                             <Copy className="h-3 w-3" />
                           </Button>
@@ -221,33 +221,33 @@ export default function LoginPage({ params }: LoginPageProps) {
                       <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md font-mono text-sm relative">
                         <div className="flex justify-between items-start">
                           <code className="whitespace-pre-wrap break-all">
-{`cd /opt/i18n_blog
+{`cd /opt/EchoPaper
 
 docker run -d \\
-    --name i18n_blog_recovery \\
+    --name EchoPaper_recovery \\
     --restart unless-stopped \\
     -p 80:80 \\
-    -v /opt/i18n_blog/blog-data:/app/data \\
+    -v /opt/EchoPaper/blog-data:/app/data \\
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \\
     -e DB_PATH="/app/data/blog.db" \\
     -e RECOVERY_MODE="true" \\
-    ictrun/i18n_blog:latest`}
+    ictrun/echopaper:latest`}
                           </code>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="h-6 w-6 p-0 flex-shrink-0"
-                            onClick={() => copyToClipboard(`cd /opt/i18n_blog
+                            onClick={() => copyToClipboard(`cd /opt/EchoPaper
 
 docker run -d \\
-    --name i18n_blog_recovery \\
+    --name EchoPaper_recovery \\
     --restart unless-stopped \\
     -p 80:80 \\
-    -v /opt/i18n_blog/blog-data:/app/data \\
+    -v /opt/EchoPaper/blog-data:/app/data \\
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \\
     -e DB_PATH="/app/data/blog.db" \\
     -e RECOVERY_MODE="true" \\
-    ictrun/i18n_blog:latest`, 'step2')}
+    ictrun/echopaper:latest`, 'step2')}
                           >
                             <Copy className="h-3 w-3" />
                           </Button>
@@ -266,17 +266,17 @@ docker run -d \\
                       <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md font-mono text-sm relative">
                         <div className="flex justify-between items-start">
                           <code className="whitespace-pre-wrap">
-{`docker logs i18n_blog_recovery
+{`docker logs EchoPaper_recovery
 
-docker rm -f i18n_blog_recovery`}
+docker rm -f EchoPaper_recovery`}
                           </code>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="h-6 w-6 p-0 flex-shrink-0"
-                            onClick={() => copyToClipboard(`docker logs i18n_blog_recovery
+                            onClick={() => copyToClipboard(`docker logs EchoPaper_recovery
 
-docker rm -f i18n_blog_recovery`, 'step3')}
+docker rm -f EchoPaper_recovery`, 'step3')}
                           >
                             <Copy className="h-3 w-3" />
                           </Button>
@@ -296,28 +296,28 @@ docker rm -f i18n_blog_recovery`, 'step3')}
                         <div className="flex justify-between items-start">
                           <code className="whitespace-pre-wrap break-all">
 {`docker run -d \\
-    --name i18n_blog \\
+    --name EchoPaper \\
     --restart unless-stopped \\
     -p 80:80 \\
-    -v /opt/i18n_blog/blog-data:/app/data \\
+    -v /opt/EchoPaper/blog-data:/app/data \\
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \\
     -e DB_PATH="/app/data/blog.db" \\
     -e RECOVERY_MODE="false" \\
-    ictrun/i18n_blog:latest`}
+    ictrun/echopaper:latest`}
                           </code>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="h-6 w-6 p-0 flex-shrink-0"
                             onClick={() => copyToClipboard(`docker run -d \\
-    --name i18n_blog \\
+    --name EchoPaper \\
     --restart unless-stopped \\
     -p 80:80 \\
-    -v /opt/i18n_blog/blog-data:/app/data \\
+    -v /opt/EchoPaper/blog-data:/app/data \\
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \\
     -e DB_PATH="/app/data/blog.db" \\
     -e RECOVERY_MODE="false" \\
-    ictrun/i18n_blog:latest`, 'step4')}
+    ictrun/echopaper:latest`, 'step4')}
                           >
                             <Copy className="h-3 w-3" />
                           </Button>

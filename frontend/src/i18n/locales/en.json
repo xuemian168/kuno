@@ -546,11 +546,11 @@
     "latestArticles": "latest articles"
   },
   "site": {
-    "title": "Minimalist Blog",
-    "description": "A minimalist blog space with dark mode support",
-    "homeTitle": "Home - Minimalist Blog",
-    "articleTitle": "Article - Minimalist Blog",
-    "adminTitle": "Admin Panel - Minimalist Blog"
+    "title": "EchoPaper",
+    "description": "Your mind embedded everywhere",
+    "homeTitle": "Home - EchoPaper",
+    "articleTitle": "Article - EchoPaper",
+    "adminTitle": "Admin Panel - EchoPaper"
   },
   "share": {
     "title": "Share",
