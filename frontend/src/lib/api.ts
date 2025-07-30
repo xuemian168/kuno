@@ -143,6 +143,39 @@ export interface CategoryViewStats {
   article_count: number
 }
 
+export interface GeographicStats {
+  country: string
+  region: string
+  city: string
+  visitor_count: number
+  view_count: number
+}
+
+export interface BrowserStats {
+  browser: string
+  browser_version: string
+  visitor_count: number
+  view_count: number
+}
+
+export interface PlatformStats {
+  os: string
+  os_version: string
+  platform: string
+  device_type: string
+  visitor_count: number
+  view_count: number
+}
+
+export interface TrendStats {
+  date: string
+  views: number
+  unique_visitors: number
+  desktop_visitors: number
+  mobile_visitors: number
+  tablet_visitors: number
+}
+
 export interface AnalyticsData {
   total_views: number
   total_articles: number
@@ -152,6 +185,9 @@ export interface AnalyticsData {
   top_articles: ArticleViewStats[]
   recent_views: DailyViewStats[]
   category_stats: CategoryViewStats[]
+  geographic_stats: GeographicStats[]
+  browser_stats: BrowserStats[]
+  platform_stats: PlatformStats[]
 }
 
 export interface ArticleAnalytics {
@@ -530,6 +566,23 @@ class ApiClient {
     }
     const url = queryParams.toString() ? `/analytics/articles/${id}?${queryParams}` : `/analytics/articles/${id}`
     return this.request<ArticleAnalytics>(url)
+  }
+
+  async getGeographicAnalytics(): Promise<{ geographic_stats: GeographicStats[] }> {
+    return this.request('/analytics/geographic')
+  }
+
+  async getBrowserAnalytics(): Promise<{ browser_stats: BrowserStats[], platform_stats: PlatformStats[] }> {
+    return this.request('/analytics/browsers')
+  }
+
+  async getTrendAnalytics(days?: number): Promise<{ trends: TrendStats[] }> {
+    const queryParams = new URLSearchParams()
+    if (days) {
+      queryParams.append('days', days.toString())
+    }
+    const url = queryParams.toString() ? `/analytics/trends?${queryParams}` : '/analytics/trends'
+    return this.request(url)
   }
 
   // Export endpoints

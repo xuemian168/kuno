@@ -8,6 +8,7 @@ import (
 	"strings"
 	"blog-backend/internal/database"
 	"blog-backend/internal/models"
+	"blog-backend/internal/services"
 	"github.com/gin-gonic/gin"
 )
 
@@ -320,7 +321,7 @@ func generateFingerprint(c *gin.Context) string {
 	return fmt.Sprintf("%x", hash)
 }
 
-// Track article view asynchronously
+// Track article view asynchronously with detailed analytics
 func trackArticleView(articleID uint, c *gin.Context) {
 	ip := getClientIP(c)
 	userAgent := c.GetHeader("User-Agent")
@@ -329,12 +330,41 @@ func trackArticleView(articleID uint, c *gin.Context) {
 	// Check if this fingerprint has already viewed this article
 	var existingView models.ArticleView
 	if err := database.DB.Where("article_id = ? AND fingerprint = ?", articleID, fingerprint).First(&existingView).Error; err != nil {
-		// No existing view found, create new one
+		// No existing view found, create new one with detailed analytics
+		
+		// Parse user agent information
+		uaInfo := services.ParseUserAgent(userAgent)
+		
+		// Get geographic information (with caching)
+		geoInfo := services.GetGeoIPWithCache(ip)
+		
+		// Enhance country name if it's a country code
+		if len(geoInfo.Country) == 2 {
+			geoInfo.Country = services.GetCountryName(geoInfo.Country)
+		}
+		
 		view := models.ArticleView{
 			ArticleID:   articleID,
 			IPAddress:   ip,
 			UserAgent:   userAgent,
 			Fingerprint: fingerprint,
+			
+			// Geographic information
+			Country: geoInfo.Country,
+			Region:  geoInfo.Region,
+			City:    geoInfo.City,
+			
+			// Browser information
+			Browser:        uaInfo.Browser,
+			BrowserVersion: uaInfo.BrowserVersion,
+			
+			// Operating system information
+			OS:        uaInfo.OS,
+			OSVersion: uaInfo.OSVersion,
+			
+			// Device information
+			DeviceType: uaInfo.DeviceType,
+			Platform:   uaInfo.Platform,
 		}
 		
 		if err := database.DB.Create(&view).Error; err == nil {

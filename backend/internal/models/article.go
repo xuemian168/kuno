@@ -95,7 +95,7 @@ type CategoryTranslation struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// ArticleView tracks unique visitors for each article
+// ArticleView tracks unique visitors for each article with detailed analytics
 type ArticleView struct {
 	ID         uint      `gorm:"primaryKey" json:"id"`
 	ArticleID  uint      `gorm:"not null;index" json:"article_id"`
@@ -103,6 +103,48 @@ type ArticleView struct {
 	UserAgent  string    `gorm:"size:500" json:"user_agent"`
 	Fingerprint string   `gorm:"size:64;index" json:"fingerprint"`
 	CreatedAt  time.Time `json:"created_at"`
+	
+	// Geographic information
+	Country    string    `gorm:"size:100;index" json:"country"`
+	Region     string    `gorm:"size:100" json:"region"`
+	City       string    `gorm:"size:100" json:"city"`
+	
+	// Browser information
+	Browser        string `gorm:"size:50;index" json:"browser"`
+	BrowserVersion string `gorm:"size:20" json:"browser_version"`
+	
+	// Operating system information
+	OS         string `gorm:"size:50;index" json:"os"`
+	OSVersion  string `gorm:"size:20" json:"os_version"`
+	
+	// Device information
+	DeviceType string `gorm:"size:20;index" json:"device_type"` // desktop, mobile, tablet
+	Platform   string `gorm:"size:30;index" json:"platform"`   // Windows, macOS, iOS, Android, Linux
+}
+
+// Analytics statistics structures for efficient querying
+type GeographicStats struct {
+	Country      string `json:"country"`
+	Region       string `json:"region"`
+	City         string `json:"city"`
+	VisitorCount int64  `json:"visitor_count"`
+	ViewCount    int64  `json:"view_count"`
+}
+
+type BrowserStats struct {
+	Browser        string `json:"browser"`
+	BrowserVersion string `json:"browser_version"`
+	VisitorCount   int64  `json:"visitor_count"`
+	ViewCount      int64  `json:"view_count"`
+}
+
+type PlatformStats struct {
+	OS           string `json:"os"`
+	OSVersion    string `json:"os_version"`
+	Platform     string `json:"platform"`
+	DeviceType   string `json:"device_type"`
+	VisitorCount int64  `json:"visitor_count"`
+	ViewCount    int64  `json:"view_count"`
 }
 
 // SocialMedia represents social media links

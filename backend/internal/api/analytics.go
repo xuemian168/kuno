@@ -9,14 +9,17 @@ import (
 )
 
 type AnalyticsResponse struct {
-	TotalViews      int64                    `json:"total_views"`
-	TotalArticles   int64                    `json:"total_articles"`
-	ViewsToday      int64                    `json:"views_today"`
-	ViewsThisWeek   int64                    `json:"views_this_week"`
-	ViewsThisMonth  int64                    `json:"views_this_month"`
-	TopArticles     []ArticleViewStats       `json:"top_articles"`
-	RecentViews     []DailyViewStats         `json:"recent_views"`
-	CategoryStats   []CategoryViewStats      `json:"category_stats"`
+	TotalViews       int64                     `json:"total_views"`
+	TotalArticles    int64                     `json:"total_articles"`
+	ViewsToday       int64                     `json:"views_today"`
+	ViewsThisWeek    int64                     `json:"views_this_week"`
+	ViewsThisMonth   int64                     `json:"views_this_month"`
+	TopArticles      []ArticleViewStats        `json:"top_articles"`
+	RecentViews      []DailyViewStats          `json:"recent_views"`
+	CategoryStats    []CategoryViewStats       `json:"category_stats"`
+	GeographicStats  []models.GeographicStats  `json:"geographic_stats"`
+	BrowserStats     []models.BrowserStats     `json:"browser_stats"`
+	PlatformStats    []models.PlatformStats    `json:"platform_stats"`
 }
 
 type ArticleViewStats struct {
@@ -157,18 +160,167 @@ func GetAnalytics(c *gin.Context) {
 		`, lang).Scan(&categoryStats)
 	}
 
+	// Get geographic statistics
+	var geographicStats []models.GeographicStats
+	database.DB.Raw(`
+		SELECT 
+			country,
+			region,
+			city,
+			COUNT(DISTINCT fingerprint) as visitor_count,
+			COUNT(*) as view_count
+		FROM article_views 
+		WHERE country != '' AND country != 'Unknown'
+		GROUP BY country, region, city
+		ORDER BY view_count DESC
+		LIMIT 20
+	`).Scan(&geographicStats)
+
+	// Get browser statistics
+	var browserStats []models.BrowserStats
+	database.DB.Raw(`
+		SELECT 
+			browser,
+			browser_version,
+			COUNT(DISTINCT fingerprint) as visitor_count,
+			COUNT(*) as view_count
+		FROM article_views 
+		WHERE browser != '' AND browser != 'Unknown'
+		GROUP BY browser, browser_version
+		ORDER BY view_count DESC
+		LIMIT 15
+	`).Scan(&browserStats)
+
+	// Get platform statistics
+	var platformStats []models.PlatformStats
+	database.DB.Raw(`
+		SELECT 
+			os,
+			os_version,
+			platform,
+			device_type,
+			COUNT(DISTINCT fingerprint) as visitor_count,
+			COUNT(*) as view_count
+		FROM article_views 
+		WHERE os != '' AND os != 'Unknown'
+		GROUP BY os, os_version, platform, device_type
+		ORDER BY view_count DESC
+		LIMIT 15
+	`).Scan(&platformStats)
+
 	response := AnalyticsResponse{
-		TotalViews:     totalViews,
-		TotalArticles:  totalArticles,
-		ViewsToday:     viewsToday,
-		ViewsThisWeek:  viewsThisWeek,
-		ViewsThisMonth: viewsThisMonth,
-		TopArticles:    topArticles,
-		RecentViews:    recentViews,
-		CategoryStats:  categoryStats,
+		TotalViews:      totalViews,
+		TotalArticles:   totalArticles,
+		ViewsToday:      viewsToday,
+		ViewsThisWeek:   viewsThisWeek,
+		ViewsThisMonth:  viewsThisMonth,
+		TopArticles:     topArticles,
+		RecentViews:     recentViews,
+		CategoryStats:   categoryStats,
+		GeographicStats: geographicStats,
+		BrowserStats:    browserStats,
+		PlatformStats:   platformStats,
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+// GetGeographicAnalytics returns detailed geographic statistics
+func GetGeographicAnalytics(c *gin.Context) {
+	var stats []models.GeographicStats
+	
+	// Get geographic distribution with more details
+	database.DB.Raw(`
+		SELECT 
+			country,
+			region,
+			city,
+			COUNT(DISTINCT fingerprint) as visitor_count,
+			COUNT(*) as view_count
+		FROM article_views 
+		WHERE country != '' AND country != 'Unknown' AND country != 'Local'
+		GROUP BY country, region, city
+		ORDER BY view_count DESC
+		LIMIT 50
+	`).Scan(&stats)
+
+	c.JSON(http.StatusOK, gin.H{
+		"geographic_stats": stats,
+	})
+}
+
+// GetBrowserAnalytics returns detailed browser and device statistics
+func GetBrowserAnalytics(c *gin.Context) {
+	var browserStats []models.BrowserStats
+	var platformStats []models.PlatformStats
+	
+	// Get browser statistics
+	database.DB.Raw(`
+		SELECT 
+			browser,
+			browser_version,
+			COUNT(DISTINCT fingerprint) as visitor_count,
+			COUNT(*) as view_count
+		FROM article_views 
+		WHERE browser != '' AND browser != 'Unknown'
+		GROUP BY browser, browser_version
+		ORDER BY view_count DESC
+		LIMIT 30
+	`).Scan(&browserStats)
+
+	// Get platform/device statistics
+	database.DB.Raw(`
+		SELECT 
+			os,
+			os_version,
+			platform,
+			device_type,
+			COUNT(DISTINCT fingerprint) as visitor_count,
+			COUNT(*) as view_count
+		FROM article_views 
+		WHERE os != '' AND os != 'Unknown'
+		GROUP BY os, os_version, platform, device_type
+		ORDER BY view_count DESC
+		LIMIT 30
+	`).Scan(&platformStats)
+
+	c.JSON(http.StatusOK, gin.H{
+		"browser_stats":  browserStats,
+		"platform_stats": platformStats,
+	})
+}
+
+// GetTrendAnalytics returns time-based analytics with multiple metrics
+func GetTrendAnalytics(c *gin.Context) {
+	days := c.DefaultQuery("days", "30")
+	
+	// Get daily trends for the specified period
+	var trends []struct {
+		Date            string `json:"date"`
+		Views           int64  `json:"views"`
+		UniqueVisitors  int64  `json:"unique_visitors"`
+		DesktopVisitors int64  `json:"desktop_visitors"`
+		MobileVisitors  int64  `json:"mobile_visitors"`
+		TabletVisitors  int64  `json:"tablet_visitors"`
+	}
+
+	database.DB.Raw(`
+		SELECT 
+			DATE(created_at) as date,
+			COUNT(*) as views,
+			COUNT(DISTINCT fingerprint) as unique_visitors,
+			COUNT(CASE WHEN device_type = 'desktop' THEN 1 END) as desktop_visitors,
+			COUNT(CASE WHEN device_type = 'mobile' THEN 1 END) as mobile_visitors,
+			COUNT(CASE WHEN device_type = 'tablet' THEN 1 END) as tablet_visitors
+		FROM article_views 
+		WHERE created_at >= DATE('now', '-' || ? || ' days')
+		GROUP BY DATE(created_at) 
+		ORDER BY date DESC
+	`, days).Scan(&trends)
+
+	c.JSON(http.StatusOK, gin.H{
+		"trends": trends,
+	})
 }
 
 func GetArticleAnalytics(c *gin.Context) {

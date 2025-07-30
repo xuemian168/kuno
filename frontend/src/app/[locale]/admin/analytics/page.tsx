@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, Article, AnalyticsData } from "@/lib/api"
+import { GeographicChart } from "@/components/analytics/geographic-chart"
+import { BrowserChart } from "@/components/analytics/browser-chart"
 
 interface AnalyticsPageProps {
   params: Promise<{ locale: string }>
@@ -233,6 +235,15 @@ export default function AnalyticsPage({ params }: AnalyticsPageProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Enhanced Analytics Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+        {/* Geographic Analytics */}
+        <GeographicChart />
+        
+        {/* Browser & Device Analytics */}
+        <BrowserChart />
+      </div>
     </motion.div>
   )
 }

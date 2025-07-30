@@ -110,6 +110,9 @@ func SetupRoutes() *gin.Engine {
 				// Analytics
 				admin.GET("/analytics", GetAnalytics)
 				admin.GET("/analytics/articles/:id", GetArticleAnalytics)
+				admin.GET("/analytics/geographic", GetGeographicAnalytics)
+				admin.GET("/analytics/browsers", GetBrowserAnalytics)
+				admin.GET("/analytics/trends", GetTrendAnalytics)
 
 				// Export functions
 				admin.GET("/export/article/:id", ExportArticle)
