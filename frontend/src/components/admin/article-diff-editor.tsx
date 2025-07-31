@@ -47,6 +47,7 @@ import {
 } from "lucide-react"
 import { translationService, initializeTranslationService } from "@/services/translation"
 import { languageManager } from "@/services/translation/language-manager"
+import { SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation/types"
 import { cn } from "@/lib/utils"
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer"
 import { ArticleSEOForm } from "@/components/admin/article-seo-form"
@@ -92,6 +93,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const [activeTextarea, setActiveTextarea] = useState<'source' | 'target' | 'single'>('source')
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const [isTranslating, setIsTranslating] = useState(false)
+  const [currentTranslatingLanguage, setCurrentTranslatingLanguage] = useState<SupportedLanguage | null>(null)
   const [hasTranslationProvider, setHasTranslationProvider] = useState(false)
   const [availableLanguages, setAvailableLanguages] = useState(adminInterfaceLanguages)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -387,34 +389,87 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       const defaultLang = article?.default_lang || 'zh'
 
       if (field === 'all') {
+        // Get all enabled languages from language manager
+        const enabledLanguages = languageManager.getEnabledLanguages()
+        
+        // Filter out the source language
+        const targetLanguages = enabledLanguages.filter(lang => lang !== sourceLanguage)
+        
+        if (targetLanguages.length === 0) {
+          notification.showError(
+            locale === 'zh' ? '没有目标语言' : 'No Target Languages',
+            locale === 'zh' ? '没有其他启用的语言可以翻译' : 'No other enabled languages to translate to'
+          )
+          return
+        }
+        
         // Filter content before translation
         const { filtered: filteredContent, placeholders: contentPlaceholders } = filterNonTranslatableContent(sourceTranslation.content)
         
-        // Translate all fields at once
-        const result = await translationService.translateArticle(
-          {
-            title: sourceTranslation.title,
-            content: filteredContent,
-            summary: sourceTranslation.summary
-          },
-          sourceLanguage,
-          targetLanguage
-        )
+        let successCount = 0
+        const failedLanguages: string[] = []
+        
+        // Translate to each enabled language
+        for (const targetLang of targetLanguages) {
+          try {
+            // Set current translating language
+            setCurrentTranslatingLanguage(targetLang)
+            
+            // Translate all fields at once
+            const result = await translationService.translateArticle(
+              {
+                title: sourceTranslation.title,
+                content: filteredContent,
+                summary: sourceTranslation.summary
+              },
+              sourceLanguage,
+              targetLang
+            )
 
-        // Restore non-translatable content
-        const restoredContent = restoreNonTranslatableContent(result.content, contentPlaceholders)
+            // Restore non-translatable content
+            const restoredContent = restoreNonTranslatableContent(result.content, contentPlaceholders)
 
-        if (targetLanguage === defaultLang) {
-          setFormData(prev => ({
-            ...prev,
-            title: result.title,
-            content: restoredContent,
-            summary: result.summary
-          }))
+            if (targetLang === defaultLang) {
+              setFormData(prev => ({
+                ...prev,
+                title: result.title,
+                content: restoredContent,
+                summary: result.summary
+              }))
+            } else {
+              updateTranslation(targetLang, 'title', result.title)
+              updateTranslation(targetLang, 'content', restoredContent)
+              updateTranslation(targetLang, 'summary', result.summary)
+            }
+            
+            successCount++
+          } catch (error) {
+            console.error(`Failed to translate to ${targetLang}:`, error)
+            failedLanguages.push(SUPPORTED_LANGUAGES[targetLang] || targetLang)
+          }
+        }
+        
+        // Clear translating language
+        setCurrentTranslatingLanguage(null)
+        
+        // Show final status
+        if (successCount === targetLanguages.length) {
+          notification.showSuccess(
+            locale === 'zh' ? '翻译完成！' : 'Translation Complete!',
+            locale === 'zh' ? `成功翻译到 ${successCount} 种语言` : `Successfully translated to ${successCount} languages`
+          )
+        } else if (successCount > 0) {
+          notification.showWarning(
+            locale === 'zh' ? '部分翻译完成' : 'Partial Translation Complete',
+            locale === 'zh' 
+              ? `成功翻译到 ${successCount} 种语言，失败: ${failedLanguages.join(', ')}`
+              : `Successfully translated to ${successCount} languages, failed: ${failedLanguages.join(', ')}`
+          )
         } else {
-          updateTranslation(targetLanguage, 'title', result.title)
-          updateTranslation(targetLanguage, 'content', restoredContent)
-          updateTranslation(targetLanguage, 'summary', result.summary)
+          notification.showError(
+            locale === 'zh' ? '翻译失败' : 'Translation Failed',
+            locale === 'zh' ? '所有语言翻译均失败' : 'Failed to translate to any language'
+          )
         }
       } else {
         // Translate single field
@@ -455,6 +510,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       )
     } finally {
       setIsTranslating(false)
+      setCurrentTranslatingLanguage(null)
     }
   }
 
@@ -640,7 +696,14 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           
           case 'p': // Preview toggle - Ctrl/Cmd+P
             e.preventDefault()
-            setShowPreview(prev => prev === 'none' ? 'both' : 'none')
+            setShowPreview(prev => {
+              switch (prev) {
+                case 'none': return 'right'
+                case 'right': return 'left'
+                case 'left': return 'both'
+                case 'both': return 'none'
+              }
+            })
             break
           
           case 'm': // Media picker - Ctrl/Cmd+M
@@ -1357,14 +1420,27 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
               onClick={() => handleAutoTranslate('all')}
               disabled={isTranslating || !hasTranslationProvider}
               className="h-8 gap-2"
-              title="Auto translate all fields"
+              title={locale === 'zh' 
+                ? `自动翻译到所有启用的语言 (${languageManager.getEnabledLanguages().filter(l => l !== sourceLanguage).length} 种语言)`
+                : `Auto translate to all enabled languages (${languageManager.getEnabledLanguages().filter(l => l !== sourceLanguage).length} languages)`
+              }
             >
               {isTranslating ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Wand2 className="h-4 w-4" />
               )}
-              <span className="text-xs">Translate All</span>
+              <span className="text-xs">
+                {isTranslating && currentTranslatingLanguage ? (
+                  locale === 'zh' 
+                    ? `正在翻译到 ${SUPPORTED_LANGUAGES[currentTranslatingLanguage] || currentTranslatingLanguage}`
+                    : `Translating to ${SUPPORTED_LANGUAGES[currentTranslatingLanguage] || currentTranslatingLanguage}`
+                ) : (
+                  locale === 'zh' 
+                    ? `翻译全部 (${languageManager.getEnabledLanguages().filter(l => l !== sourceLanguage).length})`
+                    : `Translate All (${languageManager.getEnabledLanguages().filter(l => l !== sourceLanguage).length})`
+                )}
+              </span>
             </Button>
             <div className="mx-2 h-4 w-px bg-border" />
           </>
@@ -1472,18 +1548,42 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           {/* Preview Toggle - Hide for SEO */}
           {activeField !== 'seo' && (
             <div className="flex items-center gap-1 mr-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowPreview(showPreview === 'none' ? 'both' : 'none')}
-                className="h-7 px-2"
-                title={showPreview === 'none' ? (locale === 'zh' ? '显示预览' : 'Show Preview') : (locale === 'zh' ? '隐藏预览' : 'Hide Preview')}
-              >
-                {showPreview !== 'none' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="ml-1 text-xs">
-                  {showPreview === 'none' ? (locale === 'zh' ? '预览' : 'Preview') : (locale === 'zh' ? '编辑' : 'Edit')}
-                </span>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 gap-1"
+                  >
+                    {showPreview === 'none' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    <span className="text-xs">
+                      {showPreview === 'none' ? (locale === 'zh' ? '编辑模式' : 'Edit Mode') :
+                       showPreview === 'left' ? (locale === 'zh' ? '左侧预览' : 'Left Preview') :
+                       showPreview === 'right' ? (locale === 'zh' ? '右侧预览' : 'Right Preview') :
+                       (locale === 'zh' ? '双侧预览' : 'Both Preview')}
+                    </span>
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowPreview('none')}>
+                    <EyeOff className="h-4 w-4 mr-2" />
+                    {locale === 'zh' ? '编辑模式' : 'Edit Mode'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowPreview('right')}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    {locale === 'zh' ? '右侧预览' : 'Right Preview'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowPreview('left')}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    {locale === 'zh' ? '左侧预览' : 'Left Preview'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowPreview('both')}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    {locale === 'zh' ? '双侧预览' : 'Both Preview'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
         </div>
@@ -1866,7 +1966,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '切换预览' : 'Toggle Preview'}</span>
+                  <span>{locale === 'zh' ? '切换预览模式' : 'Toggle Preview Mode'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + P
                   </kbd>
