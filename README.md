@@ -2,7 +2,16 @@
 
 # EchoPaper
 
+![echopaper](./docs/echopaper.png)
+
+-	Echo  - "Resonance of information, echo of data"
+-	Paper - "Content, knowledge, blog, publication"
+
 A full-stack blog application with Go backend and Next.js frontend, containerized with Docker for easy deployment.
+
+## Demo
+
+[QUT.EDU.KG](https://qut.edu.kg/)
 
 ## Features
 
