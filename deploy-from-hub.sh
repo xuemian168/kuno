@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# I18N Blog - One-Click Deployment from Docker Hub
-# Usage: curl -sSL https://raw.githubusercontent.com/xuemian168/i18n_blog/main/deploy-from-hub.sh | bash
+# EchoPaper - One-Click Deployment from Docker Hub
+# Usage: curl -sSL https://raw.githubusercontent.com/xuemian168/EchoPaper/main/deploy-from-hub.sh | bash
 
 set -e
 
 # Configuration
-DEFAULT_IMAGE="ictrun/i18n_blog:latest"
+DEFAULT_IMAGE="ictrun/echopaper:latest"
 DEFAULT_PORT="80"
-DEFAULT_CONTAINER_NAME="i18n_blog"
+DEFAULT_CONTAINER_NAME="EchoPaper"
 
 # Colors for output
 RED='\033[0;31m'
@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}"
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║                    I18N Blog Deployment                     ║"
+echo "║                    EchoPaper Deployment                     ║"
 echo "║                  One-Click Docker Hub Deploy                ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
@@ -127,7 +127,7 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo -e "  🗑️  Remove blog: docker rm -f ${CONTAINER_NAME}"
     echo ""
     echo -e "${YELLOW}⚠️  Important: Change the default password after first login!${NC}"
-    echo -e "${BLUE}📚 Documentation: https://github.com/xuemian168/i18n_blog${NC}"
+    echo -e "${BLUE}📚 Documentation: https://github.com/xuemian168/EchoPaper${NC}"
 else
     echo -e "${RED}❌ Deployment failed. Checking logs...${NC}"
     docker logs ${CONTAINER_NAME}
