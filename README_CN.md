@@ -118,7 +118,7 @@ sudo mkdir -p /opt/EchoPaper
 cd /opt/EchoPaper
 
 # 2. 下载并执行部署脚本
-curl -sSL https://raw.githubusercontent.com/xuemian168/EchoPaper/main/deploy-from-hub.sh -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
+curl -sSL "https://raw.githubusercontent.com/xuemian168/EchoPaper/main/deploy-from-hub.sh?$(date +%s)" -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
 ```
 
 **重要提示**：
