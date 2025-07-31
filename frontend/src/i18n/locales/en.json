@@ -7,6 +7,8 @@
   },
   "admin": {
     "login": "Admin Login",
+    "createArticle": "Create Article",
+    "analytics": "Analytics",
     "username": "Username",
     "password": "Password",
     "signin": "Sign In",
@@ -398,7 +400,14 @@
     "platform": "platform",
     "noBrowserData": "No browser data available",
     "noDeviceData": "No device data available",
-    "noPlatformData": "No platform data available"
+    "noPlatformData": "No platform data available",
+    "worldMap": "World Map",
+    "detailedList": "Detailed List",
+    "visitorWorldMap": "Visitor World Map",
+    "lowActivity": "Low Activity",
+    "highActivity": "High Activity",
+    "countries": "countries",
+    "totalVisitors": "Total Visitors"
   },
   "export": {
     "exportAll": "Export All",

@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { apiClient, GeographicStats } from '@/lib/api'
-import { Globe, MapPin, Users, Eye } from 'lucide-react'
+import { Globe, MapPin, Users, Eye, Map } from 'lucide-react'
+import { WorldMapComponent } from './world-map'
 
 export function GeographicChart() {
   const t = useTranslations()
@@ -84,85 +86,104 @@ export function GeographicChart() {
         <CardDescription>{t('analytics.visitorsByLocation')}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
-          {/* Top Countries */}
-          <div>
-            <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+        <Tabs defaultValue="map" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="map" className="flex items-center gap-2">
+              <Map className="h-4 w-4" />
+              {t('analytics.worldMap') || 'World Map'}
+            </TabsTrigger>
+            <TabsTrigger value="list" className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              {t('analytics.topCountries')}
-            </h4>
-            <div className="space-y-3">
-              {topCountries.map((country, index) => (
-                <div key={country.country} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="text-xs">
-                      #{index + 1}
-                    </Badge>
-                    <div>
-                      <p className="font-medium">{country.country}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {country.regions.length} {country.regions.length === 1 ? t('analytics.region') : t('analytics.regions')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {country.visitor_count}
+              {t('analytics.detailedList') || 'Detailed List'}
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="map" className="mt-6">
+            <WorldMapComponent data={geographicData || []} loading={loading} />
+          </TabsContent>
+          
+          <TabsContent value="list" className="mt-6">
+            <div className="space-y-6">
+              {/* Top Countries */}
+              <div>
+                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  {t('analytics.topCountries')}
+                </h4>
+                <div className="space-y-3">
+                  {topCountries.map((country, index) => (
+                    <div key={country.country} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="text-xs">
+                          #{index + 1}
+                        </Badge>
+                        <div>
+                          <p className="font-medium">{country.country}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {country.regions.length} {country.regions.length === 1 ? t('analytics.region') : t('analytics.regions')}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        {country.view_count}
+                      <div className="text-right">
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {country.visitor_count}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Eye className="h-3 w-3" />
+                            {country.view_count}
+                          </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {((country.view_count / totalViews) * 100).toFixed(1)}%
+                        </div>
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {((country.view_count / totalViews) * 100).toFixed(1)}%
-                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Regional Breakdown */}
+              {(geographicData || []).length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium mb-3">{t('analytics.regionalBreakdown')}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+                    {(geographicData || []).slice(0, 20).map((item, index) => (
+                      <div key={`${item.country}-${item.region}-${item.city}`} className="p-2 border rounded text-sm">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{item.city}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.region}, {item.country}
+                            </p>
+                          </div>
+                          <div className="text-right text-xs">
+                            <div className="flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              {item.visitor_count}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Eye className="h-3 w-3" />
+                              {item.view_count}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
 
-          {/* Regional Breakdown */}
-          {(geographicData || []).length > 0 && (
-            <div>
-              <h4 className="text-sm font-medium mb-3">{t('analytics.regionalBreakdown')}</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
-                {(geographicData || []).slice(0, 20).map((item, index) => (
-                  <div key={`${item.country}-${item.region}-${item.city}`} className="p-2 border rounded text-sm">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{item.city}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {item.region}, {item.country}
-                        </p>
-                      </div>
-                      <div className="text-right text-xs">
-                        <div className="flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          {item.visitor_count}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Eye className="h-3 w-3" />
-                          {item.view_count}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {(geographicData || []).length === 0 && (
+                <div className="text-center py-8">
+                  <Globe className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-muted-foreground">{t('analytics.noGeographicData')}</p>
+                </div>
+              )}
             </div>
-          )}
-
-          {(geographicData || []).length === 0 && (
-            <div className="text-center py-8">
-              <Globe className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-              <p className="text-muted-foreground">{t('analytics.noGeographicData')}</p>
-            </div>
-          )}
-        </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   )

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 	"blog-backend/internal/database"
 	"blog-backend/internal/models"
 	"blog-backend/internal/services"
@@ -19,6 +20,11 @@ func GetArticles(c *gin.Context) {
 	
 	if categoryID := c.Query("category_id"); categoryID != "" {
 		query = query.Where("category_id = ?", categoryID)
+	}
+	
+	// Filter future articles for non-admin requests
+	if !isAdminRequest(c) {
+		query = query.Where("created_at <= ?", time.Now())
 	}
 	
 	if err := query.Find(&articles).Error; err != nil {
@@ -46,6 +52,12 @@ func GetArticle(c *gin.Context) {
 	
 	var article models.Article
 	if err := database.DB.Preload("Category").Preload("Translations").First(&article, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
+		return
+	}
+	
+	// Check if article is scheduled for future publication and request is not from admin
+	if !isAdminRequest(c) && article.CreatedAt.After(time.Now()) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
 		return
 	}
@@ -79,6 +91,7 @@ func CreateArticle(c *gin.Context) {
 		Summary     string `json:"summary"`
 		CategoryID  uint   `json:"category_id"`
 		DefaultLang string `json:"default_lang"`
+		CreatedAt   string `json:"created_at"`
 		Translations []struct {
 			Language string `json:"language"`
 			Title    string `json:"title"`
@@ -103,6 +116,13 @@ func CreateArticle(c *gin.Context) {
 	}
 	if article.DefaultLang == "" {
 		article.DefaultLang = "zh"
+	}
+	
+	// Set custom created_at if provided
+	if req.CreatedAt != "" {
+		if parsedTime, err := time.Parse(time.RFC3339, req.CreatedAt); err == nil {
+			article.CreatedAt = parsedTime
+		}
 	}
 	
 	if err := database.DB.Create(&article).Error; err != nil {
@@ -153,6 +173,7 @@ func UpdateArticle(c *gin.Context) {
 		Summary     string `json:"summary"`
 		CategoryID  uint   `json:"category_id"`
 		DefaultLang string `json:"default_lang"`
+		CreatedAt   string `json:"created_at"`
 		Translations []struct {
 			Language string `json:"language"`
 			Title    string `json:"title"`
@@ -174,6 +195,13 @@ func UpdateArticle(c *gin.Context) {
 	article.CategoryID = req.CategoryID
 	if req.DefaultLang != "" {
 		article.DefaultLang = req.DefaultLang
+	}
+	
+	// Update created_at if provided
+	if req.CreatedAt != "" {
+		if parsedTime, err := time.Parse(time.RFC3339, req.CreatedAt); err == nil {
+			article.CreatedAt = parsedTime
+		}
 	}
 	
 	if err := database.DB.Save(&article).Error; err != nil {

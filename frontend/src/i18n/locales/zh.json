@@ -7,6 +7,7 @@
   },
   "admin": {
     "login": "管理员登录",
+    "createArticle": "创建文章",
     "analytics": "数据分析",
     "username": "用户名",
     "password": "密码",
@@ -400,7 +401,14 @@
     "platform": "个平台",
     "noBrowserData": "暂无浏览器数据",
     "noDeviceData": "暂无设备数据",
-    "noPlatformData": "暂无平台数据"
+    "noPlatformData": "暂无平台数据",
+    "worldMap": "世界地图",
+    "detailedList": "详细列表",
+    "visitorWorldMap": "访客世界地图",
+    "lowActivity": "活跃度低",
+    "highActivity": "活跃度高",
+    "countries": "个国家",
+    "totalVisitors": "总访客数"
   },
   "export": {
     "exportAll": "导出全部",

@@ -105,11 +105,23 @@ export const MonacoTranslationEditor = forwardRef<
   const updateIdenticalLineDecorations = useCallback(() => {
     if (!diffEditorRef.current) return
 
-    const originalEditor = diffEditorRef.current.getOriginalEditor()
-    const modifiedEditor = diffEditorRef.current.getModifiedEditor()
-    
-    const originalText = originalEditor.getValue()
-    const modifiedText = modifiedEditor.getValue()
+    try {
+      const originalEditor = diffEditorRef.current.getOriginalEditor()
+      const modifiedEditor = diffEditorRef.current.getModifiedEditor()
+      
+      if (!originalEditor || !modifiedEditor) return
+      
+      const originalModel = originalEditor.getModel()
+      const modifiedModel = modifiedEditor.getModel()
+      
+      // Check if models exist and are not disposed
+      if (!originalModel || !modifiedModel || originalModel.isDisposed() || modifiedModel.isDisposed()) {
+        console.warn('Editor models are disposed or missing, skipping decoration update')
+        return
+      }
+      
+      const originalText = originalEditor.getValue()
+      const modifiedText = modifiedEditor.getValue()
     
     const originalLines = originalText.split('\n')
     const modifiedLines = modifiedText.split('\n')
@@ -127,74 +139,114 @@ export const MonacoTranslationEditor = forwardRef<
       if (originalLine && modifiedLine && originalLine.trim() === modifiedLine.trim()) {
         const lineNumber = i + 1
         
-        originalDecorations.push({
-          range: {
-            startLineNumber: lineNumber,
-            startColumn: 1,
-            endLineNumber: lineNumber,
-            endColumn: originalLine.length + 1
-          },
-          options: {
-            isWholeLine: true,
-            className: 'untranslated-line'
-          }
-        })
+        // Validate line numbers before creating decorations
+        const originalModel = originalEditor.getModel()
+        const modifiedModel = modifiedEditor.getModel()
         
-        modifiedDecorations.push({
-          range: {
-            startLineNumber: lineNumber,
-            startColumn: 1,
-            endLineNumber: lineNumber,
-            endColumn: modifiedLine.length + 1
-          },
-          options: {
-            isWholeLine: true,
-            className: 'untranslated-line'
-          }
-        })
+        if (originalModel && lineNumber <= originalModel.getLineCount()) {
+          originalDecorations.push({
+            range: {
+              startLineNumber: lineNumber,
+              startColumn: 1,
+              endLineNumber: lineNumber,
+              endColumn: Math.min(originalLine.length + 1, originalModel.getLineMaxColumn(lineNumber))
+            },
+            options: {
+              isWholeLine: true,
+              className: 'untranslated-line'
+            }
+          })
+        }
+        
+        if (modifiedModel && lineNumber <= modifiedModel.getLineCount()) {
+          modifiedDecorations.push({
+            range: {
+              startLineNumber: lineNumber,
+              startColumn: 1,
+              endLineNumber: lineNumber,
+              endColumn: Math.min(modifiedLine.length + 1, modifiedModel.getLineMaxColumn(lineNumber))
+            },
+            options: {
+              isWholeLine: true,
+              className: 'untranslated-line'
+            }
+          })
+        }
       }
     }
     
     // Only update decorations if they actually changed
     try {
-      const newOriginalDecorations = originalEditor.deltaDecorations(decorations.original, originalDecorations)
-      const newModifiedDecorations = modifiedEditor.deltaDecorations(decorations.modified, modifiedDecorations)
-      
-      setDecorations({
-        original: newOriginalDecorations,
-        modified: newModifiedDecorations
-      })
+      // Additional safety checks
+      if (originalEditor.getModel() && modifiedEditor.getModel()) {
+        const newOriginalDecorations = originalEditor.deltaDecorations(decorations.original, originalDecorations)
+        const newModifiedDecorations = modifiedEditor.deltaDecorations(decorations.modified, modifiedDecorations)
+        
+        setDecorations({
+          original: newOriginalDecorations,
+          modified: newModifiedDecorations
+        })
+      }
     } catch (error) {
       // Ignore decoration errors to prevent editing interruption
       console.warn('Failed to update decorations:', error)
+      // Reset decorations on error to prevent further issues
+      setDecorations({ original: [], modified: [] })
+    }
+    } catch (error) {
+      console.error('Error in updateIdenticalLineDecorations:', error)
+      // Reset decorations on any error
+      setDecorations({ original: [], modified: [] })
     }
   }, [decorations])
 
   // Only update editor values when they change from external source (not from user input)
   useEffect(() => {
     if (isReady && diffEditorRef.current && originalValue !== lastExternalOriginalValue.current) {
-      const originalEditor = diffEditorRef.current.getOriginalEditor()
-      const currentValue = originalEditor.getValue()
-      
-      // Only update if the value is significantly different (to avoid cursor issues)
-      if (currentValue !== originalValue) {
-        originalEditor.setValue(originalValue)
-        lastExternalOriginalValue.current = originalValue
-        setTimeout(updateIdenticalLineDecorations, 100)
+      try {
+        const originalEditor = diffEditorRef.current.getOriginalEditor()
+        const model = originalEditor.getModel()
+        
+        if (!model || model.isDisposed()) {
+          console.warn('Original editor model is disposed, skipping value update')
+          return
+        }
+        
+        const currentValue = originalEditor.getValue()
+        
+        // Only update if the value is significantly different (to avoid cursor issues)
+        if (currentValue !== originalValue) {
+          originalEditor.setValue(originalValue)
+          lastExternalOriginalValue.current = originalValue
+          setTimeout(updateIdenticalLineDecorations, 100)
+        }
+      } catch (error) {
+        console.warn('Error updating original editor value:', error)
       }
     }
   }, [originalValue, isReady, updateIdenticalLineDecorations])
 
   useEffect(() => {
     if (isReady && diffEditorRef.current && modifiedValue !== lastExternalModifiedValue.current) {
-      const modifiedEditor = diffEditorRef.current.getModifiedEditor()
-      const currentValue = modifiedEditor.getValue()
-      
-      // Only update if the value is significantly different (to avoid cursor issues)
-      if (currentValue !== modifiedValue) {
-        modifiedEditor.setValue(modifiedValue)
-        lastExternalModifiedValue.current = modifiedValue
-        setTimeout(updateIdenticalLineDecorations, 100)
+      try {
+        const modifiedEditor = diffEditorRef.current.getModifiedEditor()
+        const model = modifiedEditor.getModel()
+        
+        if (!model || model.isDisposed()) {
+          console.warn('Modified editor model is disposed, skipping value update')
+          return
+        }
+        
+        const currentValue = modifiedEditor.getValue()
+        
+        // Only update if the value is significantly different (to avoid cursor issues)
+        if (currentValue !== modifiedValue) {
+          modifiedEditor.setValue(modifiedValue)
+          lastExternalModifiedValue.current = modifiedValue
+          setTimeout(updateIdenticalLineDecorations, 100)
+        }
+      } catch (error) {
+        console.warn('Error updating modified editor value:', error)
       }
     }
   }, [modifiedValue, isReady, updateIdenticalLineDecorations])

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
+import Image from "next/image"
 import {
   Dialog,
   DialogContent,
@@ -81,7 +82,7 @@ export function AboutDialog({ open, onOpenChange, locale }: AboutDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-violet-50 via-blue-50 to-cyan-50 dark:from-slate-800/95 dark:via-slate-700/95 dark:to-slate-800/95 border border-violet-200 dark:border-slate-600 backdrop-blur-sm">
         <DialogHeader className="text-center pb-6">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 via-blue-500 to-cyan-500 shadow-2xl">
+          <div className="mx-auto mb-6">
             <motion.div
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
@@ -91,8 +92,16 @@ export function AboutDialog({ open, onOpenChange, locale }: AboutDialogProps) {
                 damping: 20,
                 delay: 0.1
               }}
+              className="flex items-center justify-center"
             >
-              <Code2 className="h-10 w-10 text-white" />
+              <Image
+                src="/echopaper.png"
+                alt="EchoPaper Logo"
+                width={120}
+                height={120}
+                className="w-24 h-24 md:w-32 md:h-32 object-contain"
+                priority
+              />
             </motion.div>
           </div>
           

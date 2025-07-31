@@ -47,6 +47,7 @@ type SiteSettings struct {
 	PSBFiling   string                    `gorm:"size:255" json:"psb_filing"`
 	ShowViewCount bool                    `gorm:"default:true" json:"show_view_count"`
 	EnableSoundEffects bool               `gorm:"default:true" json:"enable_sound_effects"`
+	DefaultLanguage string                `gorm:"default:'zh';size:10" json:"default_language"`
 	LogoURL     string                    `gorm:"size:255" json:"logo_url"`
 	FaviconURL  string                    `gorm:"size:255" json:"favicon_url"`
 	Translations []SiteSettingsTranslation `gorm:"foreignKey:SettingsID" json:"translations,omitempty"`

@@ -69,6 +69,7 @@ func GetRSSFeed(c *gin.Context) {
 
 	// Build query for articles
 	query := database.DB.Preload("Category").Preload("Translations").
+		Where("created_at <= ?", time.Now()).
 		Order("created_at DESC").Limit(limitInt)
 
 	if categoryID != "" {

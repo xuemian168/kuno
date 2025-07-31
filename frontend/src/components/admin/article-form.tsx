@@ -40,7 +40,8 @@ export function ArticleForm({ article, isEditing = false, locale = 'zh' }: Artic
     content: article?.content || "",
     content_type: article?.content_type || "markdown",
     summary: article?.summary || "",
-    category_id: article?.category_id || 0
+    category_id: article?.category_id || 0,
+    created_at: article?.created_at || new Date().toISOString()
   })
   const [translations, setTranslations] = useState<ArticleTranslation[]>(() => {
     // Initialize translations from article data if available
@@ -226,6 +227,17 @@ export function ArticleForm({ article, isEditing = false, locale = 'zh' }: Artic
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Publication Time */}
+            <div className="space-y-2">
+              <Label htmlFor="created_at">{locale === 'zh' ? '发布时间' : 'Publication Time'}</Label>
+              <Input
+                id="created_at"
+                type="datetime-local"
+                value={new Date(formData.created_at).toISOString().slice(0, 16)}
+                onChange={(e) => handleChange('created_at', new Date(e.target.value).toISOString())}
+              />
             </div>
 
             <Separator />

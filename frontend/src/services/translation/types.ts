@@ -2,6 +2,7 @@ export interface TranslationProvider {
   name: string
   translate(text: string, from: string, to: string): Promise<string>
   translateBatch(texts: string[], from: string, to: string): Promise<string[]>
+  translateWithUsage?(text: string, from: string, to: string): Promise<TranslationResult>
   isConfigured(): boolean
   getSupportedLanguages(): string[]
 }
@@ -10,10 +11,17 @@ export interface TranslationResult {
   translatedText: string
   confidence?: number
   detectedSourceLanguage?: string
+  usage?: {
+    inputTokens?: number
+    outputTokens?: number
+    totalTokens?: number
+    estimatedCost?: number
+    currency?: string
+  }
 }
 
 export interface TranslationConfig {
-  provider: 'google' | 'deepl' | 'openai' | 'libretranslate' | 'mymemory' | 'google-free'
+  provider: 'google' | 'deepl' | 'openai' | 'gemini' | 'volcano' | 'libretranslate' | 'mymemory' | 'google-free'
   apiKey?: string
   apiSecret?: string
   region?: string

@@ -11,11 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, SiteSettings, SiteSettingsTranslation } from "@/lib/api"
 import { useSettings } from "@/contexts/settings-context"
-import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle, AlertTriangle, ChevronDown } from "lucide-react"
+import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle, AlertTriangle, ChevronDown, Activity, Sparkles, Copy } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { translationService, TranslationConfig, SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation"
 import { languageManager } from "@/services/translation/language-manager"
+import { aiSummaryService, AISummaryConfig } from "@/services/ai-summary"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { SocialMediaManager } from "@/components/admin/social-media-manager"
@@ -24,6 +25,7 @@ import { setSoundEnabled } from "@/lib/sound"
 import { NotificationDialog, useNotificationDialog } from "@/components/ui/notification-dialog"
 import { AboutDialog } from "@/components/admin/about-dialog"
 import { UpdateChecker } from "@/components/admin/update-checker"
+import { TranslationStats } from "./translation-stats"
 
 // Dynamic languages based on user configuration - will be set in component
 
@@ -44,16 +46,19 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     icp_filing: "",
     psb_filing: "",
     show_view_count: true,
-    enable_sound_effects: true
+    enable_sound_effects: true,
+    default_language: "zh"
   })
   const [translations, setTranslations] = useState<SiteSettingsTranslation[]>([])
   const [activeTab, setActiveTab] = useState('general')
   const [translationConfig, setTranslationConfig] = useState<TranslationConfig>({
     provider: 'google-free',
     apiKey: '',
+    apiSecret: '',
     model: 'gpt-3.5-turbo',
     apiUrl: '',
     email: '',
+    region: 'cn-beijing',
     enabledLanguages: languageManager.getEnabledLanguages()
   })
   const [enabledLanguages, setEnabledLanguages] = useState<SupportedLanguage[]>(
@@ -62,6 +67,14 @@ export function SettingsForm({ locale }: SettingsFormProps) {
   const [availableLanguages, setAvailableLanguages] = useState<{ code: string, name: string }[]>([])
   const [hasTranslationProvider, setHasTranslationProvider] = useState(false)
   const [translatingLanguage, setTranslatingLanguage] = useState<string | null>(null)
+  const [aiSummaryConfig, setAISummaryConfig] = useState<AISummaryConfig>({
+    provider: 'openai',
+    apiKey: '',
+    model: 'gpt-3.5-turbo',
+    maxKeywords: 10,
+    summaryLength: 'medium'
+  })
+  const [hasAISummaryProvider, setHasAISummaryProvider] = useState(false)
   
   // Password change state
   const [passwordForm, setPasswordForm] = useState({
@@ -181,7 +194,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
           icp_filing: settingsData.icp_filing || "",
           psb_filing: settingsData.psb_filing || "",
           show_view_count: settingsData.show_view_count ?? true,
-          enable_sound_effects: settingsData.enable_sound_effects ?? true
+          enable_sound_effects: settingsData.enable_sound_effects ?? true,
+          default_language: settingsData.default_language || "zh"
         })
         setTranslations(settingsData.translations || [])
         
@@ -205,6 +219,11 @@ export function SettingsForm({ locale }: SettingsFormProps) {
           setTranslationConfig(parsed.translation)
           translationService.configureFromSettings(parsed.translation)
           setHasTranslationProvider(!!parsed.translation.provider)
+        }
+        if (parsed.aiSummary) {
+          setAISummaryConfig(parsed.aiSummary)
+          aiSummaryService.configureFromSettings(parsed.aiSummary)
+          setHasAISummaryProvider(aiSummaryService.isConfigured())
         }
       } catch (error) {
         console.error('Failed to load translation settings:', error)
@@ -231,12 +250,19 @@ export function SettingsForm({ locale }: SettingsFormProps) {
       name: SUPPORTED_LANGUAGES[code] || code
     }))
     setAvailableLanguages(languages)
-  }, [enabledLanguages])
+    
+    // Ensure default language is always in enabled languages
+    // If current default language is not enabled, switch to first enabled language
+    if (!enabledLanguages.includes(formData.default_language as SupportedLanguage)) {
+      const newDefaultLang = enabledLanguages[0] || 'zh'
+      setFormData(prev => ({ ...prev, default_language: newDefaultLang }))
+    }
+  }, [enabledLanguages, formData.default_language])
 
   const getTranslation = (language: string) => {
-    if (language === 'zh') {
+    if (language === formData.default_language) {
       return {
-        language: 'zh',
+        language: formData.default_language,
         site_title: formData.site_title,
         site_subtitle: formData.site_subtitle
       }
@@ -250,7 +276,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
   }
 
   const updateTranslation = (language: string, field: string, value: string) => {
-    if (language === 'zh') {
+    if (language === formData.default_language) {
       setFormData(prev => ({ ...prev, [field]: value }))
       return
     }
@@ -289,9 +315,9 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     setSaving(true)
 
     try {
-      // Collect all translations except default (zh)
+      // Collect all translations except default language
       const allTranslations = translations.filter(t => 
-        t.language !== 'zh' && (t.site_title.trim() || t.site_subtitle.trim())
+        t.language !== formData.default_language && (t.site_title.trim() || t.site_subtitle.trim())
       )
 
       const settingsData = {
@@ -302,6 +328,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         psb_filing: formData.psb_filing,
         show_view_count: formData.show_view_count,
         enable_sound_effects: formData.enable_sound_effects,
+        default_language: formData.default_language,
         logo_url: settings?.logo_url || '',
         favicon_url: settings?.favicon_url || '',
         translations: allTranslations
@@ -321,7 +348,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
       }
       const allSettings = {
         ...updatedSettings,
-        translation: configWithLanguages
+        translation: configWithLanguages,
+        aiSummary: aiSummaryConfig
       }
       localStorage.setItem('blog_settings', JSON.stringify(allSettings))
 
@@ -331,6 +359,15 @@ export function SettingsForm({ locale }: SettingsFormProps) {
       // Configure translation service
       translationService.configureFromSettings(configWithLanguages)
       setHasTranslationProvider(translationService.isConfigured())
+      
+      // Configure AI summary service
+      try {
+        aiSummaryService.configureFromSettings(aiSummaryConfig)
+        setHasAISummaryProvider(aiSummaryService.isConfigured())
+      } catch (error) {
+        console.error('Failed to configure AI summary service:', error)
+        setHasAISummaryProvider(false)
+      }
 
       notification.showSuccess(
         locale === 'zh' ? '设置保存成功！' : 'Settings Updated Successfully!',
@@ -368,13 +405,14 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         icp_filing: settings.icp_filing || "",
         psb_filing: settings.psb_filing || "",
         show_view_count: settings.show_view_count ?? true,
-        enable_sound_effects: settings.enable_sound_effects ?? true
+        enable_sound_effects: settings.enable_sound_effects ?? true,
+        default_language: settings.default_language || "zh"
       })
     }
   }
 
   const handleAutoTranslate = async (targetLanguage: string) => {
-    if (!hasTranslationProvider || targetLanguage === 'zh') return
+    if (!hasTranslationProvider || targetLanguage === formData.default_language) return
 
     setTranslatingLanguage(targetLanguage)
     try {
@@ -382,7 +420,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
       if (formData.site_title.trim()) {
         const translatedTitle = await translationService.translate(
           formData.site_title,
-          'zh',
+          formData.default_language as SupportedLanguage,
           targetLanguage as SupportedLanguage
         )
         updateTranslation(targetLanguage, 'site_title', translatedTitle)
@@ -392,7 +430,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
       if (formData.site_subtitle.trim()) {
         const translatedSubtitle = await translationService.translate(
           formData.site_subtitle,
-          'zh',
+          formData.default_language as SupportedLanguage,
           targetLanguage as SupportedLanguage
         )
         updateTranslation(targetLanguage, 'site_subtitle', translatedSubtitle)
@@ -656,6 +694,32 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                   />
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {t('settings.footerDescription')}
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <Label htmlFor="default_language" className="text-base font-medium text-gray-700 dark:text-gray-300">
+                    {locale === 'zh' ? '默认语言' : 'Default Language'}
+                  </Label>
+                  <Select
+                    value={formData.default_language}
+                    onValueChange={(value) => handleChange('default_language', value)}
+                  >
+                    <SelectTrigger className="h-11 border-2 border-gray-200 dark:border-gray-700 focus:border-emerald-500 dark:focus:border-emerald-400 rounded-lg transition-colors">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {enabledLanguages.map((code) => (
+                        <SelectItem key={code} value={code}>
+                          {SUPPORTED_LANGUAGES[code]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {locale === 'zh' 
+                      ? `设置网站的默认语言，用于文章编辑和内容验证。只能从已启用的 ${enabledLanguages.length} 种语言中选择。` 
+                      : `Set the default language for the site, used for article editing and content validation. Can only be selected from the ${enabledLanguages.length} enabled languages.`
+                    }
                   </p>
                 </div>
 
@@ -1033,7 +1097,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={() => setEnabledLanguages(['zh', 'en'])}
+                        onClick={() => setEnabledLanguages([formData.default_language as SupportedLanguage, 'en'])}
                       >
                         {t('settings.resetToMinimal')}
                       </Button>
@@ -1054,7 +1118,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         <Checkbox
                           id={`lang-${code}`}
                           checked={enabledLanguages.includes(code as SupportedLanguage)}
-                          disabled={code === 'zh' || code === 'en'} // Cannot disable required languages
+                          disabled={code === formData.default_language || code === 'en'} // Cannot disable required languages
                           onCheckedChange={(checked) => {
                             if (checked) {
                               setEnabledLanguages(prev => [...prev, code as SupportedLanguage])
@@ -1066,11 +1130,11 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         <label
                           htmlFor={`lang-${code}`}
                           className={`text-sm cursor-pointer ${
-                            code === 'zh' || code === 'en' ? 'font-medium text-primary' : ''
+                            code === formData.default_language || code === 'en' ? 'font-medium text-primary' : ''
                           }`}
                         >
                           {name}
-                          {(code === 'zh' || code === 'en') && (
+                          {(code === formData.default_language || code === 'en') && (
                             <span className="ml-1 text-xs text-muted-foreground">{t('settings.required')}</span>
                           )}
                         </label>
@@ -1085,7 +1149,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={() => setEnabledLanguages(['zh', 'en', 'ja', 'ko'])}
+                        onClick={() => setEnabledLanguages([formData.default_language as SupportedLanguage, 'en', 'ja', 'ko'])}
                       >
                         {t('settings.eastAsian')}
                       </Button>
@@ -1093,7 +1157,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={() => setEnabledLanguages(['zh', 'en', 'es', 'fr', 'de', 'it', 'pt'])}
+                        onClick={() => setEnabledLanguages([formData.default_language as SupportedLanguage, 'en', 'es', 'fr', 'de', 'it', 'pt'])}
                       >
                         {t('settings.european')}
                       </Button>
@@ -1148,12 +1212,14 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                       <SelectItem value="google">Google Translate (API Key)</SelectItem>
                       <SelectItem value="deepl">DeepL (API Key)</SelectItem>
                       <SelectItem value="openai">OpenAI ChatGPT (API Key)</SelectItem>
+                      <SelectItem value="gemini">Google Gemini (API Key)</SelectItem>
+                      <SelectItem value="volcano">Volcano Engine (API Key)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* API Key field - only show for providers that need it */}
-                {['google', 'deepl', 'openai', 'libretranslate', 'mymemory'].includes(translationConfig.provider) && (
+                {['google', 'deepl', 'openai', 'gemini', 'volcano', 'libretranslate', 'mymemory'].includes(translationConfig.provider) && (
                   <div className="space-y-2">
                     <Label>{t('settings.apiKey')} {['libretranslate', 'mymemory'].includes(translationConfig.provider) && `(${t('settings.apiKeyOptional')})`}</Label>
                     <Input
@@ -1173,9 +1239,118 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         translationConfig.provider === 'google' ? 'Enter your Google Cloud API key' :
                         translationConfig.provider === 'deepl' ? 'Enter your DeepL API key' :
                         translationConfig.provider === 'openai' ? 'Enter your OpenAI API key' :
+                        translationConfig.provider === 'gemini' ? 'Enter your Google AI Studio API key' :
+                        translationConfig.provider === 'volcano' ? 'Enter your Volcano Engine Access Key ID' :
                         translationConfig.provider === 'libretranslate' ? 'API key (if required by instance)' :
                         'API key for higher rate limits (optional)'
                       }
+                    />
+                  </div>
+                )}
+
+                {/* API Secret field for Volcano Engine */}
+                {translationConfig.provider === 'volcano' && (
+                  <div className="space-y-2">
+                    <Label>{t('settings.apiSecret') || 'API Secret'}</Label>
+                    <Input
+                      type="password"
+                      value={translationConfig.apiSecret || ''}
+                      onChange={(e) => {
+                        const newConfig = { ...translationConfig, apiSecret: e.target.value }
+                        setTranslationConfig(newConfig)
+                        try {
+                          translationService.configureFromSettings(newConfig)
+                          setHasTranslationProvider(translationService.isConfigured())
+                        } catch (error) {
+                          console.error('Failed to configure translation service:', error)
+                        }
+                      }}
+                      placeholder="Enter your Volcano Engine Access Key Secret"
+                    />
+                  </div>
+                )}
+
+                {/* Model selection for OpenAI and Gemini */}
+                {['openai', 'gemini'].includes(translationConfig.provider) && (
+                  <div className="space-y-2">
+                    <Label>{t('settings.model') || 'Model'}</Label>
+                    <Select
+                      value={translationConfig.model || (translationConfig.provider === 'openai' ? 'gpt-3.5-turbo' : 'gemini-1.5-flash')}
+                      onValueChange={(value) => {
+                        const newConfig = { ...translationConfig, model: value }
+                        setTranslationConfig(newConfig)
+                        try {
+                          translationService.configureFromSettings(newConfig)
+                          setHasTranslationProvider(translationService.isConfigured())
+                        } catch (error) {
+                          console.error('Failed to configure translation service:', error)
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {translationConfig.provider === 'openai' ? (
+                          <>
+                            <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                            <SelectItem value="gpt-4">GPT-4</SelectItem>
+                            <SelectItem value="gpt-4-turbo-preview">GPT-4 Turbo</SelectItem>
+                            <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                            <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
+                          </>
+                        ) : (
+                          <>
+                            <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
+                            <SelectItem value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</SelectItem>
+                            <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* API URL field for LibreTranslate */}
+                {translationConfig.provider === 'libretranslate' && (
+                  <div className="space-y-2">
+                    <Label>{t('settings.apiUrl') || 'API URL'} ({t('settings.optional') || 'Optional'})</Label>
+                    <Input
+                      type="url"
+                      value={translationConfig.apiUrl || ''}
+                      onChange={(e) => {
+                        const newConfig = { ...translationConfig, apiUrl: e.target.value }
+                        setTranslationConfig(newConfig)
+                        try {
+                          translationService.configureFromSettings(newConfig)
+                          setHasTranslationProvider(translationService.isConfigured())
+                        } catch (error) {
+                          console.error('Failed to configure translation service:', error)
+                        }
+                      }}
+                      placeholder="https://libretranslate.com (default)"
+                    />
+                  </div>
+                )}
+
+                {/* Email field for MyMemory */}
+                {translationConfig.provider === 'mymemory' && (
+                  <div className="space-y-2">
+                    <Label>{t('settings.email') || 'Email'} ({t('settings.optional') || 'Optional'})</Label>
+                    <Input
+                      type="email"
+                      value={translationConfig.email || ''}
+                      onChange={(e) => {
+                        const newConfig = { ...translationConfig, email: e.target.value }
+                        setTranslationConfig(newConfig)
+                        try {
+                          translationService.configureFromSettings(newConfig)
+                          setHasTranslationProvider(translationService.isConfigured())
+                        } catch (error) {
+                          console.error('Failed to configure translation service:', error)
+                        }
+                      }}
+                      placeholder="your-email@example.com (for better rate limits)"
                     />
                   </div>
                 )}
@@ -1187,6 +1362,15 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                       <Check className="h-3 w-3" />
                       {t('settings.readyToUse')}
                     </Badge>
+                  ) : translationConfig.provider === 'volcano' ? (
+                    translationConfig.apiKey && translationConfig.apiSecret ? (
+                      <Badge variant="default" className="gap-1">
+                        <Check className="h-3 w-3" />
+                        {t('settings.configured')}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">{locale === 'zh' ? '需要Access Key ID和Secret' : 'Access Key ID and Secret required'}</Badge>
+                    )
                   ) : translationConfig.apiKey ? (
                     <Badge variant="default" className="gap-1">
                       <Check className="h-3 w-3" />
@@ -1194,6 +1378,254 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     </Badge>
                   ) : (
                     <Badge variant="secondary">{t('settings.apiKeyRequired')}</Badge>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Translation Usage Statistics */}
+            <Card className="pt-0">
+              <CardHeader className="pt-6 pb-4 px-6">
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  {locale === 'zh' ? '翻译使用统计' : 'Translation Usage Statistics'}
+                </CardTitle>
+                <CardDescription>
+                  {locale === 'zh' ? '查看翻译API使用情况和费用统计' : 'View translation API usage and cost statistics'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <TranslationStats showDetailed={true} locale={locale} />
+              </CardContent>
+            </Card>
+
+            {/* AI Summary Configuration Section */}
+            <Card className="pt-0">
+              <CardHeader className="pt-6 pb-4 px-6">
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  {locale === 'zh' ? 'AI摘要配置' : 'AI Summary Configuration'}
+                </CardTitle>
+                <CardDescription>
+                  {locale === 'zh' ? '配置AI摘要服务用于自动生成文章标题、摘要和SEO关键字' : 'Configure AI summary service for automatic article title, summary, and SEO keywords generation'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    {locale === 'zh' ? 'AI摘要配置信息将保存在本地浏览器中。' : 'AI summary configuration is stored locally in your browser.'}
+                  </AlertDescription>
+                </Alert>
+
+                {/* Copy Translation API Configuration */}
+                {(translationConfig.provider === 'openai' || translationConfig.provider === 'gemini') && translationConfig.apiKey && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Key className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                          {locale === 'zh' ? '检测到翻译服务配置' : 'Translation Service Configuration Detected'}
+                        </span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (translationConfig.provider === 'openai' || translationConfig.provider === 'gemini') {
+                            const newConfig = {
+                              ...aiSummaryConfig,
+                              provider: translationConfig.provider as any,
+                              apiKey: translationConfig.apiKey,
+                              model: translationConfig.provider === 'openai' 
+                                ? (translationConfig.model || 'gpt-3.5-turbo')
+                                : 'gemini-1.5-flash'
+                            }
+                            setAISummaryConfig(newConfig)
+                            try {
+                              aiSummaryService.configureFromSettings(newConfig)
+                              setHasAISummaryProvider(aiSummaryService.isConfigured())
+                            } catch (error) {
+                              console.error('Failed to configure AI summary service:', error)
+                              setHasAISummaryProvider(false)
+                            }
+                          }
+                        }}
+                        className="h-7 px-3 text-xs"
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        {locale === 'zh' ? '复制配置' : 'Copy Config'}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                      {locale === 'zh' 
+                        ? `使用${translationConfig.provider === 'openai' ? 'OpenAI' : 'Gemini'}翻译服务的API配置来设置AI摘要服务`
+                        : `Use your ${translationConfig.provider === 'openai' ? 'OpenAI' : 'Gemini'} translation service API configuration for AI summary service`
+                      }
+                    </p>
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <Label>{locale === 'zh' ? 'AI服务提供商' : 'AI Service Provider'}</Label>
+                  <Select
+                    value={aiSummaryConfig.provider}
+                    onValueChange={(value) => {
+                      const newConfig = { ...aiSummaryConfig, provider: value as any }
+                      setAISummaryConfig(newConfig)
+                      try {
+                        aiSummaryService.configureFromSettings(newConfig)
+                        setHasAISummaryProvider(aiSummaryService.isConfigured())
+                      } catch (error) {
+                        console.error('Failed to configure AI summary service:', error)
+                        setHasAISummaryProvider(false)
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="openai">OpenAI GPT</SelectItem>
+                      <SelectItem value="gemini">Google Gemini</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {(aiSummaryConfig.provider === 'openai' || aiSummaryConfig.provider === 'gemini') && (
+                  <div className="space-y-2">
+                    <Label>{locale === 'zh' ? 'API密钥' : 'API Key'}</Label>
+                    <div className="relative">
+                      <Input
+                        type="password"
+                        value={aiSummaryConfig.apiKey}
+                        onChange={(e) => {
+                          const newConfig = { ...aiSummaryConfig, apiKey: e.target.value }
+                          setAISummaryConfig(newConfig)
+                          try {
+                            aiSummaryService.configureFromSettings(newConfig)
+                            setHasAISummaryProvider(aiSummaryService.isConfigured())
+                          } catch (error) {
+                            console.error('Failed to configure AI summary service:', error)
+                            setHasAISummaryProvider(false)
+                          }
+                        }}
+                        placeholder={
+                          aiSummaryConfig.provider === 'openai' ? 'sk-...' :
+                          aiSummaryConfig.provider === 'gemini' ? 'AI...' : 'Enter your API key'
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>{locale === 'zh' ? '模型' : 'Model'}</Label>
+                  <Select
+                    value={aiSummaryConfig.model}
+                    onValueChange={(value) => {
+                      const newConfig = { ...aiSummaryConfig, model: value }
+                      setAISummaryConfig(newConfig)
+                      try {
+                        aiSummaryService.configureFromSettings(newConfig)
+                        setHasAISummaryProvider(aiSummaryService.isConfigured())
+                      } catch (error) {
+                        console.error('Failed to configure AI summary service:', error)
+                        setHasAISummaryProvider(false)
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {aiSummaryConfig.provider === 'openai' && (
+                        <>
+                          <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                          <SelectItem value="gpt-4">GPT-4</SelectItem>
+                          <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                          <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
+                        </>
+                      )}
+                      {aiSummaryConfig.provider === 'gemini' && (
+                        <>
+                          <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
+                          <SelectItem value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</SelectItem>
+                          <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{locale === 'zh' ? '最大关键字数量' : 'Max Keywords'}</Label>
+                    <Select
+                      value={String(aiSummaryConfig.maxKeywords)}
+                      onValueChange={(value) => {
+                        const newConfig = { ...aiSummaryConfig, maxKeywords: parseInt(value) }
+                        setAISummaryConfig(newConfig)
+                        try {
+                          aiSummaryService.configureFromSettings(newConfig)
+                          setHasAISummaryProvider(aiSummaryService.isConfigured())
+                        } catch (error) {
+                          console.error('Failed to configure AI summary service:', error)
+                          setHasAISummaryProvider(false)
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="15">15</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{locale === 'zh' ? '摘要长度' : 'Summary Length'}</Label>
+                    <Select
+                      value={aiSummaryConfig.summaryLength}
+                      onValueChange={(value) => {
+                        const newConfig = { ...aiSummaryConfig, summaryLength: value as any }
+                        setAISummaryConfig(newConfig)
+                        try {
+                          aiSummaryService.configureFromSettings(newConfig)
+                          setHasAISummaryProvider(aiSummaryService.isConfigured())
+                        } catch (error) {
+                          console.error('Failed to configure AI summary service:', error)
+                          setHasAISummaryProvider(false)
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="short">{locale === 'zh' ? '短 (1-2句)' : 'Short (1-2 sentences)'}</SelectItem>
+                        <SelectItem value="medium">{locale === 'zh' ? '中 (3-4句)' : 'Medium (3-4 sentences)'}</SelectItem>
+                        <SelectItem value="long">{locale === 'zh' ? '长 (5-6句)' : 'Long (5-6 sentences)'}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <span className="text-sm font-medium">
+                    {locale === 'zh' ? '配置状态' : 'Configuration Status'}
+                  </span>
+                  {hasAISummaryProvider ? (
+                    <Badge variant="default" className="gap-1">
+                      <Check className="h-3 w-3" />
+                      {locale === 'zh' ? '已配置' : 'Configured'}
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">{locale === 'zh' ? '需要API密钥' : 'API Key Required'}</Badge>
                   )}
                 </div>
               </CardContent>
@@ -1222,7 +1654,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <CardTitle className="text-lg">{lang.name}</CardTitle>
-                              {lang.code === 'zh' && (
+                              {lang.code === formData.default_language && (
                                 <Badge variant="secondary">{t('settings.defaultBadge')}</Badge>
                               )}
                             </div>
@@ -1242,7 +1674,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                               {progress === 100 && (
                                 <Check className="h-4 w-4 text-green-500" />
                               )}
-                              {lang.code !== 'zh' && hasTranslationProvider && (
+                              {lang.code !== formData.default_language && hasTranslationProvider && (
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -1268,7 +1700,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                               value={translation.site_title}
                               onChange={(e) => updateTranslation(lang.code, 'site_title', e.target.value)}
                               placeholder={t('settings.enterSiteTitleIn', { language: lang.name })}
-                              disabled={lang.code === 'zh'}
+                              disabled={lang.code === formData.default_language}
                             />
                           </div>
                           <div className="space-y-2">
@@ -1277,7 +1709,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                               value={translation.site_subtitle}
                               onChange={(e) => updateTranslation(lang.code, 'site_subtitle', e.target.value)}
                               placeholder={t('settings.enterSiteSubtitleIn', { language: lang.name })}
-                              disabled={lang.code === 'zh'}
+                              disabled={lang.code === formData.default_language}
                             />
                           </div>
                         </CardContent>

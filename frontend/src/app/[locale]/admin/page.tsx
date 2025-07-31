@@ -14,6 +14,7 @@ import { apiClient, Article, Category } from "@/lib/api"
 import { WordPressImport } from "@/components/admin/wordpress-import"
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog"
 import { useThrottle } from "@/hooks/use-debounce"
+import { Clock, Calendar } from "lucide-react"
 
 interface AdminPageProps {
   params: Promise<{ locale: string }>
@@ -183,6 +184,22 @@ export default function AdminPage({ params }: AdminPageProps) {
   const throttledBulkExport = useThrottle(handleBulkExport, 2000)
   const throttledExportArticle = useThrottle(handleExportArticle, 1000)
 
+  // Helper function to check if article is scheduled for future publication
+  const isScheduledForFuture = (article: Article): boolean => {
+    return new Date(article.created_at) > new Date()
+  }
+
+  // Helper function to format scheduled time
+  const formatScheduledTime = (dateString: string): string => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
   const handleConfirmDelete = async () => {
     setDeleting(true)
     
@@ -321,13 +338,43 @@ export default function AdminPage({ params }: AdminPageProps) {
           )}
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{t('admin.articles')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{articles.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {locale === 'zh' ? '总文章数' : 'Total articles'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{locale === 'zh' ? '已发布' : 'Published'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {articles.filter(article => !isScheduledForFuture(article)).length}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {locale === 'zh' ? '已发布文章' : 'Published articles'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{locale === 'zh' ? '定时发布' : 'Scheduled'}</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {articles.filter(article => isScheduledForFuture(article)).length}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {locale === 'zh' ? '待发布文章' : 'Scheduled articles'}
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -470,8 +517,21 @@ export default function AdminPage({ params }: AdminPageProps) {
                             <Badge variant="outline">
                               {article.category.name}
                             </Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {new Date(article.created_at).toLocaleDateString()}
+                            {isScheduledForFuture(article) ? (
+                              <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {locale === 'zh' ? '定时发布' : 'Scheduled'}
+                              </Badge>
+                            ) : null}
+                            <span className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {isScheduledForFuture(article) ? (
+                                <span className="text-blue-600 dark:text-blue-400">
+                                  {formatScheduledTime(article.created_at)}
+                                </span>
+                              ) : (
+                                new Date(article.created_at).toLocaleDateString()
+                              )}
                             </span>
                             {article.view_count !== undefined && (
                               <div className="flex items-center gap-1 text-sm text-muted-foreground">

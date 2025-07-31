@@ -5,13 +5,13 @@ export const metadata: Metadata = {
   description: 'A modern blog platform',
 }
 
-// This file only provides fallback routing for the root locale
+// Root layout for non-locale routes (sitemap.xml, robots.txt, etc.)
+// Locale routes use [locale]/layout.tsx which provides the full HTML structure
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // With next-intl locale routing, this layout should not include html/body tags
-  // The actual HTML structure is handled by [locale]/layout.tsx
+  // Only return children - locale layouts handle HTML structure
   return children
 }

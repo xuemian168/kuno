@@ -38,6 +38,8 @@ export interface Article {
   seo_description?: string
   seo_keywords?: string
   seo_slug?: string
+  // Comment Translation Settings
+  selected_comments?: string  // JSON string of selected comments
   created_at: string
   updated_at: string
 }
@@ -71,6 +73,7 @@ export interface SiteSettings {
   enable_sound_effects?: boolean
   logo_url?: string
   favicon_url?: string
+  default_language?: string  // Site default language
   translations?: SiteSettingsTranslation[]
   created_at: string
   updated_at: string

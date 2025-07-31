@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { LogOut } from "lucide-react"
+import { LogOut, Home, Rss, LayoutDashboard, Settings, Image, Shield, User } from "lucide-react"
 import { useTranslations } from 'next-intl'
 import { usePathname } from 'next/navigation'
 import ModeToggle from "@/components/mode-toggle"
@@ -24,13 +24,16 @@ export default function Header() {
       return pathname === '/' || pathname.match(/^\/[a-z]{2}$/) || pathname.match(/^\/[a-z]{2}\/$/)
     }
     if (path === '/admin') {
-      return pathname.includes('/admin')
+      return pathname.includes('/admin') && !pathname.includes('/admin/settings') && !pathname.includes('/admin/media')
     }
     if (path === '/rss') {
       return pathname.includes('/rss')
     }
-    if (path === '/media') {
-      return pathname.includes('/media')
+    if (path === '/admin/settings') {
+      return pathname.includes('/admin/settings')
+    }
+    if (path === '/admin/media') {
+      return pathname.includes('/admin/media')
     }
     return pathname.includes(path)
   }
@@ -56,53 +59,77 @@ export default function Header() {
               {settings?.site_title || t('site.title')}
             </span>
           </Link>
-          <nav className="flex items-center space-x-6 text-sm font-medium">
-            <Link
-              className={cn(
-                "transition-colors hover:text-foreground/80",
-                isActivePath('/') 
-                  ? "text-foreground font-semibold border-b-2 border-primary pb-1" 
-                  : "text-foreground/60"
-              )}
-              href="/"
-            >
-              {t('nav.home')}
-            </Link>
-            <Link
-              className={cn(
-                "transition-colors hover:text-foreground/80",
-                isActivePath('/rss') 
-                  ? "text-foreground font-semibold border-b-2 border-primary pb-1" 
-                  : "text-foreground/60"
-              )}
-              href="/rss"
-            >
-              {t('rss.rssFeeds')}
-            </Link>
+          <nav className="flex items-center space-x-1 text-sm font-medium">
+            {/* Public Navigation */}
+            <div className="flex items-center space-x-1">
+              <Link
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all hover:bg-accent",
+                  isActivePath('/') 
+                    ? "text-foreground font-semibold bg-accent" 
+                    : "text-foreground/60 hover:text-foreground/80"
+                )}
+                href="/"
+              >
+                <Home className="h-4 w-4" />
+                <span>{t('nav.home')}</span>
+              </Link>
+              <Link
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all hover:bg-accent",
+                  isActivePath('/rss') 
+                    ? "text-foreground font-semibold bg-accent" 
+                    : "text-foreground/60 hover:text-foreground/80"
+                )}
+                href="/rss"
+              >
+                <Rss className="h-4 w-4" />
+                <span>{t('rss.rssFeeds')}</span>
+              </Link>
+            </div>
+            
+            {/* Admin Navigation - Visually separated */}
             {isAuthenticated && user && (
               <>
-                <Link
-                  className={cn(
-                    "transition-colors hover:text-foreground/80",
-                    isActivePath('/admin') 
-                      ? "text-foreground font-semibold border-b-2 border-primary pb-1" 
-                      : "text-foreground/60"
-                  )}
-                  href="/admin"
-                >
-                  {t('nav.admin')}
-                </Link>
-                <Link
-                  className={cn(
-                    "transition-colors hover:text-foreground/80",
-                    isActivePath('/media') 
-                      ? "text-foreground font-semibold border-b-2 border-primary pb-1" 
-                      : "text-foreground/60"
-                  )}
-                  href="/admin/media"
-                >
-                  {t('admin.media')}
-                </Link>
+                <div className="w-px h-6 bg-border mx-2" />
+                <div className="flex items-center space-x-1 relative">
+                  <Link
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all hover:bg-accent ml-4",
+                      isActivePath('/admin') && !pathname.includes('/admin/settings') && !pathname.includes('/admin/media')
+                        ? "text-foreground font-semibold bg-accent" 
+                        : "text-foreground/60 hover:text-foreground/80"
+                    )}
+                    href="/admin"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span>Dashboard</span>
+                  </Link>
+                  <Link
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all hover:bg-accent",
+                      pathname.includes('/admin/settings')
+                        ? "text-foreground font-semibold bg-accent" 
+                        : "text-foreground/60 hover:text-foreground/80"
+                    )}
+                    href="/admin/settings"
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Settings</span>
+                  </Link>
+                  <Link
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all hover:bg-accent",
+                      pathname.includes('/admin/media')
+                        ? "text-foreground font-semibold bg-accent" 
+                        : "text-foreground/60 hover:text-foreground/80"
+                    )}
+                    href="/admin/media"
+                  >
+                    <Image className="h-4 w-4" />
+                    <span>Media</span>
+                  </Link>
+                </div>
               </>
             )}
           </nav>
@@ -125,9 +152,12 @@ export default function Header() {
           <nav className="flex items-center space-x-2">
             {isAuthenticated && user && (
               <>
-                <span className="text-sm text-muted-foreground hidden sm:inline">
-                  Welcome, {user.username}
-                </span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-accent/50 hidden sm:flex">
+                  <User className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">
+                    {user.username}
+                  </span>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"

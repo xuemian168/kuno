@@ -1,4 +1,5 @@
 import { BaseTranslationProvider } from './base'
+import { TranslationResult } from '../types'
 
 export class OpenAIProvider extends BaseTranslationProvider {
   name = 'OpenAI'
@@ -55,6 +56,93 @@ export class OpenAIProvider extends BaseTranslationProvider {
 
       const data = await response.json()
       return data.choices[0].message.content.trim()
+    } catch (error) {
+      if (error instanceof Error && 'code' in error) {
+        throw error
+      }
+      throw this.createError(
+        `OpenAI error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'PROVIDER_ERROR'
+      )
+    }
+  }
+
+  async translateWithUsage(text: string, from: string, to: string): Promise<TranslationResult> {
+    if (!this.isConfigured()) {
+      throw this.createError('OpenAI API key not configured', 'NOT_CONFIGURED')
+    }
+
+    this.validateLanguages(from, to)
+
+    const fromLang = this.getLanguageName(from)
+    const toLang = this.getLanguageName(to)
+
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [
+            {
+              role: 'system',
+              content: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}. 
+                       Maintain the original formatting, tone, and style. 
+                       Only provide the translation without any explanation or additional text.`
+            },
+            {
+              role: 'user',
+              content: text
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: Math.min(text.length * 2, 4000)
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw this.createError(
+          error.error?.message || 'Translation failed',
+          error.error?.code || 'TRANSLATION_ERROR'
+        )
+      }
+
+      const data = await response.json()
+      
+      // Calculate estimated cost based on model
+      const inputTokens = data.usage?.prompt_tokens || 0
+      const outputTokens = data.usage?.completion_tokens || 0
+      const totalTokens = data.usage?.total_tokens || inputTokens + outputTokens
+      
+      let estimatedCost = 0
+      const currency = 'USD'
+      
+      // Pricing as of 2024 (per 1K tokens)
+      const pricing: Record<string, { input: number, output: number }> = {
+        'gpt-3.5-turbo': { input: 0.0015, output: 0.002 },
+        'gpt-4': { input: 0.03, output: 0.06 },
+        'gpt-4-turbo-preview': { input: 0.01, output: 0.03 },
+        'gpt-4o': { input: 0.005, output: 0.015 },
+        'gpt-4o-mini': { input: 0.00015, output: 0.0006 }
+      }
+      
+      const modelPricing = pricing[this.model] || pricing['gpt-3.5-turbo']
+      estimatedCost = (inputTokens / 1000) * modelPricing.input + (outputTokens / 1000) * modelPricing.output
+
+      return {
+        translatedText: data.choices[0].message.content.trim(),
+        usage: {
+          inputTokens,
+          outputTokens,
+          totalTokens,
+          estimatedCost,
+          currency
+        }
+      }
     } catch (error) {
       if (error instanceof Error && 'code' in error) {
         throw error

@@ -68,6 +68,7 @@ func UpdateSettings(c *gin.Context) {
 		PSBFiling          string                           `json:"psb_filing"`
 		ShowViewCount      *bool                            `json:"show_view_count"`
 		EnableSoundEffects *bool                            `json:"enable_sound_effects"`
+		DefaultLanguage    string                           `json:"default_language"`
 		LogoURL            string                           `json:"logo_url"`
 		FaviconURL         string                           `json:"favicon_url"`
 		Translations       []models.SiteSettingsTranslation `json:"translations"`
@@ -89,6 +90,9 @@ func UpdateSettings(c *gin.Context) {
 	}
 	if input.EnableSoundEffects != nil {
 		settings.EnableSoundEffects = *input.EnableSoundEffects
+	}
+	if input.DefaultLanguage != "" {
+		settings.DefaultLanguage = input.DefaultLanguage
 	}
 	settings.LogoURL = input.LogoURL
 	settings.FaviconURL = input.FaviconURL

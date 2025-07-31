@@ -7,6 +7,8 @@
   },
   "admin": {
     "login": "管理者ログイン",
+    "createArticle": "記事を作成",
+    "analytics": "アナリティクス",
     "username": "ユーザー名",
     "password": "パスワード",
     "signin": "サインイン",
@@ -361,7 +363,14 @@
     "platform": "プラットフォーム",
     "noBrowserData": "ブラウザデータがありません",
     "noDeviceData": "デバイスデータがありません",
-    "noPlatformData": "プラットフォームデータがありません"
+    "noPlatformData": "プラットフォームデータがありません",
+    "worldMap": "世界地図",
+    "detailedList": "詳細リスト",
+    "visitorWorldMap": "訪問者世界地図",
+    "lowActivity": "低活動",
+    "highActivity": "高活動",
+    "countries": "カ国",
+    "totalVisitors": "総訪問者数"
   },
   "export": {
     "exportAll": "すべてエクスポート",

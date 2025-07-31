@@ -24,7 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { apiClient, Article, Category, ArticleTranslation } from "@/lib/api"
+import { apiClient, Article, Category, ArticleTranslation, SiteSettings } from "@/lib/api"
 import { 
   ArrowLeft,
   Save,
@@ -43,11 +43,15 @@ import {
   Loader2,
   Check,
   X,
-  ChevronDown
+  ChevronDown,
+  ArrowLeftRight,
+  Sparkles,
+  Code
 } from "lucide-react"
 import { translationService, initializeTranslationService } from "@/services/translation"
 import { languageManager } from "@/services/translation/language-manager"
 import { SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation/types"
+import { aiSummaryService, initializeAISummaryService } from "@/services/ai-summary"
 import { cn } from "@/lib/utils"
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer"
 import { ArticleSEOForm } from "@/components/admin/article-seo-form"
@@ -56,6 +60,9 @@ import { MediaLibrary } from "@/lib/api"
 import { playSuccessSound, initializeSoundSettings } from "@/lib/sound"
 import { NotificationDialog, useNotificationDialog } from "@/components/ui/notification-dialog"
 import { MonacoTranslationEditor, MonacoTranslationEditorRef } from "./monaco-translation-editor"
+import { DualLanguageEditor, DualLanguageEditorRef } from "./dual-language-editor"
+import { TranslationStats } from "./translation-stats"
+import { CommentTranslator } from "./comment-translator"
 
 
 
@@ -78,11 +85,11 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const [loading, setLoading] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
+  const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null)
   const [sourceLanguage, setSourceLanguage] = useState(locale)
   const [targetLanguage, setTargetLanguage] = useState(locale === 'zh' ? 'en' : 'zh')
   const [leftPanelWidth, setLeftPanelWidth] = useState(50)
   const [activeField, setActiveField] = useState<'basic' | 'content' | 'seo'>('content')
-  const [showPreview, setShowPreview] = useState<'none' | 'left' | 'right' | 'both'>('none')
   const [activeLine, setActiveLine] = useState<number | null>(null)
   const [sourceScrollTop, setSourceScrollTop] = useState(0)
   const [targetScrollTop, setTargetScrollTop] = useState(0)
@@ -95,8 +102,17 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const [isTranslating, setIsTranslating] = useState(false)
   const [currentTranslatingLanguage, setCurrentTranslatingLanguage] = useState<SupportedLanguage | null>(null)
   const [hasTranslationProvider, setHasTranslationProvider] = useState(false)
-  const [availableLanguages, setAvailableLanguages] = useState(adminInterfaceLanguages)
+  const [availableLanguages, setAvailableLanguages] = useState(() => {
+    // Initialize with enabled language options from language manager
+    return languageManager.getEnabledLanguageOptions()
+  })
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [editorKey, setEditorKey] = useState(0)
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false)
+  const [hasAISummaryProvider, setHasAISummaryProvider] = useState(false)
+  const [showCommentTranslator, setShowCommentTranslator] = useState(false)
+  const [currentCodeContent, setCurrentCodeContent] = useState('')
+  const [selectedComments, setSelectedComments] = useState<any[]>([])
   
   // Notification dialog
   const notification = useNotificationDialog()
@@ -104,6 +120,90 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const sourceTextareaRef = useRef<HTMLTextAreaElement>(null)
   const targetTextareaRef = useRef<HTMLTextAreaElement>(null)
   const monacoEditorRef = useRef<MonacoTranslationEditorRef>(null)
+  const dualLanguageEditorRef = useRef<DualLanguageEditorRef>(null)
+
+  // Get the site's default language
+  const getDefaultLanguage = () => {
+    return siteSettings?.default_language || article?.default_lang || 'zh'
+  }
+
+  // Helper function for publication time validation
+  const validatePublicationTime = (dateTime: string): { isValid: boolean, message?: string } => {
+    const date = new Date(dateTime)
+    const now = new Date()
+    
+    if (isNaN(date.getTime())) {
+      return {
+        isValid: false,
+        message: locale === 'zh' ? '无效的日期时间格式' : 'Invalid date time format'
+      }
+    }
+    
+    // Check if the date is too far in the past (more than 10 years)
+    const tenYearsAgo = new Date()
+    tenYearsAgo.setFullYear(now.getFullYear() - 10)
+    
+    if (date < tenYearsAgo) {
+      return {
+        isValid: false,
+        message: locale === 'zh' ? '发布时间不能早于10年前' : 'Publication time cannot be more than 10 years ago'
+      }
+    }
+    
+    // Check if the date is too far in the future (more than 5 years)
+    const fiveYearsFromNow = new Date()
+    fiveYearsFromNow.setFullYear(now.getFullYear() + 5)
+    
+    if (date > fiveYearsFromNow) {
+      return {
+        isValid: false,
+        message: locale === 'zh' ? '发布时间不能晚于5年后' : 'Publication time cannot be more than 5 years in the future'
+      }
+    }
+    
+    return { isValid: true }
+  }
+
+  // Helper function to format publication time for display
+  const formatPublicationTime = (dateTime: string): string => {
+    const date = new Date(dateTime)
+    const now = new Date()
+    
+    if (date > now) {
+      return locale === 'zh' ? '（定时发布）' : '(Scheduled)'
+    } else {
+      return locale === 'zh' ? '（已发布）' : '(Published)'
+    }
+  }
+
+  // Helper function to get current timezone
+  const getCurrentTimezone = (): string => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone
+    } catch {
+      return 'UTC'
+    }
+  }
+
+  // Helper function to format datetime with timezone info
+  const formatDateTimeWithTimezone = (dateTime: string): string => {
+    const date = new Date(dateTime)
+    const timezone = getCurrentTimezone()
+    
+    try {
+      const formatted = date.toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      })
+      return `${formatted} (${timezone})`
+    } catch {
+      return date.toLocaleString()
+    }
+  }
   
   const [formData, setFormData] = useState({
     title: article?.title || "",
@@ -111,6 +211,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     content_type: article?.content_type || "markdown",
     summary: article?.summary || "",
     category_id: article?.category_id || 0,
+    created_at: article?.created_at || new Date().toISOString(),
     // SEO Fields
     seo_title: article?.seo_title || "",
     seo_description: article?.seo_description || "",
@@ -121,7 +222,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const [translations, setTranslations] = useState<ArticleTranslation[]>(() => {
     if (article?.translations && Array.isArray(article.translations)) {
       // Filter out the default language from translations array
-      const defaultLang = article.default_lang || 'zh'
+      const defaultLang = getDefaultLanguage()
       return article.translations
         .filter((t: any) => t.language !== defaultLang)
         .map((t: any) => ({
@@ -140,7 +241,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
 
   const getTranslation = (language: string) => {
     // Check if this language is the article's default language
-    const defaultLang = article?.default_lang || 'zh'
+    const defaultLang = getDefaultLanguage()
     if (language === defaultLang) {
       return {
         id: 0,
@@ -279,6 +380,19 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }
   }, [sourceLanguage, targetLanguage, activeField, getTranslation])
 
+  // Update source language to default language once site settings are loaded
+  useEffect(() => {
+    if (siteSettings) {
+      const defaultLang = getDefaultLanguage()
+      setSourceLanguage(defaultLang)
+      // Set target language to a different language than default
+      const otherLang = availableLanguages.find(lang => lang.code !== defaultLang)
+      if (otherLang && targetLanguage === defaultLang) {
+        setTargetLanguage(otherLang.code)
+      }
+    }
+  }, [siteSettings, availableLanguages, targetLanguage])
+
   useEffect(() => {
     // Initialize sound settings
     initializeSoundSettings();
@@ -292,10 +406,23 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       }
     }
 
+    const fetchSiteSettings = async () => {
+      try {
+        const settings = await apiClient.getSettings()
+        setSiteSettings(settings)
+      } catch (error) {
+        console.error('Failed to fetch site settings:', error)
+      }
+    }
+
     fetchCategories()
+    fetchSiteSettings()
     
     // Initialize translation service
     initializeTranslationService()
+    
+    // Initialize AI summary service
+    initializeAISummaryService()
     
     // Load available languages from language manager
     const enabledLanguages = languageManager.getEnabledLanguageOptions()
@@ -307,10 +434,20 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       setHasTranslationProvider(!!provider)
     }
     
+    // Check if AI summary provider is configured
+    const checkAIProvider = () => {
+      const aiProvider = aiSummaryService.getActiveProvider()
+      setHasAISummaryProvider(!!aiProvider && aiSummaryService.isConfigured())
+    }
+    
     checkProvider()
+    checkAIProvider()
     
     // Check again after a short delay to ensure initialization is complete
-    const timer = setTimeout(checkProvider, 500)
+    const timer = setTimeout(() => {
+      checkProvider()
+      checkAIProvider()
+    }, 500)
     return () => clearTimeout(timer)
   }, [locale])
 
@@ -321,6 +458,22 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }
   }, [categories])
 
+  // Restore selected comments from article data
+  useEffect(() => {
+    if (article?.selected_comments) {
+      try {
+        const savedComments = JSON.parse(article.selected_comments)
+        setSelectedComments(savedComments)
+        console.log('Restored selected comments from article:', savedComments)
+      } catch (error) {
+        console.error('Failed to parse saved comments:', error)
+        setSelectedComments([])
+      }
+    } else {
+      setSelectedComments([])
+    }
+  }, [article?.selected_comments])
+
   // Function to filter out non-translatable content before sending to translation service
   const filterNonTranslatableContent = (text: string): { filtered: string; placeholders: Map<string, string> } => {
     const lines = text.split('\n')
@@ -329,6 +482,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     
     const filteredLines = lines.map((line, index) => {
       const trimmedLine = line.trim()
+      const lineNumber = index + 1
       
       // Check if line should not be translated
       if (
@@ -353,6 +507,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         placeholders.set(placeholder, line)
         return placeholder
       }
+      
       
       return line
     })
@@ -386,7 +541,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
 
     try {
       const sourceTranslation = getTranslation(sourceLanguage)
-      const defaultLang = article?.default_lang || 'zh'
+      const defaultLang = getDefaultLanguage()
 
       if (field === 'all') {
         // Get all enabled languages from language manager
@@ -404,6 +559,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         }
         
         // Filter content before translation
+        console.log('Original content for translation:', sourceTranslation.content.substring(0, 300) + '...')
+        console.log('Selected comments for this translation:', selectedComments)
         const { filtered: filteredContent, placeholders: contentPlaceholders } = filterNonTranslatableContent(sourceTranslation.content)
         
         let successCount = 0
@@ -423,7 +580,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 summary: sourceTranslation.summary
               },
               sourceLanguage,
-              targetLang
+              targetLang,
+              selectedComments
             )
 
             // Restore non-translatable content
@@ -482,7 +640,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           const rawTranslation = await translationService.translate(
             filtered,
             sourceLanguage,
-            targetLanguage
+            targetLanguage,
+            selectedComments
           )
           // Restore non-translatable content
           translatedText = restoreNonTranslatableContent(rawTranslation, placeholders)
@@ -491,7 +650,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           translatedText = await translationService.translate(
             sourceText,
             sourceLanguage,
-            targetLanguage
+            targetLanguage,
+            selectedComments
           )
         }
 
@@ -514,6 +674,89 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }
   }
 
+  const handleAIGenerate = async (type: 'all' | 'title' | 'summary' | 'keywords') => {
+    if (!aiSummaryService.isConfigured()) {
+      notification.showError(
+        locale === 'zh' ? 'AI服务未配置' : 'AI Service Not Configured',
+        locale === 'zh' ? '请先在设置中配置AI服务' : 'Please configure AI service in settings first'
+      )
+      return
+    }
+
+    // Get current content
+    const defaultLang = getDefaultLanguage()
+    const currentTranslation = getTranslation(defaultLang)
+    
+    if (!currentTranslation.content.trim()) {
+      notification.showError(
+        locale === 'zh' ? '内容为空' : 'Content is Empty',
+        locale === 'zh' ? '请先输入文章内容再生成AI总结' : 'Please enter article content before generating AI summary'
+      )
+      return
+    }
+
+    setIsGeneratingAI(true)
+
+    try {
+      if (type === 'all') {
+        // Generate complete summary including title, summary, and keywords
+        const result = await aiSummaryService.generateSummary({
+          content: currentTranslation.content,
+          existingTitle: currentTranslation.title,
+          existingSummary: currentTranslation.summary,
+          language: defaultLang
+        })
+
+        // Update form data
+        setFormData(prev => ({
+          ...prev,
+          title: result.title,
+          summary: result.summary,
+          seo_keywords: result.keywords.join(', ')
+        }))
+
+        notification.showSuccess(
+          locale === 'zh' ? 'AI总结生成成功' : 'AI Summary Generated Successfully',
+          locale === 'zh' 
+            ? `已生成标题、摘要和${result.keywords.length}个关键字`
+            : `Generated title, summary and ${result.keywords.length} keywords`
+        )
+      } else if (type === 'title') {
+        const title = await aiSummaryService.generateTitle(currentTranslation.content, defaultLang)
+        setFormData(prev => ({ ...prev, title }))
+        notification.showSuccess(
+          locale === 'zh' ? '标题生成成功' : 'Title Generated Successfully',
+          title
+        )
+      } else if (type === 'summary') {
+        const result = await aiSummaryService.generateSummary({
+          content: currentTranslation.content,
+          language: defaultLang
+        })
+        setFormData(prev => ({ ...prev, summary: result.summary }))
+        notification.showSuccess(
+          locale === 'zh' ? '摘要生成成功' : 'Summary Generated Successfully',
+          result.summary
+        )
+      } else if (type === 'keywords') {
+        const keywords = await aiSummaryService.generateSEOKeywords(currentTranslation.content, defaultLang)
+        setFormData(prev => ({ ...prev, seo_keywords: keywords.join(', ') }))
+        notification.showSuccess(
+          locale === 'zh' ? 'SEO关键字生成成功' : 'SEO Keywords Generated Successfully',
+          locale === 'zh' ? `生成了${keywords.length}个关键字` : `Generated ${keywords.length} keywords`
+        )
+      }
+    } catch (error) {
+      console.error('AI generation failed:', error)
+      notification.showError(
+        locale === 'zh' ? 'AI生成失败' : 'AI Generation Failed',
+        locale === 'zh' ? 'AI内容生成失败，请稍后重试' : 'AI content generation failed. Please try again later.'
+      )
+    } finally {
+      setIsGeneratingAI(false)
+    }
+  }
+
   const handleSEOChange = (seoData: { seo_title?: string, seo_description?: string, seo_keywords?: string, seo_slug?: string }) => {
     // Update main formData with global SEO data
     setFormData(prev => ({
@@ -522,20 +765,53 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }))
   }
 
-  const handleSubmit = async (exitAfterSave = false) => {
-    // Validate required fields
-    if (!formData.title.trim()) {
+  const handleCommentTranslation = () => {
+    if (!hasTranslationProvider) {
       notification.showError(
-        locale === 'zh' ? '标题必须输入' : 'Title is required',
-        locale === 'zh' ? '请输入文章标题' : 'Please enter article title'
+        locale === 'zh' ? '翻译服务未配置' : 'Translation Service Not Configured',
+        locale === 'zh' ? '请先在设置中配置翻译服务' : 'Please configure translation service in settings first'
+      )
+      return
+    }
+
+    // Get current content from the active translation
+    const currentTranslation = getTranslation(sourceLanguage)
+    setCurrentCodeContent(currentTranslation.content)
+    setShowCommentTranslator(true)
+  }
+
+  const handleCommentSelectionConfirm = (comments: any[]) => {
+    // Store selected comments for batch translation use
+    setSelectedComments(comments)
+    console.log('Selected comments for translation:', comments)
+    console.log('Comments with line numbers:', comments.map(c => `Line ${c.lineNumber}: "${c.commentText}"`))
+    notification.showSuccess(
+      locale === 'zh' ? '注释选择已确认' : 'Comment Selection Confirmed',
+      comments.length > 0 
+        ? (locale === 'zh' ? `已选择 ${comments.length} 条注释用于翻译` : `${comments.length} comments selected for translation`)
+        : (locale === 'zh' ? '未选择任何注释，将跳过注释翻译' : 'No comments selected, comment translation will be skipped')
+    )
+  }
+
+  const handleSubmit = async (exitAfterSave = false) => {
+    // Validate required fields for default language
+    // formData contains the default language article data
+    if (!formData.title.trim()) {
+      const defaultLang = getDefaultLanguage()
+      const defaultLangName = SUPPORTED_LANGUAGES[defaultLang as keyof typeof SUPPORTED_LANGUAGES] || defaultLang
+      notification.showError(
+        locale === 'zh' ? `默认语言(${defaultLangName})标题必须输入` : `Title is required for default language (${defaultLangName})`,
+        locale === 'zh' ? `请输入${defaultLangName}文章标题` : `Please enter article title in ${defaultLangName}`
       )
       return
     }
     
     if (!formData.content.trim()) {
+      const defaultLang = getDefaultLanguage()
+      const defaultLangName = SUPPORTED_LANGUAGES[defaultLang as keyof typeof SUPPORTED_LANGUAGES] || defaultLang
       notification.showError(
-        locale === 'zh' ? '内容必须输入' : 'Content is required', 
-        locale === 'zh' ? '请输入文章内容' : 'Please enter article content'
+        locale === 'zh' ? `默认语言(${defaultLangName})内容必须输入` : `Content is required for default language (${defaultLangName})`, 
+        locale === 'zh' ? `请输入${defaultLangName}文章内容` : `Please enter article content in ${defaultLangName}`
       )
       return
     }
@@ -553,7 +829,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
 
     try {
       // Collect only non-default language translations
-      const defaultLang = article?.default_lang || 'zh'
+      const defaultLang = getDefaultLanguage()
       const allTranslations: ArticleTranslation[] = []
       
       // Add other language translations (exclude default language)
@@ -566,7 +842,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       const articleData = {
         ...formData,
         default_lang: defaultLang, // Keep the existing default language
-        translations: allTranslations
+        translations: allTranslations,
+        selected_comments: JSON.stringify(selectedComments) // Save selected comments
       }
 
       if (isEditing && article) {
@@ -694,17 +971,6 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             }
             break
           
-          case 'p': // Preview toggle - Ctrl/Cmd+P
-            e.preventDefault()
-            setShowPreview(prev => {
-              switch (prev) {
-                case 'none': return 'right'
-                case 'right': return 'left'
-                case 'left': return 'both'
-                case 'both': return 'none'
-              }
-            })
-            break
           
           case 'm': // Media picker - Ctrl/Cmd+M
             e.preventDefault()
@@ -728,9 +994,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           case 'l': // Switch panels (left/right languages) - Ctrl/Cmd+L
             e.preventDefault()
             if (editMode === 'translation') {
-              const tempLang = sourceLanguage
-              setSourceLanguage(targetLanguage)
-              setTargetLanguage(tempLang)
+              swapLanguages()
             }
             break
           
@@ -846,7 +1110,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     } else if (textarea === targetTextareaRef.current) {
       updateTranslation(targetLanguage, 'content', newText)
     } else if (textarea.id === 'content') {
-      const defaultLang = article?.default_lang || 'zh'
+      const defaultLang = getDefaultLanguage()
       updateTranslation(defaultLang, 'content', newText)
     }
     
@@ -857,8 +1121,16 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }, 10)
   }
 
+  const swapLanguages = () => {
+    const tempLang = sourceLanguage
+    setSourceLanguage(targetLanguage)
+    setTargetLanguage(tempLang)
+    // Force Monaco editor to re-render to avoid state sync issues
+    setEditorKey(prev => prev + 1)
+  }
+
   const updateTranslation = (language: string, field: string, value: string) => {
-    const defaultLang = article?.default_lang || 'zh'
+    const defaultLang = getDefaultLanguage()
     if (language === defaultLang) {
       setFormData(prev => ({ ...prev, [field]: value }))
       return
@@ -1006,7 +1278,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     let language = ''
     
     if (editMode === 'single') {
-      const defaultLang = article?.default_lang || 'zh'
+      const defaultLang = getDefaultLanguage()
       const translation = getTranslation(defaultLang)
       currentValue = translation.content
       language = defaultLang
@@ -1149,7 +1421,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   }
 
   const renderSingleEditor = () => {
-    const defaultLang = article?.default_lang || 'zh'
+    const defaultLang = getDefaultLanguage()
     const currentTranslation = getTranslation(defaultLang)
     
     // If we're showing SEO, render it directly
@@ -1163,7 +1435,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 ...formData,
                 id: article?.id || 0,
                 category: article?.category || { id: 0, name: '', description: '', created_at: '', updated_at: '' },
-                default_lang: article?.default_lang || 'zh',
+                default_lang: getDefaultLanguage(),
                 translations: article?.translations || [],
                 created_at: article?.created_at || new Date().toISOString(),
                 updated_at: article?.updated_at || new Date().toISOString()
@@ -1205,6 +1477,64 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             />
           </div>
 
+          {/* Publication Time */}
+          <div className="space-y-2">
+            <Label htmlFor="created_at" className="flex items-center gap-2">
+              {locale === 'zh' ? '发布时间' : 'Publication Time'}
+              <span className="text-xs text-muted-foreground font-normal">
+                {formatPublicationTime(formData.created_at)}
+              </span>
+            </Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="created_at"
+                type="datetime-local"
+                value={new Date(formData.created_at).toISOString().slice(0, 16)}
+                onChange={(e) => {
+                  const validation = validatePublicationTime(e.target.value)
+                  if (validation.isValid) {
+                    setFormData(prev => ({
+                      ...prev,
+                      created_at: new Date(e.target.value).toISOString()
+                    }))
+                  } else if (validation.message) {
+                    notification.showError(
+                      locale === 'zh' ? '无效的发布时间' : 'Invalid Publication Time',
+                      validation.message
+                    )
+                  }
+                }}
+                className="max-w-xs"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setFormData(prev => ({
+                  ...prev,
+                  created_at: new Date().toISOString()
+                }))}
+                className="text-xs"
+              >
+                {locale === 'zh' ? '现在' : 'Now'}
+              </Button>
+            </div>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>
+                {locale === 'zh' 
+                  ? '设置文章的发布时间。如果设置为未来时间，文章将在该时间自动发布。点击"现在"设置为当前时间。'
+                  : 'Set the publication time for the article. If set to a future time, the article will be automatically published at that time. Click "Now" to set to current time.'
+                }
+              </p>
+              <p className="font-mono">
+                {locale === 'zh' ? '当前时区' : 'Current timezone'}: {getCurrentTimezone()}
+              </p>
+              <p className="font-mono">
+                {locale === 'zh' ? '显示时间' : 'Display time'}: {formatDateTimeWithTimezone(formData.created_at)}
+              </p>
+            </div>
+          </div>
+
           {/* Content */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -1242,6 +1572,16 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           <div className="p-4 space-y-4">
             <h1 className="text-2xl font-bold">{translation.title || 'Untitled'}</h1>
             <p className="text-muted-foreground leading-relaxed">{translation.summary || 'No summary'}</p>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <div className="flex items-center gap-2">
+                <span>
+                  {sourceLanguage === 'zh' ? '发布时间' : 'Publication Time'}: {formatDateTimeWithTimezone(formData.created_at)}
+                </span>
+                <span className="text-xs">
+                  {formatPublicationTime(formData.created_at)}
+                </span>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="p-4 space-y-6">
@@ -1265,6 +1605,62 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 className="min-h-[100px] resize-none"
               />
             </div>
+            {/* Publication Time - Only show on source side and only if it's default language */}
+            {isSource && language === getDefaultLanguage() && (
+              <div className="space-y-2">
+                <Label htmlFor={`created_at-${side}`} className="flex items-center gap-2">
+                  {sourceLanguage === 'zh' ? '发布时间' : 'Publication Time'}
+                  <span className="text-xs text-muted-foreground font-normal">
+                    {formatPublicationTime(formData.created_at)}
+                  </span>
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id={`created_at-${side}`}
+                    type="datetime-local"
+                    value={new Date(formData.created_at).toISOString().slice(0, 16)}
+                    onChange={(e) => {
+                      const validation = validatePublicationTime(e.target.value)
+                      if (validation.isValid) {
+                        setFormData(prev => ({
+                          ...prev,
+                          created_at: new Date(e.target.value).toISOString()
+                        }))
+                      } else if (validation.message) {
+                        notification.showError(
+                          locale === 'zh' ? '无效的发布时间' : 'Invalid Publication Time',
+                          validation.message
+                        )
+                      }
+                    }}
+                    className="max-w-xs"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      created_at: new Date().toISOString()
+                    }))}
+                    className="text-xs"
+                  >
+                    {locale === 'zh' ? '现在' : 'Now'}
+                  </Button>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>
+                    {locale === 'zh' 
+                      ? '设置文章的发布时间。如果设置为未来时间，文章将在该时间自动发布。'
+                      : 'Set the publication time for the article. If set to a future time, the article will be automatically published at that time.'
+                    }
+                  </p>
+                  <p className="font-mono">
+                    {locale === 'zh' ? '时区' : 'Timezone'}: {getCurrentTimezone()}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )
       
@@ -1411,6 +1807,15 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
 
         <div className="mx-2 h-4 w-px bg-border" />
 
+        {/* Translation Stats - show current provider and usage */}
+        <TranslationStats 
+          className="hidden lg:flex"
+          showDetailed={false} 
+          locale={locale} 
+        />
+
+        <div className="mx-2 h-4 w-px bg-border" />
+
         {/* Auto Translate All Button - only show in translation mode */}
         {editMode === 'translation' && (
           <>
@@ -1544,48 +1949,83 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
               </Button>
             </div>
           )}
-          
-          {/* Preview Toggle - Hide for SEO */}
-          {activeField !== 'seo' && (
-            <div className="flex items-center gap-1 mr-4">
+
+          {/* AI Summary Buttons - Only show when AI service is configured */}
+          {hasAISummaryProvider && (
+            <div className="flex items-center gap-1 mr-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 px-2 gap-1"
+                    className="h-7 px-2"
+                    disabled={isGeneratingAI}
+                    title={locale === 'zh' ? 'AI生成内容' : 'AI Generate Content'}
                   >
-                    {showPreview === 'none' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    <span className="text-xs">
-                      {showPreview === 'none' ? (locale === 'zh' ? '编辑模式' : 'Edit Mode') :
-                       showPreview === 'left' ? (locale === 'zh' ? '左侧预览' : 'Left Preview') :
-                       showPreview === 'right' ? (locale === 'zh' ? '右侧预览' : 'Right Preview') :
-                       (locale === 'zh' ? '双侧预览' : 'Both Preview')}
+                    {isGeneratingAI ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    <span className="ml-1 text-xs">
+                      {locale === 'zh' ? 'AI生成' : 'AI Generate'}
                     </span>
-                    <ChevronDown className="h-3 w-3" />
+                    <ChevronDown className="ml-1 h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setShowPreview('none')}>
-                    <EyeOff className="h-4 w-4 mr-2" />
-                    {locale === 'zh' ? '编辑模式' : 'Edit Mode'}
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem 
+                    onClick={() => handleAIGenerate('all')}
+                    disabled={isGeneratingAI}
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    {locale === 'zh' ? '生成全部 (标题+摘要+关键字)' : 'Generate All (Title+Summary+Keywords)'}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowPreview('right')}>
-                    <Eye className="h-4 w-4 mr-2" />
-                    {locale === 'zh' ? '右侧预览' : 'Right Preview'}
+                  <DropdownMenuItem 
+                    onClick={() => handleAIGenerate('title')}
+                    disabled={isGeneratingAI}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    {locale === 'zh' ? '生成标题' : 'Generate Title'}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowPreview('left')}>
-                    <Eye className="h-4 w-4 mr-2" />
-                    {locale === 'zh' ? '左侧预览' : 'Left Preview'}
+                  <DropdownMenuItem 
+                    onClick={() => handleAIGenerate('summary')}
+                    disabled={isGeneratingAI}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    {locale === 'zh' ? '生成摘要' : 'Generate Summary'}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowPreview('both')}>
-                    <Eye className="h-4 w-4 mr-2" />
-                    {locale === 'zh' ? '双侧预览' : 'Both Preview'}
+                  <DropdownMenuItem 
+                    onClick={() => handleAIGenerate('keywords')}
+                    disabled={isGeneratingAI}
+                  >
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    {locale === 'zh' ? '生成SEO关键字' : 'Generate SEO Keywords'}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           )}
+
+          {/* Comment Translation Button - Only show for content field and when translation service is configured */}
+          {activeField === 'content' && hasTranslationProvider && (
+            <div className="flex items-center gap-1 mr-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCommentTranslation}
+                className="h-7 px-2"
+                title={locale === 'zh' ? '翻译代码注释' : 'Translate Code Comments'}
+              >
+                <Code className="h-4 w-4" />
+                <span className="ml-1 text-xs">
+                  {locale === 'zh' ? '注释翻译' : 'Comments'}
+                </span>
+              </Button>
+            </div>
+          )}
+          
+          {/* Preview Toggle - Hide for SEO */}
         </div>
       )}
 
@@ -1633,6 +2073,20 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 </div>
               </div>
             </div>
+            
+            {/* Swap Languages Button */}
+            <div className="flex items-center justify-center border-r">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={swapLanguages}
+                className="h-6 w-6 px-0 hover:bg-primary/10"
+                title={locale === 'zh' ? '交换左右语言' : 'Swap Languages'}
+              >
+                <ArrowLeftRight className="h-3 w-3" />
+              </Button>
+            </div>
+            
             <div className="flex-1 px-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Select value={targetLanguage} onValueChange={(value) => {
@@ -1694,71 +2148,24 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             </div>
           </div>
 
-          {/* Monaco Editor or Preview */}
+          {/* Dual Language Editor */}
           <div className="flex-1 overflow-hidden">
-            {showPreview === 'none' ? (
-              <MonacoTranslationEditor
-                ref={monacoEditorRef}
-                originalValue={sourceTranslation.content}
-                modifiedValue={targetTranslation.content}
-                onOriginalChange={(value) => updateTranslation(sourceLanguage, 'content', value)}
-                onModifiedChange={(value) => updateTranslation(targetLanguage, 'content', value)}
-                language="markdown"
-                height="100%"
-                theme={theme === 'dark' ? 'vs-dark' : 'vs'}
-                className="h-full"
-              />
-            ) : (
-              <div className="h-full flex">
-                {/* Left Preview/Editor */}
-                <div className="flex-1 border-r">
-                  {showPreview === 'left' || showPreview === 'both' ? (
-                    <div className="p-4 h-full overflow-y-auto">
-                      {sourceTranslation.content ? (
-                        <MarkdownRenderer content={sourceTranslation.content} />
-                      ) : (
-                        <p className="text-muted-foreground">No content</p>
-                      )}
-                    </div>
-                  ) : (
-                    <MonacoTranslationEditor
-                      originalValue={sourceTranslation.content}
-                      modifiedValue=""
-                      onOriginalChange={(value) => updateTranslation(sourceLanguage, 'content', value)}
-                      language="markdown"
-                      height="100%"
-                      theme={theme === 'dark' ? 'vs-dark' : 'vs'}
-                      className="h-full"
-                      options={{ renderSideBySide: false }}
-                    />
-                  )}
-                </div>
-                
-                {/* Right Preview/Editor */}
-                <div className="flex-1">
-                  {showPreview === 'right' || showPreview === 'both' ? (
-                    <div className="p-4 h-full overflow-y-auto">
-                      {targetTranslation.content ? (
-                        <MarkdownRenderer content={targetTranslation.content} />
-                      ) : (
-                        <p className="text-muted-foreground">No content</p>
-                      )}
-                    </div>
-                  ) : (
-                    <MonacoTranslationEditor
-                      originalValue=""
-                      modifiedValue={targetTranslation.content}
-                      onModifiedChange={(value) => updateTranslation(targetLanguage, 'content', value)}
-                      language="markdown"
-                      height="100%"
-                      theme={theme === 'dark' ? 'vs-dark' : 'vs'}
-                      className="h-full"
-                      options={{ renderSideBySide: false }}
-                    />
-                  )}
-                </div>
-              </div>
-            )}
+            <DualLanguageEditor
+              key={`dual-editor-${editorKey}`}
+              ref={dualLanguageEditorRef}
+              leftValue={sourceTranslation.content}
+              rightValue={targetTranslation.content}
+              leftLanguage={sourceLanguage}
+              rightLanguage={targetLanguage}
+              leftLanguageName={availableLanguages.find(lang => lang.code === sourceLanguage)?.name || sourceLanguage}
+              rightLanguageName={availableLanguages.find(lang => lang.code === targetLanguage)?.name || targetLanguage}
+              onLeftChange={(value) => updateTranslation(sourceLanguage, 'content', value)}
+              onRightChange={(value) => updateTranslation(targetLanguage, 'content', value)}
+              language="markdown"
+              height="100%"
+              theme={theme === 'dark' ? 'vs-dark' : 'vs'}
+              className="h-full"
+            />
           </div>
         </div>
       ) : (
@@ -1810,19 +2217,35 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
 
           {/* Content */}
           <div className="flex-1 relative overflow-hidden">
-            {renderField(sourceLanguage, sourceTranslation, showPreview === 'left' || showPreview === 'both', 'source')}
+            {renderField(sourceLanguage, sourceTranslation, false, 'source')}
           </div>
         </div>
 
-        {/* Resizer */}
-        <div
-          className={cn(
-            "w-1 cursor-col-resize hover:bg-primary/20 transition-colors flex items-center justify-center group",
-            isDragging && "bg-primary/20"
-          )}
-          onMouseDown={handleMouseDown}
-        >
-          <div className="w-1 h-8 bg-border group-hover:bg-primary/50 rounded-full transition-colors" />
+        {/* Resizer with Swap Button */}
+        <div className="relative flex flex-col items-center">
+          {/* Swap Languages Button */}
+          <div className="flex items-center justify-center h-9 border-b bg-muted/20">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={swapLanguages}
+              className="h-6 w-6 px-0 hover:bg-primary/10"
+              title={locale === 'zh' ? '交换左右语言' : 'Swap Languages'}
+            >
+              <ArrowLeftRight className="h-3 w-3" />
+            </Button>
+          </div>
+          
+          {/* Resizer */}
+          <div
+            className={cn(
+              "flex-1 w-1 cursor-col-resize hover:bg-primary/20 transition-colors flex items-center justify-center group",
+              isDragging && "bg-primary/20"
+            )}
+            onMouseDown={handleMouseDown}
+          >
+            <div className="w-1 h-8 bg-border group-hover:bg-primary/50 rounded-full transition-colors" />
+          </div>
         </div>
 
         {/* Right Panel */}
@@ -1897,7 +2320,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
 
           {/* Content */}
           <div className="flex-1 relative overflow-hidden">
-            {renderField(targetLanguage, targetTranslation, showPreview === 'right' || showPreview === 'both', 'target')}
+            {renderField(targetLanguage, targetTranslation, false, 'target')}
           </div>
         </div>
         </div>
@@ -2091,6 +2514,16 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         </DialogContent>
       </Dialog>
       
+      {/* Comment Translator Dialog */}
+      <CommentTranslator
+        open={showCommentTranslator}
+        onOpenChange={setShowCommentTranslator}
+        onConfirm={handleCommentSelectionConfirm}
+        codeContent={currentCodeContent}
+        locale={locale}
+        initialSelectedComments={selectedComments}
+      />
+
       {/* Notification Dialog */}
       <NotificationDialog
         open={notification.open}

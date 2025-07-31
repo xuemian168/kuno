@@ -1,16 +1,19 @@
 import { MetadataRoute } from 'next'
-import { apiClient } from '@/lib/api'
-import { routing } from '@/i18n/routing'
-import { getBaseUrl } from '@/lib/utils'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = getBaseUrl()
+  // Get base URL from environment or use default
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
+  const baseUrl = apiUrl.replace('/api', '')
+  
+  // Define supported locales (keeping it simple to avoid routing import issues)
+  const locales = ['zh', 'en', 'ja', 'ko', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ar', 'hi']
+  const defaultLocale = 'zh'
   
   const routes: MetadataRoute.Sitemap = []
   
   // Add home pages for each locale
-  routing.locales.forEach(locale => {
-    const url = locale === routing.defaultLocale 
+  locales.forEach(locale => {
+    const url = locale === defaultLocale 
       ? `${baseUrl}/` 
       : `${baseUrl}/${locale}/`
     
@@ -21,9 +24,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
       alternates: {
         languages: Object.fromEntries(
-          routing.locales.map(loc => [
+          locales.map(loc => [
             loc,
-            loc === routing.defaultLocale 
+            loc === defaultLocale 
               ? `${baseUrl}/` 
               : `${baseUrl}/${loc}/`
           ])
@@ -33,75 +36,63 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   })
   
   try {
-    // Fetch all articles
-    const articles = await apiClient.getArticles()
+    // Fetch articles directly with fetch to avoid import issues
+    const response = await fetch(`${apiUrl}/articles`, {
+      headers: {
+        'Accept': 'application/json',
+      },
+      // Don't cache during build
+      cache: 'no-store'
+    })
     
-    // Add article pages for each locale
-    articles.forEach(article => {
-      routing.locales.forEach(locale => {
-        const url = locale === routing.defaultLocale 
-          ? `${baseUrl}/article/${article.id}` 
-          : `${baseUrl}/${locale}/article/${article.id}`
-        
-        // Extract media from article content for image sitemap
-        const extractMediaFromContent = (content: string) => {
-          const images: string[] = []
-          
-          // Extract YouTube video thumbnails
-          const youtubeMatches = content.match(/<YouTubeEmbed\s+url="([^"]+)"/g)
-          if (youtubeMatches) {
-            youtubeMatches.forEach(match => {
-              const urlMatch = match.match(/url="([^"]+)"/)
-              if (urlMatch) {
-                const videoId = urlMatch[1].match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)
-                if (videoId) {
-                  images.push(`https://img.youtube.com/vi/${videoId[1]}/maxresdefault.jpg`)
-                }
-              }
-            })
-          }
-          
-          return images
-        }
-        
-        const images = extractMediaFromContent(article.content)
-        
-        // Use SEO-friendly URL if seo_slug is available
-        const seoSlug = article.seo_slug
-        const baseArticleUrl = seoSlug
-          ? (locale === routing.defaultLocale 
-              ? `${baseUrl}/article/${seoSlug}` 
-              : `${baseUrl}/${locale}/article/${seoSlug}`)
-          : url
+    if (response.ok) {
+      const articles = await response.json()
+      
+      // Filter out future articles
+      const now = new Date()
+      const publishedArticles = articles.filter((article: any) => 
+        new Date(article.created_at) <= now
+      )
+      
+      // Add article pages for each locale
+      publishedArticles.forEach((article: any) => {
+        locales.forEach(locale => {
+          // Use SEO-friendly URL if seo_slug is available
+          const seoSlug = article.seo_slug
+          const baseArticleUrl = seoSlug
+            ? (locale === defaultLocale 
+                ? `${baseUrl}/article/${seoSlug}` 
+                : `${baseUrl}/${locale}/article/${seoSlug}`)
+            : (locale === defaultLocale 
+                ? `${baseUrl}/article/${article.id}` 
+                : `${baseUrl}/${locale}/article/${article.id}`)
 
-        routes.push({
-          url: baseArticleUrl,
-          lastModified: new Date(article.updated_at || article.created_at),
-          changeFrequency: 'weekly',
-          priority: 0.8,
-          alternates: {
-            languages: Object.fromEntries(
-              routing.locales.map(loc => {
-                const localeUrl = seoSlug
-                  ? (loc === routing.defaultLocale 
-                      ? `${baseUrl}/article/${seoSlug}` 
-                      : `${baseUrl}/${loc}/article/${seoSlug}`)
-                  : (loc === routing.defaultLocale 
-                      ? `${baseUrl}/article/${article.id}` 
-                      : `${baseUrl}/${loc}/article/${article.id}`)
-                return [loc, localeUrl]
-              })
-            )
-          },
-          // Add images to sitemap for better SEO
-          ...(images.length > 0 && {
-            images: images
+          routes.push({
+            url: baseArticleUrl,
+            lastModified: new Date(article.updated_at || article.created_at),
+            changeFrequency: 'weekly',
+            priority: 0.8,
+            alternates: {
+              languages: Object.fromEntries(
+                locales.map(loc => {
+                  const localeUrl = seoSlug
+                    ? (loc === defaultLocale 
+                        ? `${baseUrl}/article/${seoSlug}` 
+                        : `${baseUrl}/${loc}/article/${seoSlug}`)
+                    : (loc === defaultLocale 
+                        ? `${baseUrl}/article/${article.id}` 
+                        : `${baseUrl}/${loc}/article/${article.id}`)
+                  return [loc, localeUrl]
+                })
+              )
+            }
           })
         })
       })
-    })
+    }
   } catch (error) {
     console.error('Failed to fetch articles for sitemap:', error)
+    // Continue with basic routes even if article fetch fails
   }
   
   return routes

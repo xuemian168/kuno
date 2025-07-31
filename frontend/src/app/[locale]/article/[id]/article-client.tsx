@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { notFound } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Calendar, Tag, Eye } from 'lucide-react'
+import { ArrowLeft, Calendar, Tag, Eye, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { MarkdownRenderer } from '@/components/markdown/markdown-renderer'
@@ -17,6 +17,8 @@ import { getBaseUrl, getSiteUrl } from '@/lib/utils'
 import EmbedCodeGenerator from '@/components/embed-code-generator'
 import SocialShare from '@/components/social-share'
 import ShareBar from '@/components/share-bar'
+import { useAuth } from '@/contexts/auth-context'
+import { Link } from '@/i18n/routing'
 
 interface ArticlePageClientProps {
   id: string
@@ -26,6 +28,7 @@ interface ArticlePageClientProps {
 export default function ArticlePageClient({ id, locale }: ArticlePageClientProps) {
   const t = useTranslations()
   const router = useRouter()
+  const { isAuthenticated, user } = useAuth()
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -127,6 +130,19 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
               {t('common.back')}
             </Button>
             <div className="flex items-center gap-2">
+              {/* Admin Edit Button */}
+              {isAuthenticated && user && (
+                <Link href={`/admin/articles/${id}`}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    {locale === 'zh' ? '编辑文章' : 'Edit Article'}
+                  </Button>
+                </Link>
+              )}
               <SocialShare 
                 url={articleUrl} 
                 title={article.title} 
