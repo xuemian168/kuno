@@ -407,7 +407,18 @@
     "lowActivity": "Low Activity",
     "highActivity": "High Activity",
     "countries": "countries",
-    "totalVisitors": "Total Visitors"
+    "totalVisitors": "Total Visitors",
+    "viewFullMap": "View Full Map",
+    "geographicLocation": "Geographic location distribution",
+    "visitorDistribution": "Visitor Distribution",
+    "failedToLoad": "Failed to load data",
+    "dataPoints": "data points",
+    "topCountry": "Top Country",
+    "views": "views",
+    "avgViewsPerCountry": "Avg Views/Country",
+    "average": "average",
+    "totalRegions": "Total Regions",
+    "lastUpdated": "Last Updated"
   },
   "export": {
     "exportAll": "Export All",

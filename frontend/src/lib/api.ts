@@ -575,6 +575,11 @@ class ApiClient {
     return this.request('/analytics/geographic')
   }
 
+  async getGeographicStats(): Promise<GeographicStats[]> {
+    const result = await this.request<{ geographic_stats: GeographicStats[] }>('/analytics/geographic')
+    return result.geographic_stats
+  }
+
   async getBrowserAnalytics(): Promise<{ browser_stats: BrowserStats[], platform_stats: PlatformStats[] }> {
     return this.request('/analytics/browsers')
   }

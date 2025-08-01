@@ -408,7 +408,18 @@
     "lowActivity": "活跃度低",
     "highActivity": "活跃度高",
     "countries": "个国家",
-    "totalVisitors": "总访客数"
+    "totalVisitors": "总访客数",
+    "viewFullMap": "查看完整地图",
+    "geographicLocation": "地理位置分布",
+    "visitorDistribution": "访客分布",
+    "failedToLoad": "数据加载失败",
+    "dataPoints": "个数据点",
+    "topCountry": "热门国家",
+    "views": "次浏览",
+    "avgViewsPerCountry": "平均浏览/国家",
+    "average": "平均",
+    "totalRegions": "总区域数",
+    "lastUpdated": "最后更新"
   },
   "export": {
     "exportAll": "导出全部",
