@@ -25,8 +25,9 @@ RUN apk add --no-cache libc6-compat git
 
 WORKDIR /app/frontend
 
-# Copy frontend package files
+# Copy frontend package files and npmrc
 COPY frontend/package*.json ./
+COPY frontend/.npmrc ./
 RUN npm ci && npm cache clean --force
 
 # Copy frontend source
