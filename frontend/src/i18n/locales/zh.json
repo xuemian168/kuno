@@ -567,11 +567,11 @@
     "latestArticles": "最新文章"
   },
   "site": {
-    "title": "极简博客",
-    "description": "一个支持深色模式的极简博客空间",
-    "homeTitle": "首页 - 极简博客",
-    "articleTitle": "文章 - 极简博客",
-    "adminTitle": "管理后台 - 极简博客"
+    "title": "KUNO",
+    "description": "KUNO",
+    "homeTitle": "首页 - KUNO",
+    "articleTitle": "文章 - KUNO",
+    "adminTitle": "管理后台 - KUNO"
   },
   "share": {
     "title": "分享",

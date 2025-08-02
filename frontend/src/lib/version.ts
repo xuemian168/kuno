@@ -47,8 +47,8 @@ export const getAppVersion = (): AppVersion => {
 
 // 应用信息常量
 export const APP_INFO = {
-  name: "kuno",
-  fullName: "kuno System",
+  name: "KUNO",
+  fullName: "KUNO System",
   description: {
     zh: "一个简洁优雅的现代化博客系统，支持多语言、Markdown编辑、媒体管理等功能。",
     en: "A minimalist and elegant modern blog system with multi-language support, Markdown editing, media management and more."
