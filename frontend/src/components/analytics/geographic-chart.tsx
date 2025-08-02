@@ -49,11 +49,11 @@ export function GeographicChart() {
     )
   }
 
-  // Group data by country for better visualization
-  const countryData = (geographicData || []).reduce((acc, item) => {
+  // Group data by location for better visualization
+  const locationData = (geographicData || []).reduce((acc, item) => {
     if (!acc[item.country]) {
       acc[item.country] = {
-        country: item.country,
+        location: item.country,
         visitor_count: 0,
         view_count: 0,
         regions: []
@@ -64,17 +64,26 @@ export function GeographicChart() {
     acc[item.country].regions.push(item)
     return acc
   }, {} as Record<string, {
-    country: string
+    location: string
     visitor_count: number
     view_count: number
     regions: GeographicStats[]
   }>)
 
-  const topCountries = Object.values(countryData)
+  const topLocations = Object.values(locationData)
     .sort((a, b) => b.view_count - a.view_count)
     .slice(0, 10)
 
   const totalViews = (geographicData || []).reduce((sum, item) => sum + item.view_count, 0)
+
+  // Function to format location name with China suffix for HK, Macao, Taiwan
+  const formatLocationName = (locationName: string) => {
+    const specialRegions = ['Hong Kong', 'Macao', 'Taiwan', 'Macau']
+    if (specialRegions.some(region => locationName.includes(region))) {
+      return `${locationName} (China)`
+    }
+    return locationName
+  }
 
   return (
     <Card>
@@ -104,23 +113,23 @@ export function GeographicChart() {
           
           <TabsContent value="list" className="mt-6">
             <div className="space-y-6">
-              {/* Top Countries */}
+              {/* Top Locations */}
               <div>
                 <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
                   {t('analytics.topCountries')}
                 </h4>
                 <div className="space-y-3">
-                  {topCountries.map((country, index) => (
-                    <div key={country.country} className="flex items-center justify-between p-3 border rounded-lg">
+                  {topLocations.map((location, index) => (
+                    <div key={location.location} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
                         <Badge variant="outline" className="text-xs">
                           #{index + 1}
                         </Badge>
                         <div>
-                          <p className="font-medium">{country.country}</p>
+                          <p className="font-medium">{formatLocationName(location.location)}</p>
                           <p className="text-xs text-muted-foreground">
-                            {country.regions.length} {country.regions.length === 1 ? t('analytics.region') : t('analytics.regions')}
+                            {location.regions.length} {location.regions.length === 1 ? t('analytics.region') : t('analytics.regions')}
                           </p>
                         </div>
                       </div>
@@ -128,15 +137,15 @@ export function GeographicChart() {
                         <div className="flex items-center gap-4 text-sm">
                           <div className="flex items-center gap-1">
                             <Users className="h-3 w-3" />
-                            {country.visitor_count}
+                            {location.visitor_count}
                           </div>
                           <div className="flex items-center gap-1">
                             <Eye className="h-3 w-3" />
-                            {country.view_count}
+                            {location.view_count}
                           </div>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {((country.view_count / totalViews) * 100).toFixed(1)}%
+                          {((location.view_count / totalViews) * 100).toFixed(1)}%
                         </div>
                       </div>
                     </div>
@@ -155,7 +164,7 @@ export function GeographicChart() {
                           <div>
                             <p className="font-medium">{item.city}</p>
                             <p className="text-xs text-muted-foreground">
-                              {item.region}, {item.country}
+                              {item.region}, {formatLocationName(item.country)}
                             </p>
                           </div>
                           <div className="text-right text-xs">

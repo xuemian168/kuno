@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { apiClient, BrowserStats, PlatformStats } from '@/lib/api'
-import { Monitor, Smartphone, Tablet, Chrome, Users, Eye } from 'lucide-react'
+import { Monitor, Smartphone, Tablet, Users, Eye, Globe } from 'lucide-react'
 
 interface BrowserChartProps {
   className?: string
@@ -41,7 +41,7 @@ export function BrowserChart({ className }: BrowserChartProps) {
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Chrome className="h-5 w-5" />
+            <Monitor className="h-5 w-5" />
             {t('analytics.browserAndDevice')}
           </CardTitle>
           <CardDescription>{t('analytics.visitorsByBrowserAndDevice')}</CardDescription>
@@ -118,15 +118,50 @@ export function BrowserChart({ className }: BrowserChartProps) {
   }
 
   const getBrowserIcon = (browser: string) => {
-    // You could add specific icons for different browsers
-    return <Chrome className="h-4 w-4" />
+    const browserName = browser.toLowerCase()
+    
+    if (browserName.includes('chrome')) {
+      return <img src="/browsers/chrome.svg" alt="Chrome" className="h-4 w-4" />
+    } else if (browserName.includes('firefox')) {
+      return <img src="/browsers/firefox.svg" alt="Firefox" className="h-4 w-4" />
+    } else if (browserName.includes('safari')) {
+      return <img src="/browsers/safari.svg" alt="Safari" className="h-4 w-4" />
+    } else if (browserName.includes('edge')) {
+      return <img src="/browsers/edge.svg" alt="Edge" className="h-4 w-4" />
+    } else if (browserName.includes('opera')) {
+      return <img src="/browsers/opera.svg" alt="Opera" className="h-4 w-4" />
+    } else if (browserName.includes('wechat') || browserName.includes('微信')) {
+      return <img src="/browsers/wechat.svg" alt="WeChat" className="h-4 w-4" />
+    } else {
+      // Default browser icon for unknown browsers
+      return <Globe className="h-4 w-4" />
+    }
+  }
+
+  const getOSIcon = (os: string) => {
+    const osName = os.toLowerCase()
+    
+    if (osName.includes('android')) {
+      return <img src="/devices/android.svg" alt="Android" className="h-4 w-4" />
+    } else if (osName.includes('ios') || osName.includes('iphone') || osName.includes('ipad')) {
+      return <img src="/devices/ios.svg" alt="iOS" className="h-4 w-4" />
+    } else if (osName.includes('macos') || osName.includes('mac os') || osName.includes('darwin')) {
+      return <img src="/devices/macos.svg" alt="macOS" className="h-4 w-4" />
+    } else if (osName.includes('windows') || osName.includes('win')) {
+      return <img src="/devices/windows.svg" alt="Windows" className="h-4 w-4" />
+    } else if (osName.includes('linux') || osName.includes('ubuntu') || osName.includes('debian') || osName.includes('fedora') || osName.includes('centos')) {
+      return <img src="/devices/linux.svg" alt="Linux" className="h-4 w-4" />
+    } else {
+      // Default OS icon for unknown operating systems
+      return <Monitor className="h-4 w-4" />
+    }
   }
 
   return (
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Chrome className="h-5 w-5" />
+          <Monitor className="h-5 w-5" />
           {t('analytics.browserAndDevice')}
         </CardTitle>
         <CardDescription>{t('analytics.visitorsByBrowserAndDevice')}</CardDescription>
@@ -176,7 +211,7 @@ export function BrowserChart({ className }: BrowserChartProps) {
               ))
             ) : (
               <div className="text-center py-8">
-                <Chrome className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                <Globe className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
                 <p className="text-muted-foreground">{t('analytics.noBrowserData')}</p>
               </div>
             )}
@@ -225,12 +260,12 @@ export function BrowserChart({ className }: BrowserChartProps) {
             )}
           </TabsContent>
 
-          <TabsContent value="platforms" className="space-y-3 max-h-64 overflow-y-auto">
+          <TabsContent value="platforms" className="space-y-3">
             {(platformData || []).length > 0 ? (
-              (platformData || []).slice(0, 15).map((platform, index) => (
+              (platformData || []).map((platform, index) => (
                 <div key={`${platform.os}-${platform.os_version}-${platform.device_type}`} className="flex items-center justify-between p-2 border rounded text-sm">
                   <div className="flex items-center gap-2">
-                    {getDeviceIcon(platform.device_type)}
+                    {getOSIcon(platform.os)}
                     <div>
                       <p className="font-medium">{platform.os} {platform.os_version}</p>
                       <p className="text-xs text-muted-foreground">
