@@ -1,12 +1,15 @@
 [中文](./README_CN.md) | English
 
-# kuno
+# KUNO
 
 ![kuno](./docs/kuno.png)
 
-KUNO name origin: 
-- "KUN" is the pinyin of "坤" (kūn), which carries and supports all things in Chinese philosophy, symbolizing how this CMS carries and supports all content. Pronounced as "kuno (/ˈkuːnoʊ/)".
-- “O” stands for Origin and Openness, symbolizing the start of all content and the open, inclusive nature of the system.
+The name [**KUNO** /ˈkuːnoʊ/] blends Eastern philosophy with modern digital principles:
+> - "KUN" is the pinyin of "坤" (kūn), which carries and supports all things in Chinese philosophy, symbolizing how this CMS carries and supports all content. Pronounced as "kuno (/ˈkuːnoʊ/)".
+> - “O” stands for Origin and Openness, symbolizing the start of all content and the open, inclusive nature of the system.
+> - Pronounced as /ˈkuːnoʊ/ — clean, elegant, and globally readable.
+
+KUNO is designed as a lightweight, blazing-fast, i18n-first CMS, empowering creators to build rich, structured content ecosystems with freedom and harmony.
 
 A full-stack blog application with Go backend and Next.js frontend, containerized with Docker for easy deployment.
 
