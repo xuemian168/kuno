@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react"
 import { Editor } from "@monaco-editor/react"
 import type { editor } from "monaco-editor"
+import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ArrowLeftRight, Eye, EyeOff, Edit3 } from "lucide-react"
@@ -48,10 +49,15 @@ export const DualLanguageEditor = forwardRef<
     onRightChange,
     language = "markdown",
     height = "400px",
-    theme = "vs",
+    theme,
     className,
     options = {}
   } = props
+
+  const { resolvedTheme } = useTheme()
+  
+  // Determine Monaco editor theme based on system theme
+  const monacoTheme = theme || (resolvedTheme === 'dark' ? 'vs-dark' : 'vs')
 
   const leftEditorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const rightEditorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
@@ -169,7 +175,7 @@ export const DualLanguageEditor = forwardRef<
               language={language}
               value={leftValue}
               onMount={handleLeftEditorMount}
-              theme={theme}
+              theme={monacoTheme}
               options={{
                 wordWrap: 'on',
                 minimap: { enabled: false },
@@ -201,7 +207,7 @@ export const DualLanguageEditor = forwardRef<
               language={language}
               value={rightValue}
               onMount={handleRightEditorMount}
-              theme={theme}
+              theme={monacoTheme}
               options={{
                 wordWrap: 'on',
                 minimap: { enabled: false },

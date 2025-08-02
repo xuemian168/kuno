@@ -20,7 +20,8 @@ export default function EditArticlePage({ params }: EditArticlePageProps) {
       const fetchArticle = async () => {
         try {
           const articleId = parseInt(id)
-          const articleData = await apiClient.getArticle(articleId, paramLocale)
+          // Don't pass locale to get the original article data without translation applied
+          const articleData = await apiClient.getArticle(articleId)
           setArticle(articleData)
         } catch (error) {
           console.error('Failed to fetch article:', error)

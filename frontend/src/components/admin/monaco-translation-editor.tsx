@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from "react"
 import { DiffEditor } from "@monaco-editor/react"
 import type { editor } from "monaco-editor"
+import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
 
 export interface MonacoTranslationEditorRef {
@@ -36,11 +37,15 @@ export const MonacoTranslationEditor = forwardRef<
   onModifiedChange,
   language = "markdown",
   height = "400px",
-  theme = "vs",
+  theme,
   readOnly = false,
   className,
   options = {}
 }, ref) => {
+  const { theme: systemTheme, resolvedTheme } = useTheme()
+  
+  // Determine Monaco editor theme based on system theme
+  const monacoTheme = theme || (resolvedTheme === 'dark' ? 'vs-dark' : 'vs')
   const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null)
   const [isReady, setIsReady] = useState(false)
   const [decorations, setDecorations] = useState<{ original: string[], modified: string[] }>({ original: [], modified: [] })
@@ -434,7 +439,7 @@ export const MonacoTranslationEditor = forwardRef<
         modified={initialModifiedValue.current}
         onMount={handleEditorDidMount}
         options={editorOptions}
-        theme={theme}
+        theme={monacoTheme}
         loading={
           <div className="flex items-center justify-center h-full">
             <div className="text-muted-foreground">Loading editor...</div>

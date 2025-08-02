@@ -8,6 +8,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Helper function to get the site's default language
+func getCategoryDefaultLanguage() string {
+	var settings models.SiteSettings
+	if err := database.DB.First(&settings).Error; err != nil {
+		// Fallback to 'zh' if unable to get settings
+		return "zh"
+	}
+	if settings.DefaultLanguage == "" {
+		return "zh"
+	}
+	return settings.DefaultLanguage
+}
+
 func GetCategories(c *gin.Context) {
 	var categories []models.Category
 	
@@ -20,7 +33,8 @@ func GetCategories(c *gin.Context) {
 	
 	// Apply language filtering if requested
 	lang := c.Query("lang")
-	if lang != "" && lang != "zh" {
+	defaultLang := getCategoryDefaultLanguage()
+	if lang != "" && lang != defaultLang {
 		for i := range categories {
 			applyCategoryTranslation(&categories[i], lang)
 		}

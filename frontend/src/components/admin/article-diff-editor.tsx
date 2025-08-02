@@ -59,7 +59,6 @@ import MediaPicker from "./media-picker"
 import { MediaLibrary } from "@/lib/api"
 import { playSuccessSound, initializeSoundSettings } from "@/lib/sound"
 import { NotificationDialog, useNotificationDialog } from "@/components/ui/notification-dialog"
-import { MonacoTranslationEditor, MonacoTranslationEditorRef } from "./monaco-translation-editor"
 import { DualLanguageEditor, DualLanguageEditorRef } from "./dual-language-editor"
 import { TranslationStats } from "./translation-stats"
 import { CommentTranslator } from "./comment-translator"
@@ -72,6 +71,8 @@ interface ArticleDiffEditorProps {
   locale?: string
 }
 
+type ProgressMap = Record<string, number>
+
 // Admin interface languages (hardcoded for admin interface)
 const adminInterfaceLanguages = [
   { code: 'zh', name: '中文' },
@@ -81,13 +82,18 @@ const adminInterfaceLanguages = [
 export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }: ArticleDiffEditorProps) {
   const router = useRouter()
   const t = useTranslations()
-  const { theme } = useTheme()
+  const { theme, resolvedTheme } = useTheme()
   const [loading, setLoading] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null)
-  const [sourceLanguage, setSourceLanguage] = useState(locale)
-  const [targetLanguage, setTargetLanguage] = useState(locale === 'zh' ? 'en' : 'zh')
+  
+  // Normalize locale to standard language code (e.g., 'zh-CN' -> 'zh')
+  const normalizedLocale = locale.split('-')[0] as SupportedLanguage
+  
+  // Initialize language states as null, will be set after siteSettings loads
+  const [sourceLanguage, setSourceLanguage] = useState<SupportedLanguage | null>(null)
+  const [targetLanguage, setTargetLanguage] = useState<SupportedLanguage | null>(null)
   const [leftPanelWidth, setLeftPanelWidth] = useState(50)
   const [activeField, setActiveField] = useState<'basic' | 'content' | 'seo'>('content')
   const [activeLine, setActiveLine] = useState<number | null>(null)
@@ -107,7 +113,6 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     return languageManager.getEnabledLanguageOptions()
   })
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [editorKey, setEditorKey] = useState(0)
   const [isGeneratingAI, setIsGeneratingAI] = useState(false)
   const [hasAISummaryProvider, setHasAISummaryProvider] = useState(false)
   const [showCommentTranslator, setShowCommentTranslator] = useState(false)
@@ -119,12 +124,18 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   
   const sourceTextareaRef = useRef<HTMLTextAreaElement>(null)
   const targetTextareaRef = useRef<HTMLTextAreaElement>(null)
-  const monacoEditorRef = useRef<MonacoTranslationEditorRef>(null)
   const dualLanguageEditorRef = useRef<DualLanguageEditorRef>(null)
 
   // Get the site's default language
-  const getDefaultLanguage = () => {
-    return siteSettings?.default_language || article?.default_lang || 'zh'
+  const getDefaultLanguage = (): SupportedLanguage => {
+    return (siteSettings?.default_language || article?.default_lang || 'zh') as SupportedLanguage
+  }
+
+  // Get language display name
+  const getLanguageDisplayName = (languageCode: string) => {
+    const language = availableLanguages.find(lang => lang.code === languageCode)
+    console.log('Getting display name for:', languageCode, 'found:', language, 'availableLanguages:', availableLanguages)
+    return language ? language.name : SUPPORTED_LANGUAGES[languageCode as keyof typeof SUPPORTED_LANGUAGES] || languageCode
   }
 
   // Helper function for publication time validation
@@ -135,7 +146,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     if (isNaN(date.getTime())) {
       return {
         isValid: false,
-        message: locale === 'zh' ? '无效的日期时间格式' : 'Invalid date time format'
+        message: normalizedLocale === 'zh' ? '无效的日期时间格式' : 'Invalid date time format'
       }
     }
     
@@ -146,7 +157,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     if (date < tenYearsAgo) {
       return {
         isValid: false,
-        message: locale === 'zh' ? '发布时间不能早于10年前' : 'Publication time cannot be more than 10 years ago'
+        message: normalizedLocale === 'zh' ? '发布时间不能早于10年前' : 'Publication time cannot be more than 10 years ago'
       }
     }
     
@@ -157,7 +168,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     if (date > fiveYearsFromNow) {
       return {
         isValid: false,
-        message: locale === 'zh' ? '发布时间不能晚于5年后' : 'Publication time cannot be more than 5 years in the future'
+        message: normalizedLocale === 'zh' ? '发布时间不能晚于5年后' : 'Publication time cannot be more than 5 years in the future'
       }
     }
     
@@ -170,9 +181,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     const now = new Date()
     
     if (date > now) {
-      return locale === 'zh' ? '（定时发布）' : '(Scheduled)'
+      return normalizedLocale === 'zh' ? '（定时发布）' : '(Scheduled)'
     } else {
-      return locale === 'zh' ? '（已发布）' : '(Published)'
+      return normalizedLocale === 'zh' ? '（已发布）' : '(Published)'
     }
   }
 
@@ -191,7 +202,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     const timezone = getCurrentTimezone()
     
     try {
-      const formatted = date.toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US', {
+      const formatted = date.toLocaleString(normalizedLocale === 'zh' ? 'zh-CN' : 'en-US', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -221,43 +232,64 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   
   const [translations, setTranslations] = useState<ArticleTranslation[]>(() => {
     if (article?.translations && Array.isArray(article.translations)) {
-      // Filter out the default language from translations array
-      const defaultLang = getDefaultLanguage()
-      return article.translations
-        .filter((t: any) => t.language !== defaultLang)
-        .map((t: any) => ({
-          id: t.id || 0,
-          article_id: t.article_id || 0,
-          language: t.language,
-          title: t.title || '',
-          content: t.content || '',
-          summary: t.summary || '',
-          created_at: t.created_at || new Date().toISOString(),
-          updated_at: t.updated_at || new Date().toISOString()
-        }))
+      // Just store all translations initially, we'll filter them dynamically
+      return article.translations.map((t: any) => ({
+        id: t.id || 0,
+        article_id: t.article_id || 0,
+        language: t.language,
+        title: t.title || '',
+        content: t.content || '',
+        summary: t.summary || '',
+        created_at: t.created_at || new Date().toISOString(),
+        updated_at: t.updated_at || new Date().toISOString()
+      }))
     }
     return []
   })
 
-  const getTranslation = (language: string) => {
-    // Check if this language is the article's default language
-    const defaultLang = getDefaultLanguage()
-    if (language === defaultLang) {
+  const getTranslation = (language: string | null): ArticleTranslation => {
+    // If language is null, return empty translation
+    if (!language) {
       return {
         id: 0,
-        article_id: 0,
-        language: defaultLang,
-        title: formData.title,
-        content: formData.content,
-        summary: formData.summary,
+        article_id: article?.id || 0,
+        language: '',
+        title: '',
+        content: '',
+        summary: '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
     }
     
-    return translations.find(t => t.language === language) || {
+    // Get the default language - either from site settings, article, or fallback to 'zh'
+    const defaultLang = getDefaultLanguage()
+    
+    // If requesting the default language, return data from formData
+    if (language === defaultLang) {
+      return {
+        id: 0,
+        article_id: article?.id || 0,
+        language: defaultLang,
+        title: formData.title,
+        content: formData.content,
+        summary: formData.summary,
+        created_at: formData.created_at || new Date().toISOString(),
+        updated_at: article?.updated_at || new Date().toISOString()
+      }
+    }
+    
+    // For non-default languages, look in the translations array
+    const existingTranslation = translations.find(t => t.language === language)
+    
+    if (existingTranslation) {
+      return existingTranslation
+    }
+    
+    // Return empty translation for new language
+    return {
       id: 0,
-      article_id: 0,
+      article_id: article?.id || 0,
       language,
       title: '',
       content: '',
@@ -268,7 +300,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   }
 
   // Calculate translation progress
-  const progress = useMemo(() => {
+  const progress: ProgressMap = useMemo(() => {
+    if (!sourceLanguage || !targetLanguage) return {}
+    
     const getProgress = (lang: string) => {
       const translation = getTranslation(lang)
       let completed = 0
@@ -282,11 +316,11 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       [sourceLanguage]: getProgress(sourceLanguage),
       [targetLanguage]: getProgress(targetLanguage)
     }
-  }, [translations, formData, sourceLanguage, targetLanguage, locale])
+  }, [translations, formData, sourceLanguage, targetLanguage, normalizedLocale])
 
   // Calculate translation progress for content
   const translationProgress = useMemo(() => {
-    if (activeField !== 'content') return { sourceLines: [] as string[], targetLines: [] as string[], untranslatedLines: [] as number[], totalLines: 0, translatedLines: 0 }
+    if (activeField !== 'content' || !sourceLanguage || !targetLanguage) return { sourceLines: [] as string[], targetLines: [] as string[], untranslatedLines: [] as number[], totalLines: 0, translatedLines: 0 }
     
     const sourceTranslation = getTranslation(sourceLanguage)
     const targetTranslation = getTranslation(targetLanguage)
@@ -380,18 +414,26 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }
   }, [sourceLanguage, targetLanguage, activeField, getTranslation])
 
-  // Update source language to default language once site settings are loaded
+  // Initialize languages once site settings are loaded
   useEffect(() => {
-    if (siteSettings) {
+    if (siteSettings && availableLanguages.length > 0) {
       const defaultLang = getDefaultLanguage()
-      setSourceLanguage(defaultLang)
+      
+      // Clean up any translations for the default language
+      setTranslations(prev => prev.filter(t => t.language !== defaultLang))
+      
+      // Set source language to default language from site settings
+      if (sourceLanguage !== defaultLang) {
+        setSourceLanguage(defaultLang)
+      }
+      
       // Set target language to a different language than default
       const otherLang = availableLanguages.find(lang => lang.code !== defaultLang)
-      if (otherLang && targetLanguage === defaultLang) {
+      if (otherLang && (!targetLanguage || targetLanguage === defaultLang)) {
         setTargetLanguage(otherLang.code)
       }
     }
-  }, [siteSettings, availableLanguages, targetLanguage])
+  }, [siteSettings, availableLanguages, sourceLanguage, targetLanguage])
 
   useEffect(() => {
     // Initialize sound settings
@@ -399,7 +441,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     
     const fetchCategories = async () => {
       try {
-        const categoriesData = await apiClient.getCategories({ lang: locale })
+        const categoriesData = await apiClient.getCategories({ lang: normalizedLocale })
         setCategories(categoriesData)
       } catch (error) {
         console.error('Failed to fetch categories:', error)
@@ -449,7 +491,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       checkAIProvider()
     }, 500)
     return () => clearTimeout(timer)
-  }, [locale])
+  }, [normalizedLocale])
 
   // Set initial category when categories are loaded
   useEffect(() => {
@@ -552,8 +594,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         
         if (targetLanguages.length === 0) {
           notification.showError(
-            locale === 'zh' ? '没有目标语言' : 'No Target Languages',
-            locale === 'zh' ? '没有其他启用的语言可以翻译' : 'No other enabled languages to translate to'
+            normalizedLocale === 'zh' ? '没有目标语言' : 'No Target Languages',
+            normalizedLocale === 'zh' ? '没有其他启用的语言可以翻译' : 'No other enabled languages to translate to'
           )
           return
         }
@@ -579,7 +621,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 content: filteredContent,
                 summary: sourceTranslation.summary
               },
-              sourceLanguage,
+              sourceLanguage!,
               targetLang,
               selectedComments
             )
@@ -613,20 +655,20 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         // Show final status
         if (successCount === targetLanguages.length) {
           notification.showSuccess(
-            locale === 'zh' ? '翻译完成！' : 'Translation Complete!',
-            locale === 'zh' ? `成功翻译到 ${successCount} 种语言` : `Successfully translated to ${successCount} languages`
+            normalizedLocale === 'zh' ? '翻译完成！' : 'Translation Complete!',
+            normalizedLocale === 'zh' ? `成功翻译到 ${successCount} 种语言` : `Successfully translated to ${successCount} languages`
           )
         } else if (successCount > 0) {
           notification.showWarning(
-            locale === 'zh' ? '部分翻译完成' : 'Partial Translation Complete',
-            locale === 'zh' 
+            normalizedLocale === 'zh' ? '部分翻译完成' : 'Partial Translation Complete',
+            normalizedLocale === 'zh' 
               ? `成功翻译到 ${successCount} 种语言，失败: ${failedLanguages.join(', ')}`
               : `Successfully translated to ${successCount} languages, failed: ${failedLanguages.join(', ')}`
           )
         } else {
           notification.showError(
-            locale === 'zh' ? '翻译失败' : 'Translation Failed',
-            locale === 'zh' ? '所有语言翻译均失败' : 'Failed to translate to any language'
+            normalizedLocale === 'zh' ? '翻译失败' : 'Translation Failed',
+            normalizedLocale === 'zh' ? '所有语言翻译均失败' : 'Failed to translate to any language'
           )
         }
       } else {
@@ -639,8 +681,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           const { filtered, placeholders } = filterNonTranslatableContent(sourceText)
           const rawTranslation = await translationService.translate(
             filtered,
-            sourceLanguage,
-            targetLanguage,
+            sourceLanguage!,
+            targetLanguage!,
             selectedComments
           )
           // Restore non-translatable content
@@ -649,8 +691,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           // For title and summary, translate directly
           translatedText = await translationService.translate(
             sourceText,
-            sourceLanguage,
-            targetLanguage,
+            sourceLanguage!,
+            targetLanguage!,
             selectedComments
           )
         }
@@ -677,8 +719,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const handleAIGenerate = async (type: 'all' | 'title' | 'summary' | 'keywords') => {
     if (!aiSummaryService.isConfigured()) {
       notification.showError(
-        locale === 'zh' ? 'AI服务未配置' : 'AI Service Not Configured',
-        locale === 'zh' ? '请先在设置中配置AI服务' : 'Please configure AI service in settings first'
+        normalizedLocale === 'zh' ? 'AI服务未配置' : 'AI Service Not Configured',
+        normalizedLocale === 'zh' ? '请先在设置中配置AI服务' : 'Please configure AI service in settings first'
       )
       return
     }
@@ -689,8 +731,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     
     if (!currentTranslation.content.trim()) {
       notification.showError(
-        locale === 'zh' ? '内容为空' : 'Content is Empty',
-        locale === 'zh' ? '请先输入文章内容再生成AI总结' : 'Please enter article content before generating AI summary'
+        normalizedLocale === 'zh' ? '内容为空' : 'Content is Empty',
+        normalizedLocale === 'zh' ? '请先输入文章内容再生成AI总结' : 'Please enter article content before generating AI summary'
       )
       return
     }
@@ -716,8 +758,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         }))
 
         notification.showSuccess(
-          locale === 'zh' ? 'AI总结生成成功' : 'AI Summary Generated Successfully',
-          locale === 'zh' 
+          normalizedLocale === 'zh' ? 'AI总结生成成功' : 'AI Summary Generated Successfully',
+          normalizedLocale === 'zh' 
             ? `已生成标题、摘要和${result.keywords.length}个关键字`
             : `Generated title, summary and ${result.keywords.length} keywords`
         )
@@ -725,7 +767,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         const title = await aiSummaryService.generateTitle(currentTranslation.content, defaultLang)
         setFormData(prev => ({ ...prev, title }))
         notification.showSuccess(
-          locale === 'zh' ? '标题生成成功' : 'Title Generated Successfully',
+          normalizedLocale === 'zh' ? '标题生成成功' : 'Title Generated Successfully',
           title
         )
       } else if (type === 'summary') {
@@ -735,22 +777,22 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         })
         setFormData(prev => ({ ...prev, summary: result.summary }))
         notification.showSuccess(
-          locale === 'zh' ? '摘要生成成功' : 'Summary Generated Successfully',
+          normalizedLocale === 'zh' ? '摘要生成成功' : 'Summary Generated Successfully',
           result.summary
         )
       } else if (type === 'keywords') {
         const keywords = await aiSummaryService.generateSEOKeywords(currentTranslation.content, defaultLang)
         setFormData(prev => ({ ...prev, seo_keywords: keywords.join(', ') }))
         notification.showSuccess(
-          locale === 'zh' ? 'SEO关键字生成成功' : 'SEO Keywords Generated Successfully',
-          locale === 'zh' ? `生成了${keywords.length}个关键字` : `Generated ${keywords.length} keywords`
+          normalizedLocale === 'zh' ? 'SEO关键字生成成功' : 'SEO Keywords Generated Successfully',
+          normalizedLocale === 'zh' ? `生成了${keywords.length}个关键字` : `Generated ${keywords.length} keywords`
         )
       }
     } catch (error) {
       console.error('AI generation failed:', error)
       notification.showError(
-        locale === 'zh' ? 'AI生成失败' : 'AI Generation Failed',
-        locale === 'zh' ? 'AI内容生成失败，请稍后重试' : 'AI content generation failed. Please try again later.'
+        normalizedLocale === 'zh' ? 'AI生成失败' : 'AI Generation Failed',
+        normalizedLocale === 'zh' ? 'AI内容生成失败，请稍后重试' : 'AI content generation failed. Please try again later.'
       )
     } finally {
       setIsGeneratingAI(false)
@@ -768,8 +810,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const handleCommentTranslation = () => {
     if (!hasTranslationProvider) {
       notification.showError(
-        locale === 'zh' ? '翻译服务未配置' : 'Translation Service Not Configured',
-        locale === 'zh' ? '请先在设置中配置翻译服务' : 'Please configure translation service in settings first'
+        normalizedLocale === 'zh' ? '翻译服务未配置' : 'Translation Service Not Configured',
+        normalizedLocale === 'zh' ? '请先在设置中配置翻译服务' : 'Please configure translation service in settings first'
       )
       return
     }
@@ -786,10 +828,10 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     console.log('Selected comments for translation:', comments)
     console.log('Comments with line numbers:', comments.map(c => `Line ${c.lineNumber}: "${c.commentText}"`))
     notification.showSuccess(
-      locale === 'zh' ? '注释选择已确认' : 'Comment Selection Confirmed',
+      normalizedLocale === 'zh' ? '注释选择已确认' : 'Comment Selection Confirmed',
       comments.length > 0 
-        ? (locale === 'zh' ? `已选择 ${comments.length} 条注释用于翻译` : `${comments.length} comments selected for translation`)
-        : (locale === 'zh' ? '未选择任何注释，将跳过注释翻译' : 'No comments selected, comment translation will be skipped')
+        ? (normalizedLocale === 'zh' ? `已选择 ${comments.length} 条注释用于翻译` : `${comments.length} comments selected for translation`)
+        : (normalizedLocale === 'zh' ? '未选择任何注释，将跳过注释翻译' : 'No comments selected, comment translation will be skipped')
     )
   }
 
@@ -800,8 +842,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       const defaultLang = getDefaultLanguage()
       const defaultLangName = SUPPORTED_LANGUAGES[defaultLang as keyof typeof SUPPORTED_LANGUAGES] || defaultLang
       notification.showError(
-        locale === 'zh' ? `默认语言(${defaultLangName})标题必须输入` : `Title is required for default language (${defaultLangName})`,
-        locale === 'zh' ? `请输入${defaultLangName}文章标题` : `Please enter article title in ${defaultLangName}`
+        normalizedLocale === 'zh' ? `默认语言(${defaultLangName})标题必须输入` : `Title is required for default language (${defaultLangName})`,
+        normalizedLocale === 'zh' ? `请输入${defaultLangName}文章标题` : `Please enter article title in ${defaultLangName}`
       )
       return
     }
@@ -810,16 +852,16 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       const defaultLang = getDefaultLanguage()
       const defaultLangName = SUPPORTED_LANGUAGES[defaultLang as keyof typeof SUPPORTED_LANGUAGES] || defaultLang
       notification.showError(
-        locale === 'zh' ? `默认语言(${defaultLangName})内容必须输入` : `Content is required for default language (${defaultLangName})`, 
-        locale === 'zh' ? `请输入${defaultLangName}文章内容` : `Please enter article content in ${defaultLangName}`
+        normalizedLocale === 'zh' ? `默认语言(${defaultLangName})内容必须输入` : `Content is required for default language (${defaultLangName})`, 
+        normalizedLocale === 'zh' ? `请输入${defaultLangName}文章内容` : `Please enter article content in ${defaultLangName}`
       )
       return
     }
 
     if (formData.category_id === 0) {
       notification.showError(
-        locale === 'zh' ? '分类必须选择' : 'Category is required',
-        locale === 'zh' ? '请选择文章分类' : 'Please select article category'
+        normalizedLocale === 'zh' ? '分类必须选择' : 'Category is required',
+        normalizedLocale === 'zh' ? '请选择文章分类' : 'Please select article category'
       )
       return
     }
@@ -830,14 +872,12 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     try {
       // Collect only non-default language translations
       const defaultLang = getDefaultLanguage()
-      const allTranslations: ArticleTranslation[] = []
       
-      // Add other language translations (exclude default language)
-      translations.forEach(t => {
-        if (t.language !== defaultLang && (t.title.trim() || t.content.trim() || t.summary.trim())) {
-          allTranslations.push(t)
-        }
-      })
+      // Filter translations to exclude default language and empty translations
+      const allTranslations = translations.filter(t => 
+        t.language !== defaultLang && 
+        (t.title.trim() || t.content.trim() || t.summary.trim())
+      )
 
       const articleData = {
         ...formData,
@@ -853,8 +893,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         
         // Show success notification
         notification.showSuccess(
-          locale === 'zh' ? '文章保存成功！' : 'Article Saved Successfully!',
-          locale === 'zh' ? '您的文章已成功保存。' : 'Your article has been saved successfully.'
+          normalizedLocale === 'zh' ? '文章保存成功！' : 'Article Saved Successfully!',
+          normalizedLocale === 'zh' ? '您的文章已成功保存。' : 'Your article has been saved successfully.'
         )
         
         if (exitAfterSave) {
@@ -870,8 +910,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         
         // Show success notification
         notification.showSuccess(
-          locale === 'zh' ? '文章创建成功！' : 'Article Created Successfully!',
-          locale === 'zh' ? '您的文章已成功创建。' : 'Your article has been created successfully.'
+          normalizedLocale === 'zh' ? '文章创建成功！' : 'Article Created Successfully!',
+          normalizedLocale === 'zh' ? '您的文章已成功创建。' : 'Your article has been created successfully.'
         )
         
         if (exitAfterSave) {
@@ -887,8 +927,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       
       // Show error notification
       notification.showError(
-        locale === 'zh' ? '保存失败' : 'Save Failed',
-        locale === 'zh' ? '文章保存失败，请稍后重试。' : 'Failed to save article. Please try again later.'
+        normalizedLocale === 'zh' ? '保存失败' : 'Save Failed',
+        normalizedLocale === 'zh' ? '文章保存失败，请稍后重试。' : 'Failed to save article. Please try again later.'
       )
       
       // Reset error status after a delay
@@ -925,9 +965,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       updateTranslation(targetLanguage, 'summary', sourceTranslation.summary)
     } else if (activeField === 'content') {
       updateTranslation(targetLanguage, 'content', sourceTranslation.content)
-      // Also update Monaco editor if it's active - copy source to target
-      if (monacoEditorRef.current) {
-        monacoEditorRef.current.setModifiedValue(sourceTranslation.content)
+      // Also update DualLanguageEditor if it's active
+      if (dualLanguageEditorRef.current) {
+        dualLanguageEditorRef.current.setRightValue(sourceTranslation.content)
       }
     }
   }
@@ -946,9 +986,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       updateTranslation(targetLanguage, 'summary', sourceTranslation.summary)
     } else if (activeField === 'content') {
       updateTranslation(targetLanguage, 'content', sourceTranslation.content)
-      // Also update Monaco editor if it's active - copy source to target
-      if (monacoEditorRef.current) {
-        monacoEditorRef.current.setModifiedValue(sourceTranslation.content)
+      // Also update DualLanguageEditor if it's active
+      if (dualLanguageEditorRef.current) {
+        dualLanguageEditorRef.current.setRightValue(sourceTranslation.content)
       }
     }
     
@@ -1122,40 +1162,50 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   }
 
   const swapLanguages = () => {
+    if (!sourceLanguage || !targetLanguage) return
+    
     const tempLang = sourceLanguage
     setSourceLanguage(targetLanguage)
     setTargetLanguage(tempLang)
-    // Force Monaco editor to re-render to avoid state sync issues
-    setEditorKey(prev => prev + 1)
   }
 
-  const updateTranslation = (language: string, field: string, value: string) => {
+  const updateTranslation = (language: string | null, field: keyof Pick<ArticleTranslation, 'title' | 'content' | 'summary'>, value: string) => {
+    // If language is null, don't update anything
+    if (!language) return
+    
     const defaultLang = getDefaultLanguage()
+    
+    // If updating the default language, update formData
     if (language === defaultLang) {
       setFormData(prev => ({ ...prev, [field]: value }))
       return
     }
 
+    // For non-default languages, update the translations array
     setTranslations(prev => {
       const newTranslations = [...prev]
       const existingIndex = newTranslations.findIndex(t => t.language === language)
       
       if (existingIndex >= 0) {
+        // Update existing translation
         newTranslations[existingIndex] = {
           ...newTranslations[existingIndex],
-          [field]: value
+          [field]: value,
+          updated_at: new Date().toISOString()
         }
       } else {
-        newTranslations.push({
+        // Create new translation entry only for non-default languages
+        const newTranslation: ArticleTranslation = {
           id: 0,
-          article_id: 0,
+          article_id: article?.id || 0,
           language,
           title: field === 'title' ? value : '',
           content: field === 'content' ? value : '',
           summary: field === 'summary' ? value : '',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        })
+        }
+        newTranslations.push(newTranslation)
       }
       
       return newTranslations
@@ -1193,10 +1243,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     if (editMode === 'single') {
       insertTextAtCursor('single', markdownText)
     } else if (activeField === 'content') {
-      // Use Monaco editor for content field
-      if (monacoEditorRef.current) {
-        monacoEditorRef.current.insertTextAtCursor(markdownText)
-      }
+      // Insert into both editors at the same position
+      insertTextAtSamePosition(markdownText)
     } else {
       // In translation mode for basic fields, insert into both source and target at the same relative position
       insertTextAtSamePosition(markdownText)
@@ -1284,13 +1332,13 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       language = defaultLang
     } else {
       if (textarea === 'source') {
-        const translation = getTranslation(sourceLanguage)
+        const translation = getTranslation(sourceLanguage!)
         currentValue = translation.content
-        language = sourceLanguage
+        language = sourceLanguage!
       } else {
-        const translation = getTranslation(targetLanguage)
+        const translation = getTranslation(targetLanguage!)
         currentValue = translation.content
-        language = targetLanguage
+        language = targetLanguage!
       }
     }
 
@@ -1388,8 +1436,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     setActiveLine(lineNumber)
   }
 
-  const sourceTranslation = getTranslation(sourceLanguage)
-  const targetTranslation = getTranslation(targetLanguage)
+  const sourceTranslation = getTranslation(sourceLanguage!)
+  const targetTranslation = getTranslation(targetLanguage!)
 
   const renderLineNumbers = (lines: string[], side: 'source' | 'target') => {
     if (activeField !== 'content') return null
@@ -1442,7 +1490,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
               }}
               translations={translations}
               activeLanguage={defaultLang}
-              locale={locale}
+              locale={normalizedLocale}
               onSEOChange={handleSEOChange}
             />
           </div>
@@ -1480,7 +1528,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           {/* Publication Time */}
           <div className="space-y-2">
             <Label htmlFor="created_at" className="flex items-center gap-2">
-              {locale === 'zh' ? '发布时间' : 'Publication Time'}
+              {normalizedLocale === 'zh' ? '发布时间' : 'Publication Time'}
               <span className="text-xs text-muted-foreground font-normal">
                 {formatPublicationTime(formData.created_at)}
               </span>
@@ -1499,7 +1547,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                     }))
                   } else if (validation.message) {
                     notification.showError(
-                      locale === 'zh' ? '无效的发布时间' : 'Invalid Publication Time',
+                      normalizedLocale === 'zh' ? '无效的发布时间' : 'Invalid Publication Time',
                       validation.message
                     )
                   }
@@ -1516,21 +1564,21 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 }))}
                 className="text-xs"
               >
-                {locale === 'zh' ? '现在' : 'Now'}
+                {normalizedLocale === 'zh' ? '现在' : 'Now'}
               </Button>
             </div>
             <div className="text-xs text-muted-foreground space-y-1">
               <p>
-                {locale === 'zh' 
+                {normalizedLocale === 'zh' 
                   ? '设置文章的发布时间。如果设置为未来时间，文章将在该时间自动发布。点击"现在"设置为当前时间。'
                   : 'Set the publication time for the article. If set to a future time, the article will be automatically published at that time. Click "Now" to set to current time.'
                 }
               </p>
               <p className="font-mono">
-                {locale === 'zh' ? '当前时区' : 'Current timezone'}: {getCurrentTimezone()}
+                {normalizedLocale === 'zh' ? '当前时区' : 'Current timezone'}: {getCurrentTimezone()}
               </p>
               <p className="font-mono">
-                {locale === 'zh' ? '显示时间' : 'Display time'}: {formatDateTimeWithTimezone(formData.created_at)}
+                {normalizedLocale === 'zh' ? '显示时间' : 'Display time'}: {formatDateTimeWithTimezone(formData.created_at)}
               </p>
             </div>
           </div>
@@ -1628,7 +1676,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                         }))
                       } else if (validation.message) {
                         notification.showError(
-                          locale === 'zh' ? '无效的发布时间' : 'Invalid Publication Time',
+                          normalizedLocale === 'zh' ? '无效的发布时间' : 'Invalid Publication Time',
                           validation.message
                         )
                       }
@@ -1645,18 +1693,18 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                     }))}
                     className="text-xs"
                   >
-                    {locale === 'zh' ? '现在' : 'Now'}
+                    {normalizedLocale === 'zh' ? '现在' : 'Now'}
                   </Button>
                 </div>
                 <div className="text-xs text-muted-foreground space-y-1">
                   <p>
-                    {locale === 'zh' 
+                    {normalizedLocale === 'zh' 
                       ? '设置文章的发布时间。如果设置为未来时间，文章将在该时间自动发布。'
                       : 'Set the publication time for the article. If set to a future time, the article will be automatically published at that time.'
                     }
                   </p>
                   <p className="font-mono">
-                    {locale === 'zh' ? '时区' : 'Timezone'}: {getCurrentTimezone()}
+                    {normalizedLocale === 'zh' ? '时区' : 'Timezone'}: {getCurrentTimezone()}
                   </p>
                 </div>
               </div>
@@ -1721,6 +1769,17 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }
   }
 
+  // Don't render until languages are initialized
+  if (!sourceLanguage || !targetLanguage) {
+    return (
+      <div className="h-screen flex flex-col bg-background">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Clean Top Bar */}
@@ -1777,7 +1836,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           onClick={() => setEditMode(editMode === 'single' ? 'translation' : 'single')}
           className="h-8 gap-2"
           disabled={editMode === 'translation'}
-          title={editMode === 'translation' ? (locale === 'zh' ? '简单编辑器暂时不可用' : 'Simple editor temporarily unavailable') : ''}
+          title={editMode === 'translation' ? (normalizedLocale === 'zh' ? '简单编辑器暂时不可用' : 'Simple editor temporarily unavailable') : ''}
         >
           {editMode === 'single' ? (
             <>
@@ -1825,7 +1884,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
               onClick={() => handleAutoTranslate('all')}
               disabled={isTranslating || !hasTranslationProvider}
               className="h-8 gap-2"
-              title={locale === 'zh' 
+              title={normalizedLocale === 'zh' 
                 ? `自动翻译到所有启用的语言 (${languageManager.getEnabledLanguages().filter(l => l !== sourceLanguage).length} 种语言)`
                 : `Auto translate to all enabled languages (${languageManager.getEnabledLanguages().filter(l => l !== sourceLanguage).length} languages)`
               }
@@ -1837,11 +1896,11 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
               )}
               <span className="text-xs">
                 {isTranslating && currentTranslatingLanguage ? (
-                  locale === 'zh' 
+                  normalizedLocale === 'zh' 
                     ? `正在翻译到 ${SUPPORTED_LANGUAGES[currentTranslatingLanguage] || currentTranslatingLanguage}`
                     : `Translating to ${SUPPORTED_LANGUAGES[currentTranslatingLanguage] || currentTranslatingLanguage}`
                 ) : (
-                  locale === 'zh' 
+                  normalizedLocale === 'zh' 
                     ? `翻译全部 (${languageManager.getEnabledLanguages().filter(l => l !== sourceLanguage).length})`
                     : `Translate All (${languageManager.getEnabledLanguages().filter(l => l !== sourceLanguage).length})`
                 )}
@@ -1858,8 +1917,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             size="sm"
             className={cn(
               "h-8 rounded-r-none transition-colors",
-              saveStatus === 'saved' && "bg-green-600 hover:bg-green-700",
-              saveStatus === 'error' && "bg-red-600 hover:bg-red-700"
+              saveStatus === 'saved' && "bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600",
+              saveStatus === 'error' && "bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
             )}
           >
             {saveStatus === 'saving' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -1877,8 +1936,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 size="sm"
                 className={cn(
                   "h-8 px-2 rounded-l-none border-l",
-                  saveStatus === 'saved' && "bg-green-600 hover:bg-green-700 border-green-700",
-                  saveStatus === 'error' && "bg-red-600 hover:bg-red-700 border-red-700"
+                  saveStatus === 'saved' && "bg-green-600 hover:bg-green-700 border-green-700 dark:bg-green-500 dark:hover:bg-green-600 dark:border-green-500",
+                  saveStatus === 'error' && "bg-red-600 hover:bg-red-700 border-red-700 dark:bg-red-500 dark:hover:bg-red-600 dark:border-red-500"
                 )}
                 disabled={loading || saveStatus === 'saving'}
               >
@@ -1888,7 +1947,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => handleSubmit(true)}>
                 <Save className="h-4 w-4 mr-2" />
-                {locale === 'zh' ? '保存并退出' : 'Save and Exit'}
+                {normalizedLocale === 'zh' ? '保存并退出' : 'Save and Exit'}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1960,7 +2019,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                     size="sm"
                     className="h-7 px-2"
                     disabled={isGeneratingAI}
-                    title={locale === 'zh' ? 'AI生成内容' : 'AI Generate Content'}
+                    title={normalizedLocale === 'zh' ? 'AI生成内容' : 'AI Generate Content'}
                   >
                     {isGeneratingAI ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1968,7 +2027,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                       <Sparkles className="h-4 w-4" />
                     )}
                     <span className="ml-1 text-xs">
-                      {locale === 'zh' ? 'AI生成' : 'AI Generate'}
+                      {normalizedLocale === 'zh' ? 'AI生成' : 'AI Generate'}
                     </span>
                     <ChevronDown className="ml-1 h-3 w-3" />
                   </Button>
@@ -1979,28 +2038,28 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                     disabled={isGeneratingAI}
                   >
                     <Sparkles className="mr-2 h-4 w-4" />
-                    {locale === 'zh' ? '生成全部 (标题+摘要+关键字)' : 'Generate All (Title+Summary+Keywords)'}
+                    {normalizedLocale === 'zh' ? '生成全部 (标题+摘要+关键字)' : 'Generate All (Title+Summary+Keywords)'}
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => handleAIGenerate('title')}
                     disabled={isGeneratingAI}
                   >
                     <FileText className="mr-2 h-4 w-4" />
-                    {locale === 'zh' ? '生成标题' : 'Generate Title'}
+                    {normalizedLocale === 'zh' ? '生成标题' : 'Generate Title'}
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => handleAIGenerate('summary')}
                     disabled={isGeneratingAI}
                   >
                     <FileText className="mr-2 h-4 w-4" />
-                    {locale === 'zh' ? '生成摘要' : 'Generate Summary'}
+                    {normalizedLocale === 'zh' ? '生成摘要' : 'Generate Summary'}
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => handleAIGenerate('keywords')}
                     disabled={isGeneratingAI}
                   >
                     <HelpCircle className="mr-2 h-4 w-4" />
-                    {locale === 'zh' ? '生成SEO关键字' : 'Generate SEO Keywords'}
+                    {normalizedLocale === 'zh' ? '生成SEO关键字' : 'Generate SEO Keywords'}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -2015,11 +2074,11 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 size="sm"
                 onClick={handleCommentTranslation}
                 className="h-7 px-2"
-                title={locale === 'zh' ? '翻译代码注释' : 'Translate Code Comments'}
+                title={normalizedLocale === 'zh' ? '翻译代码注释' : 'Translate Code Comments'}
               >
                 <Code className="h-4 w-4" />
                 <span className="ml-1 text-xs">
-                  {locale === 'zh' ? '注释翻译' : 'Comments'}
+                  {normalizedLocale === 'zh' ? '注释翻译' : 'Comments'}
                 </span>
               </Button>
             </div>
@@ -2040,10 +2099,11 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             <div className="flex-1 px-4 flex items-center justify-between border-r">
               <div className="flex items-center gap-2">
                 <Select value={sourceLanguage} onValueChange={(value) => {
-                  if (value !== sourceLanguage) {
-                    setSourceLanguage(value)
-                    if (value === targetLanguage) {
-                      const otherLang = availableLanguages.find(lang => lang.code !== value)
+                  const typedValue = value as SupportedLanguage
+                  if (typedValue !== sourceLanguage) {
+                    setSourceLanguage(typedValue)
+                    if (typedValue === targetLanguage) {
+                      const otherLang = availableLanguages.find(lang => lang.code !== typedValue)
                       if (otherLang) {
                         setTargetLanguage(otherLang.code)
                       }
@@ -2051,7 +2111,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                   }
                 }}>
                   <SelectTrigger className="h-6 w-32 text-xs">
-                    <SelectValue />
+                    <SelectValue>{getLanguageDisplayName(sourceLanguage)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {availableLanguages.filter(lang => lang.code !== targetLanguage).map(lang => (
@@ -2065,8 +2125,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                   <div 
                     className={cn(
                       "h-full transition-all",
-                      progress[sourceLanguage] === 100 ? "bg-green-500" : 
-                      progress[sourceLanguage] > 0 ? "bg-yellow-500" : "bg-muted"
+                      progress[sourceLanguage] === 100 ? "bg-green-500 dark:bg-green-400" : 
+                      progress[sourceLanguage] > 0 ? "bg-yellow-500 dark:bg-yellow-400" : "bg-muted"
                     )}
                     style={{ width: `${progress[sourceLanguage]}%` }}
                   />
@@ -2081,7 +2141,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 size="sm"
                 onClick={swapLanguages}
                 className="h-6 w-6 px-0 hover:bg-primary/10"
-                title={locale === 'zh' ? '交换左右语言' : 'Swap Languages'}
+                title={normalizedLocale === 'zh' ? '交换左右语言' : 'Swap Languages'}
               >
                 <ArrowLeftRight className="h-3 w-3" />
               </Button>
@@ -2090,33 +2150,44 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             <div className="flex-1 px-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Select value={targetLanguage} onValueChange={(value) => {
-                  if (value !== targetLanguage) {
-                    setTargetLanguage(value)
-                    if (value === sourceLanguage) {
-                      const otherLang = availableLanguages.find(lang => lang.code !== value)
+                  console.log('Target language change (top):', { value, currentTarget: targetLanguage, currentSource: sourceLanguage })
+                  console.log('Available languages for target (top):', availableLanguages.filter(lang => lang.code !== sourceLanguage))
+                  const typedValue = value as SupportedLanguage
+                  if (typedValue !== targetLanguage) {
+                    console.log('Setting target language to (top):', typedValue)
+                    setTargetLanguage(typedValue)
+                    if (typedValue === sourceLanguage) {
+                      console.log('Target same as source (top), finding other language...')
+                      const otherLang = availableLanguages.find(lang => lang.code !== typedValue)
+                      console.log('Found other language (top):', otherLang)
                       if (otherLang) {
+                        console.log('Setting source to (top):', otherLang.code)
                         setSourceLanguage(otherLang.code)
                       }
                     }
                   }
                 }}>
                   <SelectTrigger className="h-6 w-32 text-xs">
-                    <SelectValue />
+                    <SelectValue>{getLanguageDisplayName(targetLanguage)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {availableLanguages.filter(lang => lang.code !== sourceLanguage).map(lang => (
-                      <SelectItem key={lang.code} value={lang.code}>
-                        {lang.name}
-                      </SelectItem>
-                    ))}
+                    {(() => {
+                      const filteredLangs = availableLanguages.filter(lang => lang.code !== sourceLanguage)
+                      console.log('Rendering target language options (top):', filteredLangs, 'sourceLanguage:', sourceLanguage)
+                      return filteredLangs.map(lang => (
+                        <SelectItem key={lang.code} value={lang.code}>
+                          {lang.name}
+                        </SelectItem>
+                      ))
+                    })()}
                   </SelectContent>
                 </Select>
                 <div className="w-12 h-1 bg-secondary rounded-full overflow-hidden">
                   <div 
                     className={cn(
                       "h-full transition-all",
-                      progress[targetLanguage] === 100 ? "bg-green-500" : 
-                      progress[targetLanguage] > 0 ? "bg-yellow-500" : "bg-muted"
+                      progress[targetLanguage] === 100 ? "bg-green-500 dark:bg-green-400" : 
+                      progress[targetLanguage] > 0 ? "bg-yellow-500 dark:bg-yellow-400" : "bg-muted"
                     )}
                     style={{ width: `${progress[targetLanguage]}%` }}
                   />
@@ -2151,19 +2222,19 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           {/* Dual Language Editor */}
           <div className="flex-1 overflow-hidden">
             <DualLanguageEditor
-              key={`dual-editor-${editorKey}`}
+              key={`dual-editor-${sourceLanguage}-${targetLanguage}`}
               ref={dualLanguageEditorRef}
               leftValue={sourceTranslation.content}
               rightValue={targetTranslation.content}
               leftLanguage={sourceLanguage}
               rightLanguage={targetLanguage}
-              leftLanguageName={availableLanguages.find(lang => lang.code === sourceLanguage)?.name || sourceLanguage}
-              rightLanguageName={availableLanguages.find(lang => lang.code === targetLanguage)?.name || targetLanguage}
+              leftLanguageName={getLanguageDisplayName(sourceLanguage)}
+              rightLanguageName={getLanguageDisplayName(targetLanguage)}
               onLeftChange={(value) => updateTranslation(sourceLanguage, 'content', value)}
               onRightChange={(value) => updateTranslation(targetLanguage, 'content', value)}
               language="markdown"
               height="100%"
-              theme={theme === 'dark' ? 'vs-dark' : 'vs'}
+              theme={resolvedTheme === 'dark' ? 'vs-dark' : 'vs'}
               className="h-full"
             />
           </div>
@@ -2180,11 +2251,12 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           <div className="h-9 border-b px-4 flex items-center justify-between bg-muted/20">
             <div className="flex items-center gap-2">
               <Select value={sourceLanguage} onValueChange={(value) => {
-                if (value !== sourceLanguage) {
-                  setSourceLanguage(value)
+                const typedValue = value as SupportedLanguage
+                if (typedValue !== sourceLanguage) {
+                  setSourceLanguage(typedValue)
                   // If target language is the same as new source language, switch target to the other language
-                  if (value === targetLanguage) {
-                    const otherLang = availableLanguages.find(lang => lang.code !== value)
+                  if (typedValue === targetLanguage) {
+                    const otherLang = availableLanguages.find(lang => lang.code !== typedValue)
                     if (otherLang) {
                       setTargetLanguage(otherLang.code)
                     }
@@ -2192,7 +2264,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 }
               }}>
                 <SelectTrigger className="h-6 w-32 text-xs">
-                  <SelectValue />
+                  <SelectValue>{getLanguageDisplayName(sourceLanguage)}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {availableLanguages.filter(lang => lang.code !== targetLanguage).map(lang => (
@@ -2230,7 +2302,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
               size="sm"
               onClick={swapLanguages}
               className="h-6 w-6 px-0 hover:bg-primary/10"
-              title={locale === 'zh' ? '交换左右语言' : 'Swap Languages'}
+              title={normalizedLocale === 'zh' ? '交换左右语言' : 'Swap Languages'}
             >
               <ArrowLeftRight className="h-3 w-3" />
             </Button>
@@ -2254,26 +2326,37 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           <div className="h-9 border-b px-4 flex items-center justify-between bg-muted/20">
             <div className="flex items-center gap-2">
               <Select value={targetLanguage} onValueChange={(value) => {
-                if (value !== targetLanguage) {
-                  setTargetLanguage(value)
+                console.log('Target language change:', { value, currentTarget: targetLanguage, currentSource: sourceLanguage })
+                console.log('Available languages for target:', availableLanguages.filter(lang => lang.code !== sourceLanguage))
+                const typedValue = value as SupportedLanguage
+                if (typedValue !== targetLanguage) {
+                  console.log('Setting target language to:', typedValue)
+                  setTargetLanguage(typedValue)
                   // If source language is the same as new target language, switch source to the other language
-                  if (value === sourceLanguage) {
-                    const otherLang = availableLanguages.find(lang => lang.code !== value)
+                  if (typedValue === sourceLanguage) {
+                    console.log('Target same as source, finding other language...')
+                    const otherLang = availableLanguages.find(lang => lang.code !== typedValue)
+                    console.log('Found other language:', otherLang)
                     if (otherLang) {
+                      console.log('Setting source to:', otherLang.code)
                       setSourceLanguage(otherLang.code)
                     }
                   }
                 }
               }}>
                 <SelectTrigger className="h-6 w-32 text-xs">
-                  <SelectValue />
+                  <SelectValue>{getLanguageDisplayName(targetLanguage)}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {availableLanguages.filter(lang => lang.code !== sourceLanguage).map(lang => (
-                    <SelectItem key={lang.code} value={lang.code}>
-                      {lang.name}
-                    </SelectItem>
-                  ))}
+                  {(() => {
+                    const filteredLangs = availableLanguages.filter(lang => lang.code !== sourceLanguage)
+                    console.log('Rendering target language options (right panel):', filteredLangs, 'sourceLanguage:', sourceLanguage)
+                    return filteredLangs.map(lang => (
+                      <SelectItem key={lang.code} value={lang.code}>
+                        {lang.name}
+                      </SelectItem>
+                    ))
+                  })()}
                 </SelectContent>
               </Select>
               <div className="w-12 h-1 bg-secondary rounded-full overflow-hidden">
@@ -2365,7 +2448,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Keyboard className="h-5 w-5" />
-              {locale === 'zh' ? '键盘快捷键' : 'Keyboard Shortcuts'}
+              {normalizedLocale === 'zh' ? '键盘快捷键' : 'Keyboard Shortcuts'}
             </DialogTitle>
           </DialogHeader>
           
@@ -2373,35 +2456,35 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             {/* General Shortcuts */}
             <div>
               <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">
-                {locale === 'zh' ? '基本操作' : 'General'}
+                {normalizedLocale === 'zh' ? '基本操作' : 'General'}
               </h3>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '保存文章' : 'Save Article'}</span>
+                  <span>{normalizedLocale === 'zh' ? '保存文章' : 'Save Article'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + S
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '保存并退出' : 'Save and Exit'}</span>
+                  <span>{normalizedLocale === 'zh' ? '保存并退出' : 'Save and Exit'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     Shift + {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + S
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '切换预览模式' : 'Toggle Preview Mode'}</span>
+                  <span>{normalizedLocale === 'zh' ? '切换预览模式' : 'Toggle Preview Mode'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + P
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '切换编辑模式' : 'Switch Editor Mode'}</span>
+                  <span>{normalizedLocale === 'zh' ? '切换编辑模式' : 'Switch Editor Mode'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + T
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '显示快捷键帮助' : 'Show Keyboard Help'}</span>
+                  <span>{normalizedLocale === 'zh' ? '显示快捷键帮助' : 'Show Keyboard Help'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + /
                   </kbd>
@@ -2412,45 +2495,45 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             {/* Translation Mode Shortcuts */}
             <div>
               <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">
-                {locale === 'zh' ? '翻译模式' : 'Translation Mode'}
+                {normalizedLocale === 'zh' ? '翻译模式' : 'Translation Mode'}
               </h3>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '从源语言复制到目标语言' : 'Copy Source to Target'}</span>
+                  <span>{normalizedLocale === 'zh' ? '从源语言复制到目标语言' : 'Copy Source to Target'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + D
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '交换左右面板语言' : 'Switch Panel Languages'}</span>
+                  <span>{normalizedLocale === 'zh' ? '交换左右面板语言' : 'Switch Panel Languages'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + L
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '切换到基本信息（标题&摘要）' : 'Switch to Basic Info (Title & Summary)'}</span>
+                  <span>{normalizedLocale === 'zh' ? '切换到基本信息（标题&摘要）' : 'Switch to Basic Info (Title & Summary)'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + 1
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '切换到内容字段' : 'Switch to Content Field'}</span>
+                  <span>{normalizedLocale === 'zh' ? '切换到内容字段' : 'Switch to Content Field'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + 2
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '切换到SEO设置' : 'Switch to SEO Settings'}</span>
+                  <span>{normalizedLocale === 'zh' ? '切换到SEO设置' : 'Switch to SEO Settings'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + 3
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '聚焦左侧面板' : 'Focus Left Panel'}</span>
+                  <span>{normalizedLocale === 'zh' ? '聚焦左侧面板' : 'Focus Left Panel'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Alt + ←</kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '聚焦右侧面板' : 'Focus Right Panel'}</span>
+                  <span>{normalizedLocale === 'zh' ? '聚焦右侧面板' : 'Focus Right Panel'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Alt + →</kbd>
                 </div>
               </div>
@@ -2459,11 +2542,11 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             {/* Media Shortcuts */}
             <div>
               <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">
-                {locale === 'zh' ? '媒体操作' : 'Media'}
+                {normalizedLocale === 'zh' ? '媒体操作' : 'Media'}
               </h3>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '插入媒体' : 'Insert Media'}</span>
+                  <span>{normalizedLocale === 'zh' ? '插入媒体' : 'Insert Media'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + M
                   </kbd>
@@ -2474,29 +2557,29 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             {/* Text Formatting Shortcuts */}
             <div>
               <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">
-                {locale === 'zh' ? '文本格式化' : 'Text Formatting'}
+                {normalizedLocale === 'zh' ? '文本格式化' : 'Text Formatting'}
               </h3>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '粗体' : 'Bold'}</span>
+                  <span>{normalizedLocale === 'zh' ? '粗体' : 'Bold'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + B
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '斜体' : 'Italic'}</span>
+                  <span>{normalizedLocale === 'zh' ? '斜体' : 'Italic'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + I
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '代码' : 'Code'}</span>
+                  <span>{normalizedLocale === 'zh' ? '代码' : 'Code'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + U
                   </kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>{locale === 'zh' ? '链接' : 'Link'}</span>
+                  <span>{normalizedLocale === 'zh' ? '链接' : 'Link'}</span>
                   <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
                     {navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'} + K
                   </kbd>
@@ -2506,7 +2589,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           </div>
           
           <div className="mt-6 pt-4 border-t text-xs text-muted-foreground">
-            {locale === 'zh' 
+            {normalizedLocale === 'zh' 
               ? '💡 提示：在内容编辑区域中，可以选择文本后使用格式化快捷键来包装选中的内容。'
               : '💡 Tip: In content editing areas, you can select text and use formatting shortcuts to wrap the selected content.'
             }
