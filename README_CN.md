@@ -1,10 +1,10 @@
 中文 | [English](./README.md)
 
-# EchoPaper
+# kuno
 
 一个现代化的多语言博客平台，支持一键 Docker 部署。
 
-![echopaper](./docs/echopaper.png)
+![kuno](./docs/kuno.png)
 
 -	Echo  - “信息的共鸣、数据的回响”
 -	Paper - “内容、知识、博客、发布”
@@ -114,39 +114,39 @@
 
 ```bash
 # 1. 创建专用目录（推荐使用 /opt）
-sudo mkdir -p /opt/EchoPaper
-cd /opt/EchoPaper
+sudo mkdir -p /opt/kuno
+cd /opt/kuno
 
 # 2. 下载并执行部署脚本
-curl -sSL "https://raw.githubusercontent.com/xuemian168/EchoPaper/main/deploy-from-hub.sh?$(date +%s)" -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
+curl -sSL "https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh?$(date +%s)" -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
 ```
 
 **重要提示**：
 - 不要使用 `curl | bash` 的方式，这会导致语法错误
-- 建议在 `/opt/EchoPaper` 目录下部署，避免污染用户主目录
+- 建议在 `/opt/kuno` 目录下部署，避免污染用户主目录
 
 ### 方法二：手动部署
 
 ```bash
 # 1. 创建专用目录
-sudo mkdir -p /opt/EchoPaper
-cd /opt/EchoPaper
+sudo mkdir -p /opt/kuno
+cd /opt/kuno
 
 # 2. 创建数据目录
 mkdir -p ./blog-data
 
 # 3. 运行容器
 docker run -d \
-    --name EchoPaper \
+    --name kuno \
     --restart unless-stopped \
     -p 80:80 \
-    -v /opt/EchoPaper/blog-data:/app/data \
+    -v /opt/kuno/blog-data:/app/data \
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \
     -e DB_PATH="/app/data/blog.db" \
     -e GIN_MODE="release" \
     -e NODE_ENV="production" \
     -e JWT_SECRET="your-secure-secret-key" \
-    ictrun/echopaper:latest
+    ictrun/kuno:latest
 ```
 
 **⚠️ 重要配置说明**：
@@ -161,9 +161,9 @@ docker run -d \
   - 建议使用至少 32 字符的复杂字符串
 
 **目录说明**：
-- `/opt/EchoPaper/` - 应用主目录
-- `/opt/EchoPaper/blog-data/` - 数据存储目录（包含数据库和上传文件）
-- `/opt/EchoPaper/deploy.sh` - 部署脚本（方法一）
+- `/opt/kuno/` - 应用主目录
+- `/opt/kuno/blog-data/` - 数据存储目录（包含数据库和上传文件）
+- `/opt/kuno/deploy.sh` - 部署脚本（方法一）
 
 ## 📋 环境要求
 
@@ -208,31 +208,31 @@ docker run -d \
 
 ```bash
 # 查看运行状态
-docker ps | grep EchoPaper
+docker ps | grep kuno
 
 # 查看日志
-docker logs EchoPaper
+docker logs kuno
 
 # 停止博客
-docker stop EchoPaper
+docker stop kuno
 
 # 启动博客
-docker start EchoPaper
+docker start kuno
 
 # 重启博客
-docker restart EchoPaper
+docker restart kuno
 
 # 删除容器（注意：会丢失数据）
-docker rm -f EchoPaper
+docker rm -f kuno
 ```
 
 ## 📊 数据备份
 
-博客数据存储在 `/opt/EchoPaper/blog-data` 目录中，建议定期备份：
+博客数据存储在 `/opt/kuno/blog-data` 目录中，建议定期备份：
 
 ```bash
 # 进入应用目录
-cd /opt/EchoPaper
+cd /opt/kuno
 
 # 备份数据
 sudo tar -czf blog-backup-$(date +%Y%m%d).tar.gz ./blog-data
@@ -245,23 +245,23 @@ sudo tar -xzf blog-backup-20241201.tar.gz
 
 ```bash
 # 停止当前容器
-docker stop EchoPaper
-docker rm EchoPaper
+docker stop kuno
+docker rm kuno
 
 # 拉取最新镜像
-docker pull ictrun/echopaper:latest
+docker pull ictrun/kuno:latest
 
 # 进入应用目录
-cd /opt/EchoPaper
+cd /opt/kuno
 
 # 重新运行（注意修改 NEXT_PUBLIC_API_URL）
 docker run -d \
-    --name EchoPaper \
+    --name kuno \
     --restart unless-stopped \
     -p 80:80 \
-    -v /opt/EchoPaper/blog-data:/app/data \
+    -v /opt/kuno/blog-data:/app/data \
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \
-    ictrun/echopaper:latest
+    ictrun/kuno:latest
 ```
 
 ## 🔐 密码重置
@@ -272,23 +272,23 @@ docker run -d \
 
 #### 步骤 1：停止容器
 ```bash
-docker stop EchoPaper
+docker stop kuno
 ```
 
 #### 步骤 2：启用恢复模式
 进入应用目录并使用恢复模式重新运行容器：
 ```bash
-cd /opt/EchoPaper
+cd /opt/kuno
 
 docker run -d \
-    --name EchoPaper_recovery \
+    --name kuno_recovery \
     --restart unless-stopped \
     -p 80:80 \
-    -v /opt/EchoPaper/blog-data:/app/data \
+    -v /opt/kuno/blog-data:/app/data \
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \
     -e DB_PATH="/app/data/blog.db" \
     -e RECOVERY_MODE="true" \
-    ictrun/echopaper:latest
+    ictrun/kuno:latest
 ```
 
 系统会：
@@ -299,24 +299,24 @@ docker run -d \
 #### 步骤 3：查看重置结果
 ```bash
 # 查看日志确认密码已重置
-docker logs EchoPaper_recovery
+docker logs kuno_recovery
 
 # 删除恢复模式容器
-docker rm -f EchoPaper_recovery
+docker rm -f kuno_recovery
 ```
 
 #### 步骤 4：正常启动博客
 ```bash
 # 使用正常模式重新启动
 docker run -d \
-    --name EchoPaper \
+    --name kuno \
     --restart unless-stopped \
     -p 80:80 \
-    -v /opt/EchoPaper/blog-data:/app/data \
+    -v /opt/kuno/blog-data:/app/data \
     -e NEXT_PUBLIC_API_URL="http://localhost/api" \
     -e DB_PATH="/app/data/blog.db" \
     -e RECOVERY_MODE="false" \
-    ictrun/echopaper:latest
+    ictrun/kuno:latest
 ```
 
 #### 步骤 5：使用新密码登录
@@ -343,7 +343,7 @@ docker run -d \
 A: 修改 `-p 80:80` 为其他端口，如 `-p 8080:80`，然后通过 http://localhost:8080 访问。
 
 **Q: 如何备份文章数据？**
-A: 文章数据保存在 `/opt/EchoPaper/blog-data` 目录中，定期备份此目录即可。
+A: 文章数据保存在 `/opt/kuno/blog-data` 目录中，定期备份此目录即可。
 
 **Q: 如何自定义域名？**
 A: 修改 `NEXT_PUBLIC_API_URL` 环境变量为你的域名，如 `https://yourdomain.com/api`。
@@ -354,8 +354,8 @@ A: 确保环境变量设置正确 (`RECOVERY_MODE=true`)，并检查 Docker 日�
 ## 📞 技术支持
 
 如果遇到问题，请：
-1. 查看容器日志：`docker logs EchoPaper`
-2. 访问项目主页：https://github.com/xuemian168/EchoPaper
+1. 查看容器日志：`docker logs kuno`
+2. 访问项目主页：https://github.com/xuemian168/kuno
 3. 提交 Issue 获取帮助
 
 ## 赞助

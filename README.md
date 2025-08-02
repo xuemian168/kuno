@@ -1,8 +1,8 @@
 [中文](./README_CN.md) | English
 
-# EchoPaper
+# kuno
 
-![echopaper](./docs/echopaper.png)
+![kuno](./docs/kuno.png)
 
 -	Echo  - "Resonance of information, echo of data"
 -	Paper - "Content, knowledge, blog, publication"
@@ -123,39 +123,39 @@ Create a dedicated directory and deploy:
 
 ```bash
 # 1. Create dedicated directory (recommended: /opt)
-sudo mkdir -p /opt/EchoPaper
-cd /opt/EchoPaper
+sudo mkdir -p /opt/kuno
+cd /opt/kuno
 
 # 2. Download and execute deployment script
-curl -sSL "https://raw.githubusercontent.com/xuemian168/EchoPaper/main/deploy-from-hub.sh?$(date +%s)" -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
+curl -sSL "https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh?$(date +%s)" -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
 ```
 
 > **Important Notes**:
 > - Do not use `curl | bash` as it will cause syntax errors
-> - Deploy in `/opt/EchoPaper` to avoid cluttering the home directory
+> - Deploy in `/opt/kuno` to avoid cluttering the home directory
 
 ### Manual Deployment
 
 ```bash
 # 1. Create dedicated directory
-sudo mkdir -p /opt/EchoPaper
-cd /opt/EchoPaper
+sudo mkdir -p /opt/kuno
+cd /opt/kuno
 
 # 2. Create data directory
 mkdir -p ./blog-data
 
 # 3. Run container
 docker run -d \
-  --name EchoPaper \
+  --name kuno \
   --restart unless-stopped \
   -p 80:80 \
-  -v /opt/EchoPaper/blog-data:/app/data \
+  -v /opt/kuno/blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL="http://localhost/api" \
   -e DB_PATH="/app/data/blog.db" \
   -e GIN_MODE="release" \
   -e NODE_ENV="production" \
   -e JWT_SECRET="your-secure-secret-key" \
-  ictrun/echopaper:latest
+  ictrun/kuno:latest
 ```
 
 **⚠️ Important Configuration**:
@@ -170,9 +170,9 @@ docker run -d \
   - Use a complex string of at least 32 characters
 
 **Directory Structure**:
-- `/opt/EchoPaper/` - Application main directory
-- `/opt/EchoPaper/blog-data/` - Data storage (database and uploads)
-- `/opt/EchoPaper/deploy.sh` - Deployment script (one-click method)
+- `/opt/kuno/` - Application main directory
+- `/opt/kuno/blog-data/` - Data storage (database and uploads)
+- `/opt/kuno/deploy.sh` - Deployment script (one-click method)
 
 ### 🛠️ Development Setup
 
@@ -205,7 +205,7 @@ docker run -d \
 
 ```bash
 # Download the compose file
-curl -O https://raw.githubusercontent.com/xuemian168/EchoPaper/main/docker-compose.hub.yml
+curl -O https://raw.githubusercontent.com/xuemian168/kuno/main/docker-compose.hub.yml
 
 # Configure environment
 cp .env.hub.example .env
@@ -219,24 +219,24 @@ docker-compose -f docker-compose.hub.yml up -d
 
 ```bash
 # Create dedicated directory
-cd /opt/EchoPaper
+cd /opt/kuno
 
 # Run container with bind mount (modify NEXT_PUBLIC_API_URL!)
 docker run -d \
-  --name EchoPaper \
+  --name kuno \
   --restart unless-stopped \
   -p 80:80 \
-  -v /opt/EchoPaper/blog-data:/app/data \
+  -v /opt/kuno/blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL=https://your-api-domain.com/api \
   -e DB_PATH=/app/data/blog.db \
-  ictrun/echopaper:latest
+  ictrun/kuno:latest
 ```
 
 #### Available Tags
 
-- `ictrun/echopaper:latest` - Latest stable release
-- `ictrun/echopaper:v1.0.0` - Specific version
-- `ictrun/echopaper:develop` - Development branch
+- `ictrun/kuno:latest` - Latest stable release
+- `ictrun/kuno:v1.0.0` - Specific version
+- `ictrun/kuno:develop` - Development branch
 
 ### 🔧 Configuration
 
@@ -263,18 +263,18 @@ docker run -d \
 
 ```bash
 # Check status
-docker ps | grep EchoPaper
+docker ps | grep kuno
 
 # View logs
-docker logs EchoPaper
+docker logs kuno
 
-# Backup data (from /opt/EchoPaper)
-cd /opt/EchoPaper
+# Backup data (from /opt/kuno)
+cd /opt/kuno
 sudo tar -czf blog-backup-$(date +%Y%m%d).tar.gz ./blog-data
 
 # Stop and remove
-docker stop EchoPaper
-docker rm EchoPaper
+docker stop kuno
+docker rm kuno
 ```
 
 ## 🔄 Upgrade Instructions
@@ -292,52 +292,52 @@ mkdir -p ./backups/$(date +%Y%m%d_%H%M%S)
 docker run --rm -v blog-data:/data -v $(pwd)/backups/$(date +%Y%m%d_%H%M%S):/backup alpine sh -c "cd /data && tar czf /backup/blog-data-backup.tar.gz ."
 
 # Or if using bind mount, simply copy the directory
-cd /opt/EchoPaper
+cd /opt/kuno
 cp -r ./blog-data ./backups/$(date +%Y%m%d_%H%M%S)/
 ```
 
 #### Step 2: Pull the Latest Image
 ```bash
-docker pull ictrun/echopaper:latest
+docker pull ictrun/kuno:latest
 ```
 
 #### Step 3: Stop and Remove the Old Container
 ```bash
-docker stop EchoPaper
-docker rm EchoPaper
+docker stop kuno
+docker rm kuno
 ```
 
 #### Step 4: Start the New Container
 ```bash
 # If using named volume (recommended)
 docker run -d \
-  --name EchoPaper \
+  --name kuno \
   --restart unless-stopped \
   -p 80:80 \
   -v blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
   -e DB_PATH=/app/data/blog.db \
-  ictrun/echopaper:latest
+  ictrun/kuno:latest
 
 # If using bind mount
-cd /opt/EchoPaper
+cd /opt/kuno
 docker run -d \
-  --name EchoPaper \
+  --name kuno \
   --restart unless-stopped \
   -p 80:80 \
-  -v /opt/EchoPaper/blog-data:/app/data \
+  -v /opt/kuno/blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
   -e DB_PATH=/app/data/blog.db \
-  ictrun/echopaper:latest
+  ictrun/kuno:latest
 ```
 
 #### Step 5: Verify the Upgrade
 ```bash
 # Check container status
-docker ps | grep EchoPaper
+docker ps | grep kuno
 
 # Check logs for any errors
-docker logs EchoPaper
+docker logs kuno
 
 # Test the application
 curl -f http://localhost/api/categories || echo "API check failed"
@@ -387,7 +387,7 @@ docker-compose down && docker-compose up -d
 docker image prune -f
 
 # Or remove specific old images
-docker images | grep EchoPaper | grep -v latest | awk '{print $3}' | xargs docker rmi 2>/dev/null || true
+docker images | grep kuno | grep -v latest | awk '{print $3}' | xargs docker rmi 2>/dev/null || true
 ```
 
 #### Step 5: Verify the Upgrade
@@ -417,8 +417,8 @@ set -e
 echo "🚀 Starting Docker deployment upgrade..."
 
 # Configuration
-CONTAINER_NAME="EchoPaper"
-IMAGE_NAME="ictrun/echopaper:latest"
+CONTAINER_NAME="kuno"
+IMAGE_NAME="ictrun/kuno:latest"
 BACKUP_DIR="./backups/$(date +%Y%m%d_%H%M%S)"
 
 # Create backup
@@ -509,19 +509,19 @@ If an upgrade fails, you can rollback to the previous version:
 #### For Docker Deployment
 ```bash
 # Stop the failed container
-docker stop EchoPaper && docker rm EchoPaper
+docker stop kuno && docker rm kuno
 
 # Restore from backup (if needed)
 docker run --rm -v blog-data:/data -v $(pwd)/backups/BACKUP_DATE:/backup alpine sh -c "cd /data && tar xzf /backup/blog-data-backup.tar.gz"
 
 # Run the previous image version
 docker run -d \
-  --name EchoPaper \
+  --name kuno \
   --restart unless-stopped \
   -p 80:80 \
   -v blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
-  ictrun/echopaper:PREVIOUS_TAG
+  ictrun/kuno:PREVIOUS_TAG
 ```
 
 #### For Docker Compose Deployment
@@ -629,23 +629,23 @@ If you forget the admin password, follow these steps to reset it safely:
 
 #### Step 1: Stop the Container
 ```bash
-docker stop EchoPaper
+docker stop kuno
 ```
 
 #### Step 2: Enable Recovery Mode
 Navigate to the application directory and run with recovery mode:
 ```bash
-cd /opt/EchoPaper
+cd /opt/kuno
 
 docker run -d \
-  --name EchoPaper_recovery \
+  --name kuno_recovery \
   --restart unless-stopped \
   -p 80:80 \
-  -v /opt/EchoPaper/blog-data:/app/data \
+  -v /opt/kuno/blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL="http://localhost/api" \
   -e DB_PATH="/app/data/blog.db" \
   -e RECOVERY_MODE="true" \
-  ictrun/echopaper:latest
+  ictrun/kuno:latest
 ```
 
 The system will:
@@ -656,24 +656,24 @@ The system will:
 #### Step 3: Check Reset Result
 ```bash
 # View logs to confirm password reset
-docker logs EchoPaper_recovery
+docker logs kuno_recovery
 
 # Remove recovery container
-docker rm -f EchoPaper_recovery
+docker rm -f kuno_recovery
 ```
 
 #### Step 4: Start Blog Normally
 ```bash
 # Run with normal mode
 docker run -d \
-  --name EchoPaper \
+  --name kuno \
   --restart unless-stopped \
   -p 80:80 \
-  -v /opt/EchoPaper/blog-data:/app/data \
+  -v /opt/kuno/blog-data:/app/data \
   -e NEXT_PUBLIC_API_URL="http://localhost/api" \
   -e DB_PATH="/app/data/blog.db" \
   -e RECOVERY_MODE="false" \
-  ictrun/echopaper:latest
+  ictrun/kuno:latest
 ```
 
 #### Step 5: Login with New Password
@@ -745,7 +745,7 @@ npm start
 3. **Build failures**: Clear Docker cache with `docker system prune -f`
 4. **Deployment script errors**: 
    - **Issue**: `curl | bash` fails with "syntax error near unexpected token 'fi'"
-   - **Solution**: Download script first: `curl -sSL https://raw.githubusercontent.com/xuemian168/EchoPaper/main/deploy-from-hub.sh -o deploy.sh && chmod +x deploy.sh && ./deploy.sh`
+   - **Solution**: Download script first: `curl -sSL https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh -o deploy.sh && chmod +x deploy.sh && ./deploy.sh`
    - **Reason**: Interactive scripts require local execution, not piped execution
 5. **API URL issues**:
    - **Issue**: Frontend shows "Request URL: http://localhost:8080/api/..." even when `NEXT_PUBLIC_API_URL` is set

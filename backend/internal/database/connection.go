@@ -47,9 +47,9 @@ func InitDatabase() {
 	log.Printf("📊 Found %d site settings records", settingsCount)
 	if settingsCount == 0 {
 		defaultSettings := models.SiteSettings{
-			SiteTitle:          "EchoPaper",
+			SiteTitle:          "KUNO",
 			SiteSubtitle:       "Your mind embedded everywhere",
-			FooterText:         "© 2025 EchoPaper",
+			FooterText:         "© 2025 KUNO",
 			ShowViewCount:      true,
 			EnableSoundEffects: true,
 			LogoURL:            "",
@@ -64,7 +64,7 @@ func InitDatabase() {
 			// Only update if the field is missing/empty and we haven't set it before
 			updated := false
 			if existingSettings.FooterText == "" {
-				existingSettings.FooterText = "© 2025 EchoPaper"
+				existingSettings.FooterText = "© 2025 KUNO"
 				updated = true
 			}
 			if updated {

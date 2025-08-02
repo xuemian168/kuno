@@ -154,7 +154,7 @@ echo "✅ Backup completed"`
           title: 'pullLatestImage',
           description: 'pullLatestImageDesc',
           command: `# Pull latest image
-docker pull ictrun/echopaper:latest
+docker pull ictrun/kuno:latest
 
 echo "✅ Latest image pulled"`
         },
@@ -163,8 +163,8 @@ echo "✅ Latest image pulled"`
           title: 'stopOldContainer',
           description: 'stopOldContainerDesc',
           command: `# Stop and remove old container
-docker stop EchoPaper 2>/dev/null || echo "Container not running"
-docker rm EchoPaper 2>/dev/null || echo "Container not found"
+docker stop kuno 2>/dev/null || echo "Container not running"
+docker rm kuno 2>/dev/null || echo "Container not found"
 
 echo "✅ Old container removed"`
         },
@@ -182,13 +182,13 @@ docker run --rm -v blog-data:/data alpine sh -c "ls -la /data/ && if [ -f /data/
           description: 'startNewContainerDesc',
           command: `# Start new container with data volume
 docker run -d \\
-  --name EchoPaper \\
+  --name kuno \\
   --restart unless-stopped \\
   -p 80:80 \\
   -v blog-data:/app/data \\
   -e NEXT_PUBLIC_API_URL=https://qut.edu.kg/api \\
   -e DB_PATH=/app/data/blog.db \\
-  ictrun/echopaper:latest
+  ictrun/kuno:latest
 
 echo "✅ New container started"`
         },
@@ -200,15 +200,15 @@ echo "✅ New container started"`
 sleep 15
 
 # Check container status
-docker ps | grep EchoPaper
+docker ps | grep kuno
 
 # Check container logs
 echo "📋 Container logs:"
-docker logs --tail=20 EchoPaper
+docker logs --tail=20 kuno
 
 # Verify data is accessible
 echo "📊 Verifying data:"
-docker exec EchoPaper ls -la /app/data/`
+docker exec kuno ls -la /app/data/`
         }
       ],
       docker_compose: [

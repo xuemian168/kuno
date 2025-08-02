@@ -57,8 +57,8 @@ var (
 	dockerHubCache  *UpdateInfo
 	cacheExpiry     time.Time
 	cacheDuration   = 1 * time.Hour // Cache for 1 hour
-	dockerHubAPIURL = "https://hub.docker.com/v2/repositories/ictrun/echopaper/tags"
-	dockerImageName = "ictrun/echopaper"
+	dockerHubAPIURL = "https://hub.docker.com/v2/repositories/ictrun/kuno/tags"
+	dockerImageName = "ictrun/kuno"
 )
 
 // GetSystemInfo returns current system information
@@ -232,12 +232,12 @@ docker run --rm -v blog-data:/data -v $(pwd)/backups/$(date +%%Y%%m%%d_%%H%%M%%S
 docker pull %s:latest
 
 # 3. Stop and remove the old container
-docker stop EchoPaper
-docker rm EchoPaper
+docker stop kuno
+docker rm kuno
 
 # 4. Start the new container
 docker run -d \
-  --name EchoPaper \
+  --name kuno \
   --restart unless-stopped \
   -p 80:80 \
   -v blog-data:/app/data \
@@ -246,8 +246,8 @@ docker run -d \
   %s:latest
 
 # 5. Verify the upgrade
-docker ps | grep EchoPaper
-docker logs EchoPaper
+docker ps | grep kuno
+docker logs kuno
 
 ## 🐳 Docker Compose Deployment
 

@@ -35,7 +35,7 @@ export const getAppVersion = (): AppVersion => {
   const buildDate = process.env.NEXT_PUBLIC_BUILD_DATE || getBuildDate()
   
   return {
-    name: "EchoPaper",
+    name: "kuno",
     version: version,
     build: buildNumber,
     buildDate: buildDate,
@@ -47,8 +47,8 @@ export const getAppVersion = (): AppVersion => {
 
 // 应用信息常量
 export const APP_INFO = {
-  name: "EchoPaper",
-  fullName: "EchoPaper System",
+  name: "kuno",
+  fullName: "kuno System",
   description: {
     zh: "一个简洁优雅的现代化博客系统，支持多语言、Markdown编辑、媒体管理等功能。",
     en: "A minimalist and elegant modern blog system with multi-language support, Markdown editing, media management and more."
@@ -81,7 +81,7 @@ export const APP_INFO = {
     deployment: ["Docker", "Nginx"]
   },
   author: "xuemian168",
-  repository: "https://github.com/xuemian168/EchoPaper",
+  repository: "https://github.com/xuemian168/kuno",
   license: "Apache-2.0",
   website: "https://www.ict.run/"
 }

@@ -95,8 +95,8 @@ export function AboutDialog({ open, onOpenChange, locale }: AboutDialogProps) {
               className="flex items-center justify-center"
             >
               <Image
-                src="/echopaper.png"
-                alt="EchoPaper Logo"
+                src="/kuno.png"
+                alt="kuno Logo"
                 width={120}
                 height={120}
                 className="w-24 h-24 md:w-32 md:h-32 object-contain"

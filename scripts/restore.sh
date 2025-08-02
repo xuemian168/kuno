@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# EchoPaper Restore Script
+# kuno Restore Script
 # Usage: ./scripts/restore.sh [container-name] [backup-file] [--force]
 
 set -e
 
 # Configuration
-DEFAULT_CONTAINER="EchoPaper"
+DEFAULT_CONTAINER="kuno"
 
 # Colors for output
 RED='\033[0;31m'
@@ -31,7 +31,7 @@ if [ -z "$BACKUP_FILE" ]; then
     exit 1
 fi
 
-echo -e "${BLUE}🔄 EchoPaper Restore Utility${NC}"
+echo -e "${BLUE}🔄 kuno Restore Utility${NC}"
 echo -e "${BLUE}📦 Container: ${CONTAINER}${NC}"
 echo -e "${BLUE}📁 Backup file: ${BACKUP_FILE}${NC}"
 echo ""

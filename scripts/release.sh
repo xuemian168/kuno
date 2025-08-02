@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# EchoPaper Release Script
+# kuno Release Script
 # Usage: ./scripts/release.sh <version> [--dry-run]
 
 set -e
 
 # Configuration
 REGISTRY="ictrun"
-IMAGE_NAME="EchoPaper"
+IMAGE_NAME="kuno"
 
 # Colors for output
 RED='\033[0;31m'
@@ -37,7 +37,7 @@ if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 1
 fi
 
-echo -e "${BLUE}🚀 EchoPaper Release Process${NC}"
+echo -e "${BLUE}🚀 kuno Release Process${NC}"
 echo -e "${BLUE}📦 Version: ${VERSION}${NC}"
 echo -e "${BLUE}🏷️  Image: ${REGISTRY}/${IMAGE_NAME}:${VERSION}${NC}"
 
@@ -126,11 +126,11 @@ if command -v gh &> /dev/null; then
 
 \`\`\`bash
 # One-click deployment
-curl -sSL https://raw.githubusercontent.com/xuemian168/EchoPaper/main/deploy-from-hub.sh | bash
+curl -sSL https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh | bash
 
 # Or with specific version
 docker run -d \\
-  --name EchoPaper \\
+  --name kuno \\
   -p 80:80 \\
   -v blog-data:/app/data \\
   -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \\
@@ -139,7 +139,7 @@ docker run -d \\
 
 ## Full Changelog
 
-**Full Changelog**: https://github.com/xuemian168/EchoPaper/compare/v$(git describe --tags --abbrev=0 ${VERSION}^)...${VERSION}" \
+**Full Changelog**: https://github.com/xuemian168/kuno/compare/v$(git describe --tags --abbrev=0 ${VERSION}^)...${VERSION}" \
             --latest
     else
         echo "Would create GitHub release for ${VERSION}"
@@ -147,7 +147,7 @@ docker run -d \\
 else
     echo -e "${YELLOW}⚠️  GitHub CLI not found. Skipping GitHub release creation.${NC}"
     echo -e "${BLUE}📋 Manual steps after release:${NC}"
-    echo -e "1. Go to https://github.com/xuemian168/EchoPaper/releases"
+    echo -e "1. Go to https://github.com/xuemian168/kuno/releases"
     echo -e "2. Create a new release for tag ${VERSION}"
     echo -e "3. Add release notes"
 fi

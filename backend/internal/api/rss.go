@@ -124,7 +124,7 @@ func generateRSSFeed(articles []models.Article, settings models.SiteSettings, la
 		Description:   settings.SiteSubtitle,
 		Language:      lang,
 		LastBuildDate: time.Now().Format(time.RFC1123Z),
-		Generator:     "EchoPaper RSS Generator v1.0",
+		Generator:     "KUNO RSS Generator",
 		Items:         make([]Item, 0, len(articles)),
 	}
 

@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# EchoPaper Health Check Script
+# kuno Health Check Script
 # Usage: ./scripts/health-check.sh [container-name] [--verbose]
 
 set -e
 
 # Configuration
-DEFAULT_CONTAINER="EchoPaper"
+DEFAULT_CONTAINER="kuno"
 VERBOSE=false
 
 # Colors for output
@@ -22,7 +22,7 @@ if [[ "$2" == "--verbose" ]] || [[ "$1" == "--verbose" ]]; then
     VERBOSE=true
 fi
 
-echo -e "${BLUE}🏥 EchoPaper Health Check${NC}"
+echo -e "${BLUE}🏥 kuno Health Check${NC}"
 echo -e "${BLUE}📦 Container: ${CONTAINER}${NC}"
 echo ""
 
