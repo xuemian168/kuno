@@ -37,90 +37,14 @@ A full-stack blog application with Go backend and Next.js frontend, containerize
 
 The system supports interface switching for 70+ languages:
 
-**Core Languages** (Required):
-- 🇨🇳 中文 (Chinese)
-- 🇬🇧 English
-
-**Asian Languages**:
-- 🇯🇵 日本語 (Japanese)
-- 🇰🇷 한국어 (Korean)
-- 🇹🇭 ไทย (Thai)
-- 🇻🇳 Tiếng Việt (Vietnamese)
-- 🇮🇩 Bahasa Indonesia
-- 🇲🇾 Bahasa Melayu
-- 🇵🇭 Filipino (Tagalog)
-- 🇲🇲 မြန်မာ (Myanmar)
-- 🇰🇭 ខ្មែរ (Khmer)
-- 🇱🇦 ລາວ (Lao)
-
-**European Languages**:
-- 🇪🇸 Español (Spanish)
-- 🇫🇷 Français (French)
-- 🇩🇪 Deutsch (German)
-- 🇷🇺 Русский (Russian)
-- 🇵🇹 Português (Portuguese)
-- 🇮🇹 Italiano (Italian)
-- 🇳🇱 Nederlands (Dutch)
-- 🇸🇪 Svenska (Swedish)
-- 🇩🇰 Dansk (Danish)
-- 🇳🇴 Norsk (Norwegian)
-- 🇫🇮 Suomi (Finnish)
-- 🇵🇱 Polski (Polish)
-- 🇨🇿 Čeština (Czech)
-- 🇸🇰 Slovenčina (Slovak)
-- 🇭🇺 Magyar (Hungarian)
-- 🇷🇴 Română (Romanian)
-- 🇧🇬 Български (Bulgarian)
-- 🇭🇷 Hrvatski (Croatian)
-- 🇷🇸 Српски (Serbian)
-- 🇸🇮 Slovenščina (Slovenian)
-- 🇪🇪 Eesti (Estonian)
-- 🇱🇻 Latviešu (Latvian)
-- 🇱🇹 Lietuvių (Lithuanian)
-- 🇺🇦 Українська (Ukrainian)
-- 🇧🇾 Беларуская (Belarusian)
-- 🇹🇷 Türkçe (Turkish)
-- 🇬🇷 Ελληνικά (Greek)
-- 🇦🇱 Shqip (Albanian)
-- 🇦🇲 Հայերեն (Armenian)
-- 🇦🇿 Azərbaycan (Azerbaijani)
-- 🇬🇪 ქართული (Georgian)
-
-**Middle Eastern & African Languages**:
-- 🇸🇦 العربية (Arabic)
-- 🇮🇱 עברית (Hebrew)
-- 🇮🇷 فارسی (Persian)
-- 🇵🇰 اردو (Urdu)
-- 🇪🇹 አማርኛ (Amharic)
-- 🇰🇪 Kiswahili (Swahili)
-- 🇿🇦 isiZulu (Zulu)
-- 🇿🇦 Afrikaans
-
-**South Asian Languages**:
-- 🇮🇳 हिन्दी (Hindi)
-- 🇧🇩 বাংলা (Bengali)
-- 🇮🇳 தமிழ் (Tamil)
-- 🇮🇳 తెలుగు (Telugu)
-- 🇮🇳 മലയാളം (Malayalam)
-- 🇮🇳 ಕನ್ನಡ (Kannada)
-- 🇮🇳 ગુજરાતી (Gujarati)
-- 🇮🇳 ਪੰਜਾਬੀ (Punjabi)
-- 🇮🇳 मराठी (Marathi)
-- 🇳🇵 नेपाली (Nepali)
-- 🇱🇰 සිංහල (Sinhala)
-
-**Pacific Languages**:
-- 🇳🇿 Te Reo Māori (Maori)
-- 🇼🇸 Gagana Samoa (Samoan)
-- 🇹🇴 Lea Fakatonga (Tongan)
-- 🇫🇯 Na Vosa Vakaviti (Fijian)
-
-**Other Regional Languages**:
-- 🇮🇪 Gaeilge (Irish)
-- 🇮🇸 Íslenska (Icelandic)
-- 🇲🇹 Malti (Maltese)
-- 🇪🇸 Euskera (Basque)
-- 🇪🇸 Català (Catalan)
+| Region | Languages |
+|--------|-----------|
+| **Core** | 🇨🇳 Chinese • 🇬🇧 English |
+| **Asian** | 🇯🇵 Japanese • 🇰🇷 Korean • 🇹🇭 Thai • 🇻🇳 Vietnamese • 🇮🇩 Indonesian • 🇲🇾 Malay • 🇵🇭 Filipino • 🇲🇲 Myanmar • 🇰🇭 Khmer • 🇱🇦 Lao |
+| **European** | 🇪🇸 Spanish • 🇫🇷 French • 🇩🇪 German • 🇷🇺 Russian • 🇵🇹 Portuguese • 🇮🇹 Italian • 🇳🇱 Dutch • 🇸🇪 Swedish • 🇩🇰 Danish • 🇳🇴 Norwegian • 🇫🇮 Finnish • 🇵🇱 Polish • 🇨🇿 Czech • 🇸🇰 Slovak • 🇭🇺 Hungarian • 🇷🇴 Romanian • 🇧🇬 Bulgarian • 🇭🇷 Croatian • 🇷🇸 Serbian • 🇸🇮 Slovenian • 🇪🇪 Estonian • 🇱🇻 Latvian • 🇱🇹 Lithuanian • 🇺🇦 Ukrainian • 🇧🇾 Belarusian • 🇹🇷 Turkish • 🇬🇷 Greek • 🇦🇱 Albanian • 🇦🇲 Armenian • 🇦🇿 Azerbaijani • 🇬🇪 Georgian |
+| **Middle Eastern & African** | 🇸🇦 Arabic • 🇮🇱 Hebrew • 🇮🇷 Persian • 🇵🇰 Urdu • 🇪🇹 Amharic • 🇰🇪 Swahili • 🇿🇦 Zulu • 🇿🇦 Afrikaans |
+| **South Asian** | 🇮🇳 Hindi • 🇧🇩 Bengali • 🇮🇳 Tamil • 🇮🇳 Telugu • 🇮🇳 Malayalam • 🇮🇳 Kannada • 🇮🇳 Gujarati • 🇮🇳 Punjabi • 🇮🇳 Marathi • 🇳🇵 Nepali • 🇱🇰 Sinhala |
+| **Pacific & Others** | 🇳🇿 Māori • 🇼🇸 Samoan • 🇹🇴 Tongan • 🇫🇯 Fijian • 🇮🇪 Irish • 🇮🇸 Icelandic • 🇲🇹 Maltese • 🇪🇸 Basque • 🇪🇸 Catalan |
 
 ## Quick Start
 
