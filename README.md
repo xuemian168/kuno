@@ -4,8 +4,9 @@
 
 ![kuno](./docs/kuno.png)
 
--	Echo  - "Resonance of information, echo of data"
--	Paper - "Content, knowledge, blog, publication"
+KUNO name origin: 
+- "KUN" is the pinyin of "坤" (kūn), which carries and supports all things in Chinese philosophy, symbolizing how this CMS carries and supports all content. Pronounced as "kuno (/ˈkuːnoʊ/)".
+- “O” stands for Origin and Openness, symbolizing the start of all content and the open, inclusive nature of the system.
 
 A full-stack blog application with Go backend and Next.js frontend, containerized with Docker for easy deployment.
 
@@ -780,7 +781,7 @@ docker-compose logs -f frontend
 
 ## Sponsorship
 This project is sponsored by [TIKHUB.IO](https://tikhub.io/)
-TikHub.io is a provider of high-quality data interface services. It is committed to providing a one-stop overseas social media data API and tool service platform for developers, creators, and enterprises. It faces global users, supports custom extensions, and builds a community-driven ecosystem.
+> TikHub.io is a provider of high-quality data interface services. It is committed to providing a one-stop overseas social media data API and tool service platform for developers, creators, and enterprises. It faces global users, supports custom extensions, and builds a community-driven ecosystem.
 ![Tikhub_LOGO](./docs/tikhub.png)
 
 ## License
