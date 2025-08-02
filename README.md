@@ -4,10 +4,13 @@
 
 ![kuno](./docs/kuno.png)
 
-The name [**KUNO** /ˈkuːnoʊ/] blends Eastern philosophy with modern digital principles:
-> - "KUN" is the pinyin of "坤" (kūn), which carries and supports all things in Chinese philosophy, symbolizing how this CMS carries and supports all content. Pronounced as "kuno (/ˈkuːnoʊ/)".
-> - “O” stands for Origin and Openness, symbolizing the start of all content and the open, inclusive nature of the system.
-> - Pronounced as /ˈkuːnoʊ/ — clean, elegant, and globally readable.
+**KUNO** /ˈkuːnoʊ/
+
+The name draws inspiration from the fusion of Eastern philosophy and modern technological concepts:
+> - "KUN" is the pinyin of "坤" (kūn) from the I Ching (Book of Changes), meaning earth, carrying all things, symbolizing the system's comprehensive support and inclusiveness for multilingual and multi-format content.
+> - "O" represents Origin and Open, symbolizing the beginning of content and the system's openness, extensibility, and modern architectural design philosophy.
+
+Our logo is inspired by the Kun hexagram ☷ — six lines representing earth, harmony, carrying capacity, and inclusiveness, which also embodies KUNO system's core values.
 
 KUNO is designed as a lightweight, blazing-fast, i18n-first CMS, empowering creators to build rich, structured content ecosystems with freedom and harmony.
 
