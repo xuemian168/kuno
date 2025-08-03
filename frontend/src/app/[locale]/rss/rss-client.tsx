@@ -3,8 +3,6 @@
 import { useTranslations } from 'next-intl'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import Header from '@/components/layout/header'
-import Footer from '@/components/layout/footer'
 import { RSSFeeds } from '@/components/rss/rss-feeds'
 import { apiClient } from '@/lib/api'
 
@@ -35,32 +33,22 @@ export default function RSSPageClient({ locale }: RSSPageClientProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Header />
-        <main className="flex-1 container mx-auto px-4 py-8">
-          <div className="text-center">{t('common.loading')}</div>
-        </main>
-        <Footer />
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">{t('common.loading')}</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-4 py-8">
-        {/* RSS Feeds Component */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <RSSFeeds locale={locale} />
-        </motion.div>
-      </main>
-      
-      <Footer />
+    <div className="container mx-auto px-4 py-8">
+      {/* RSS Feeds Component */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <RSSFeeds locale={locale} />
+      </motion.div>
     </div>
   )
 }

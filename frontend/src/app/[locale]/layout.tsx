@@ -7,6 +7,8 @@ import { routing } from '@/i18n/routing'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SettingsProvider } from '@/contexts/settings-context'
 import { AuthProvider } from '@/contexts/auth-context'
+import Header from '@/components/layout/header'
+import Footer from '@/components/layout/footer'
 import '../globals.css'
 import { getBaseUrl } from '@/lib/utils'
 import { apiClient } from '@/lib/api'
@@ -149,7 +151,13 @@ export default async function LocaleLayout({
           >
             <AuthProvider>
               <SettingsProvider>
-                {children}
+                <div className="min-h-screen bg-background flex flex-col">
+                  <Header />
+                  <main className="flex-1">
+                    {children}
+                  </main>
+                  <Footer />
+                </div>
               </SettingsProvider>
             </AuthProvider>
           </ThemeProvider>

@@ -7,8 +7,6 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Calendar, ArrowRight, Eye, Rss } from 'lucide-react'
-import Header from '@/components/layout/header'
-import Footer from '@/components/layout/footer'
 import { apiClient, Article, Category } from '@/lib/api'
 import NextLink from 'next/link'
 import { WebsiteStructuredData } from '@/components/seo/structured-data'
@@ -66,12 +64,8 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Header />
-        <main className="flex-1 container mx-auto px-4 py-8">
-          <div className="text-center">{t('common.loading')}</div>
-        </main>
-        <Footer />
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">{t('common.loading')}</div>
       </div>
     )
   }
@@ -80,16 +74,13 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
   const homeUrl = locale === 'zh' ? baseUrl : `${baseUrl}/${locale}`
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="container mx-auto px-4 py-8">
       <WebsiteStructuredData 
         name={siteSettings?.site_title || t('site.title')}
         description={siteSettings?.site_subtitle || t('site.description')}
         url={homeUrl}
         locale={locale}
       />
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-4 py-8">
         {/* Hero Section */}
         <section className="text-center py-12">
           <motion.div
@@ -192,9 +183,6 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
             </div>
           )}
         </section>
-      </main>
-      
-      <Footer />
     </div>
   )
 }

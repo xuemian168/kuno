@@ -9,8 +9,6 @@ import { ArrowLeft, Calendar, Tag, Eye, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { MarkdownRenderer } from '@/components/markdown/markdown-renderer'
-import Header from '@/components/layout/header'
-import Footer from '@/components/layout/footer'
 import { apiClient, Article } from '@/lib/api'
 import { ArticleStructuredData, BreadcrumbStructuredData } from '@/components/seo/structured-data'
 import { getBaseUrl, getSiteUrl } from '@/lib/utils'
@@ -69,12 +67,8 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Header />
-        <main className="flex-1 container mx-auto px-4 py-8">
-          <div className="text-center">{t('common.loading')}</div>
-        </main>
-        <Footer />
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="text-center">{t('common.loading')}</div>
       </div>
     )
   }
@@ -98,7 +92,7 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
   ]
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
       <ArticleStructuredData
         title={article.title}
         description={article.summary || ''}
@@ -110,9 +104,6 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
         content={article.content}
       />
       <BreadcrumbStructuredData items={breadcrumbItems} />
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -221,9 +212,6 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
             </div>
           </footer>
         </motion.div>
-      </main>
-      
-      <Footer />
     </div>
   )
 }

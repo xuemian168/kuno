@@ -16,8 +16,6 @@ import {
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import Header from '@/components/layout/header'
-import Footer from '@/components/layout/footer'
 
 interface FloatingElementProps {
   children: React.ReactNode
@@ -120,9 +118,7 @@ export default function NotFound() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
-      
+    <div className="relative">
       {/* Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-50/30 via-blue-50/20 to-cyan-50/30 dark:from-violet-950/20 dark:via-blue-950/10 dark:to-cyan-950/20" />
@@ -150,7 +146,7 @@ export default function NotFound() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center px-4 relative">
+      <div className="min-h-screen flex items-center justify-center px-4 relative">
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -272,8 +268,6 @@ export default function NotFound() {
           </motion.div>
         </motion.div>
       </div>
-
-      <Footer />
     </div>
   )
 }

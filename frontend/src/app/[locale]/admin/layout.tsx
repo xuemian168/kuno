@@ -2,8 +2,6 @@
 
 import { usePathname } from 'next/navigation'
 import AuthGuard from '@/components/auth-guard'
-import Header from '@/components/layout/header'
-import Footer from '@/components/layout/footer'
 import { FaviconUpdater } from '@/components/favicon-updater'
 import { AdminBreadcrumb } from '@/components/admin/breadcrumb'
 
@@ -21,14 +19,10 @@ export default function AdminLayout({
 
   return (
     <AuthGuard requireAdmin={true}>
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="container mx-auto py-6 px-4 max-w-7xl">
         <FaviconUpdater />
-        <Header />
-        <main className="container mx-auto py-6 px-4 max-w-7xl flex-1">
-          <AdminBreadcrumb />
-          {children}
-        </main>
-        <Footer />
+        <AdminBreadcrumb />
+        {children}
       </div>
     </AuthGuard>
   )
