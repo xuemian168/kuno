@@ -51,6 +51,7 @@ func InitDatabase() {
 			SiteSubtitle:       "Your mind embedded everywhere",
 			FooterText:         "© 2025 KUNO",
 			ShowViewCount:      true,
+			ShowSiteTitle:      true,
 			EnableSoundEffects: true,
 			LogoURL:            "",
 			FaviconURL:         "",

@@ -70,6 +70,7 @@ export interface SiteSettings {
   icp_filing?: string
   psb_filing?: string
   show_view_count?: boolean
+  show_site_title?: boolean
   enable_sound_effects?: boolean
   logo_url?: string
   favicon_url?: string

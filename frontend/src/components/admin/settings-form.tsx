@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, SiteSettings, SiteSettingsTranslation } from "@/lib/api"
 import { useSettings } from "@/contexts/settings-context"
-import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle, AlertTriangle, ChevronDown, Activity, Sparkles, Copy } from "lucide-react"
+import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle, AlertTriangle, ChevronDown, Activity, Sparkles, Copy, Type } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { translationService, TranslationConfig, SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation"
@@ -46,6 +46,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     icp_filing: "",
     psb_filing: "",
     show_view_count: true,
+    show_site_title: true,
     enable_sound_effects: true,
     default_language: "zh"
   })
@@ -194,6 +195,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
           icp_filing: settingsData.icp_filing || "",
           psb_filing: settingsData.psb_filing || "",
           show_view_count: settingsData.show_view_count ?? true,
+          show_site_title: settingsData.show_site_title ?? true,
           enable_sound_effects: settingsData.enable_sound_effects ?? true,
           default_language: settingsData.default_language || "zh"
         })
@@ -327,6 +329,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         icp_filing: formData.icp_filing,
         psb_filing: formData.psb_filing,
         show_view_count: formData.show_view_count,
+        show_site_title: formData.show_site_title,
         enable_sound_effects: formData.enable_sound_effects,
         default_language: formData.default_language,
         logo_url: settings?.logo_url || '',
@@ -405,6 +408,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         icp_filing: settings.icp_filing || "",
         psb_filing: settings.psb_filing || "",
         show_view_count: settings.show_view_count ?? true,
+        show_site_title: settings.show_site_title ?? true,
         enable_sound_effects: settings.enable_sound_effects ?? true,
         default_language: settings.default_language || "zh"
       })
@@ -657,34 +661,34 @@ export function SettingsForm({ locale }: SettingsFormProps) {
               </CardHeader>
               <CardContent className="space-y-6 p-6">
                 <div className="space-y-3">
-                  <Label htmlFor="site_title" className="text-base font-medium text-gray-700 dark:text-gray-300">{t('settings.siteTitle')}</Label>
+                  <Label htmlFor="site_title" className="text-base font-medium text-gray-700 dark:text-gray-300">{t('settings.siteTitle') || 'Site Title'}</Label>
                   <Input
                     id="site_title"
                     value={formData.site_title}
                     onChange={(e) => handleChange('site_title', e.target.value)}
-                    placeholder={t('settings.enterSiteTitle')}
+                    placeholder={t('settings.enterSiteTitle') || 'Enter site title'}
                     required
                     className="h-11 border-2 border-gray-200 dark:border-gray-700 focus:border-emerald-500 dark:focus:border-emerald-400 rounded-lg transition-colors"
                   />
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('settings.titleDescription')}
+                    {t('settings.titleDescription') || 'The name of your blog that will appear in the header and browser title'}
                   </p>
                 </div>
                 <div className="space-y-3">
-                  <Label htmlFor="site_subtitle" className="text-base font-medium text-gray-700 dark:text-gray-300">{t('settings.siteSubtitle')}</Label>
+                  <Label htmlFor="site_subtitle" className="text-base font-medium text-gray-700 dark:text-gray-300">{t('settings.siteSubtitle') || 'Site Subtitle'}</Label>
                   <Input
                     id="site_subtitle"
                     value={formData.site_subtitle}
                     onChange={(e) => handleChange('site_subtitle', e.target.value)}
-                    placeholder={t('settings.enterSiteSubtitle')}
+                    placeholder={t('settings.enterSiteSubtitle') || 'Enter site subtitle'}
                     className="h-11 border-2 border-gray-200 dark:border-gray-700 focus:border-emerald-500 dark:focus:border-emerald-400 rounded-lg transition-colors"
                   />
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('settings.subtitleDescription')}
+                    {t('settings.subtitleDescription') || 'A brief description of your blog'}
                   </p>
                 </div>
                 <div className="space-y-3">
-                  <Label htmlFor="footer_text" className="text-base font-medium text-gray-700 dark:text-gray-300">{t('settings.footerText')}</Label>
+                  <Label htmlFor="footer_text" className="text-base font-medium text-gray-700 dark:text-gray-300">{t('settings.footerText') || 'Footer Text'}</Label>
                   <Input
                     id="footer_text"
                     value={formData.footer_text}
@@ -693,7 +697,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     className="h-11 border-2 border-gray-200 dark:border-gray-700 focus:border-emerald-500 dark:focus:border-emerald-400 rounded-lg transition-colors"
                   />
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('settings.footerDescription')}
+                    {t('settings.footerDescription') || 'Text that appears at the bottom of every page'}
                   </p>
                 </div>
                 <div className="space-y-3">
@@ -843,10 +847,10 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                           </div>
                           <div>
                             <Label htmlFor="show_view_count" className="text-base font-medium cursor-pointer">
-                              {t('settings.showViewCount')}
+                              {t('settings.showViewCount') || 'Show View Count'}
                             </Label>
                             <p className="text-sm text-muted-foreground mt-1">
-                              {t('settings.viewCountDescription')}
+                              {t('settings.viewCountDescription') || 'Display article view counts on the website'}
                             </p>
                           </div>
                         </div>
@@ -854,6 +858,35 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                           id="show_view_count"
                           checked={formData.show_view_count}
                           onCheckedChange={(checked: boolean) => handleChange('show_view_count', checked)}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-950/20 dark:to-violet-950/20 border-purple-200 dark:border-purple-800">
+                    <CardContent className="pt-6 pb-6">
+                      <div className="flex items-center justify-between h-full">
+                        <div className="flex items-center space-x-3">
+                          <div className={`p-2 rounded-lg ${formData.show_site_title ? 'bg-purple-100 dark:bg-purple-900/30' : 'bg-gray-100 dark:bg-gray-800'} transition-colors`}>
+                            {formData.show_site_title ? (
+                              <Type className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                            ) : (
+                              <EyeOff className="h-5 w-5 text-gray-400" />
+                            )}
+                          </div>
+                          <div>
+                            <Label htmlFor="show_site_title" className="text-base font-medium cursor-pointer">
+                              {locale === 'zh' ? '显示站点标题' : 'Show Site Title'}
+                            </Label>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {locale === 'zh' ? '在Header中显示站点标题文字，关闭后只显示Logo' : 'Show site title text in header, when disabled only logo is displayed'}
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          id="show_site_title"
+                          checked={formData.show_site_title}
+                          onCheckedChange={(checked: boolean) => handleChange('show_site_title', checked)}
                         />
                       </div>
                     </CardContent>
@@ -941,14 +974,14 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         ) : (
                           <>
                             <Upload className="h-4 w-4" />
-                            {t('settings.uploadLogo')}
+                            {t('settings.uploadLogo') || 'Upload Logo'}
                           </>
                         )}
                       </Button>
                     </div>
                   </div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('settings.logoFormats')}
+                    {t('settings.logoFormats') || 'Supports PNG, JPG, JPEG, WebP formats'}
                   </p>
                 </div>
 
@@ -990,14 +1023,14 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         ) : (
                           <>
                             <Image className="h-4 w-4" />
-                            {t('settings.uploadFavicon')}
+                            {t('settings.uploadFavicon') || 'Upload Favicon'}
                           </>
                         )}
                       </Button>
                     </div>
                   </div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('settings.faviconFormats')}
+                    {t('settings.faviconFormats') || 'Supports ICO, PNG formats (recommended 32x32 or 16x16)'}
                   </p>
                 </div>
               </CardContent>

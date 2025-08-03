@@ -46,6 +46,7 @@ type SiteSettings struct {
 	ICPFiling   string                    `gorm:"size:255" json:"icp_filing"`
 	PSBFiling   string                    `gorm:"size:255" json:"psb_filing"`
 	ShowViewCount bool                    `gorm:"default:true" json:"show_view_count"`
+	ShowSiteTitle bool                    `gorm:"default:true" json:"show_site_title"`
 	EnableSoundEffects bool               `gorm:"default:true" json:"enable_sound_effects"`
 	DefaultLanguage string                `gorm:"default:'zh';size:10" json:"default_language"`
 	LogoURL     string                    `gorm:"size:255" json:"logo_url"`

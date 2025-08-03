@@ -84,6 +84,7 @@ func UpdateSettings(c *gin.Context) {
 		ICPFiling          string                           `json:"icp_filing"`
 		PSBFiling          string                           `json:"psb_filing"`
 		ShowViewCount      *bool                            `json:"show_view_count"`
+		ShowSiteTitle      *bool                            `json:"show_site_title"`
 		EnableSoundEffects *bool                            `json:"enable_sound_effects"`
 		DefaultLanguage    string                           `json:"default_language"`
 		LogoURL            string                           `json:"logo_url"`
@@ -104,6 +105,9 @@ func UpdateSettings(c *gin.Context) {
 	settings.PSBFiling = input.PSBFiling
 	if input.ShowViewCount != nil {
 		settings.ShowViewCount = *input.ShowViewCount
+	}
+	if input.ShowSiteTitle != nil {
+		settings.ShowSiteTitle = *input.ShowSiteTitle
 	}
 	if input.EnableSoundEffects != nil {
 		settings.EnableSoundEffects = *input.EnableSoundEffects

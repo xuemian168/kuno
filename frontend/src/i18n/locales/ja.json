@@ -323,6 +323,10 @@
     "brandingDescription": "ウェブサイトのロゴとファビコンを設定",
     "logo": "ウェブサイトロゴ",
     "favicon": "ウェブサイトアイコン（ファビコン）",
+    "uploadLogo": "ロゴをアップロード",
+    "logoFormats": "PNG、JPG、JPEG、WebP形式をサポート",
+    "uploadFavicon": "ファビコンをアップロード", 
+    "faviconFormats": "ICO、PNG形式をサポート（推奨サイズ：32x32または16x16）",
     "security": "セキュリティ設定"
   },
   "analytics": {
@@ -370,7 +374,8 @@
     "lowActivity": "低活動",
     "highActivity": "高活動",
     "countries": "カ国",
-    "totalVisitors": "総訪問者数"
+    "totalVisitors": "総訪問者数",
+    "uploadLogo": "ロゴをアップロード"
   },
   "export": {
     "exportAll": "すべてエクスポート",

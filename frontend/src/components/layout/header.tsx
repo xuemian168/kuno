@@ -55,9 +55,11 @@ export default function Header() {
                 className="h-8 w-auto object-contain"
               />
             )}
-            <span className="hidden font-bold sm:inline-block">
-              {settings?.site_title || t('site.title')}
-            </span>
+            {(settings?.show_site_title ?? true) && (
+              <span className="hidden font-bold sm:inline-block">
+                {settings?.site_title || t('site.title')}
+              </span>
+            )}
           </Link>
           <nav className="flex items-center space-x-1 text-sm font-medium">
             {/* Public Navigation */}
@@ -144,9 +146,11 @@ export default function Header() {
                   className="h-7 w-auto object-contain"
                 />
               )}
-              <span className="font-bold">
-                {settings?.site_title || t('site.title')}
-              </span>
+              {(settings?.show_site_title ?? true) && (
+                <span className="font-bold">
+                  {settings?.site_title || t('site.title')}
+                </span>
+              )}
             </Link>
           </div>
           <nav className="flex items-center space-x-2">
