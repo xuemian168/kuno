@@ -9,6 +9,9 @@ import (
 func SetupRoutes() *gin.Engine {
 	r := gin.Default()
 
+	// Increase maximum multipart memory for large file uploads
+	r.MaxMultipartMemory = 100 << 20 // 100 MB
+
 	config := cors.DefaultConfig()
 	// Allow all origins for embed functionality
 	config.AllowAllOrigins = true

@@ -16,6 +16,7 @@ import MediaUpload from '@/components/admin/media-upload'
 import VideoAdd from '@/components/admin/video-add'
 import { apiClient, MediaLibrary } from '@/lib/api'
 import { generateBilibiliThumbnail } from '@/lib/bilibili-utils'
+import { getMediaUrl } from '@/lib/url-utils'
 import { useTranslations } from 'next-intl'
 
 interface OnlineVideo {
@@ -412,7 +413,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                 >
                   {item.media_type === 'image' ? (
                     <img
-                      src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${item.url}`}
+                      src={getMediaUrl(item.url)}
                       alt={item.alt}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
@@ -420,7 +421,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                     <div className="w-full h-full flex items-center justify-center">
                       <Video className="h-16 w-16 text-gray-400" />
                       <video
-                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${item.url}`}
+                        src={getMediaUrl(item.url)}
                         className="absolute inset-0 w-full h-full object-cover opacity-50"
                         muted
                       />
@@ -473,7 +474,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           onClick={(e) => {
                             e.stopPropagation()
                             setContextMenuOpen(null)
-                            const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${item.url}`
+                            const url = getMediaUrl(item.url)
                             navigator.clipboard.writeText(url)
                           }}
                           className="cursor-pointer"
@@ -485,7 +486,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           onClick={(e) => {
                             e.stopPropagation()
                             setContextMenuOpen(null)
-                            const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${item.url}`
+                            const url = getMediaUrl(item.url)
                             window.open(url, '_blank')
                           }}
                           className="cursor-pointer"
@@ -659,13 +660,13 @@ export default function MediaPage({ params }: MediaPageProps) {
                 <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
                   {selectedMedia.media_type === 'image' ? (
                     <img
-                      src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${selectedMedia.url}`}
+                      src={getMediaUrl(selectedMedia.url)}
                       alt={selectedMedia.alt}
                       className="w-full h-full object-contain"
                     />
                   ) : (
                     <video
-                      src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${selectedMedia.url}`}
+                      src={getMediaUrl(selectedMedia.url)}
                       controls
                       className="w-full h-full object-contain"
                     />
@@ -675,7 +676,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${selectedMedia.url}`
+                      const url = getMediaUrl(selectedMedia.url)
                       navigator.clipboard.writeText(url)
                     }}
                   >

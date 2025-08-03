@@ -136,7 +136,7 @@ func isValidXMLChar(r rune) bool {
 // ImportWordPress handles WordPress WXR file imports
 func ImportWordPress(c *gin.Context) {
 	// Parse multipart form
-	err := c.Request.ParseMultipartForm(32 << 20) // 32 MB limit
+	err := c.Request.ParseMultipartForm(100 << 20) // 100 MB limit
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse form data"})
 		return
@@ -440,7 +440,7 @@ type ParseResult struct {
 // ParseWordPress handles WordPress WXR file parsing without importing
 func ParseWordPress(c *gin.Context) {
 	// Parse multipart form
-	err := c.Request.ParseMultipartForm(32 << 20) // 32 MB limit
+	err := c.Request.ParseMultipartForm(100 << 20) // 100 MB limit
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse form data"})
 		return

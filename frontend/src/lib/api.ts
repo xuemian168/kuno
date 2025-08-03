@@ -1,3 +1,5 @@
+import { getApiUrl } from './url-utils'
+
 // Get API URL from environment variable or default
 function getApiBaseUrl(): string {
   // Use environment variable if available, otherwise use default
