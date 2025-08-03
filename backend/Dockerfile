@@ -31,8 +31,9 @@ WORKDIR /root/
 # Copy the binary from builder stage
 COPY --from=builder /app/main .
 
-# Create data directory for SQLite
-RUN mkdir -p ./data
+# Create data directory for SQLite and uploads directory for media files
+RUN mkdir -p ./data ./uploads/images ./uploads/videos ./uploads/branding && \
+    chmod -R 755 ./uploads
 
 # Expose port
 EXPOSE 8085

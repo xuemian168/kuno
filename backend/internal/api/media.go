@@ -77,9 +77,18 @@ func UploadMedia(c *gin.Context) {
 	fileName := fmt.Sprintf("%s%s", uuid.New().String(), ext)
 	filePath := filepath.Join(UploadDir, subDir, fileName)
 
+	// Ensure directory exists
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		fmt.Printf("Failed to create directory %s: %v\n", dir, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
+		return
+	}
+
 	// Create the file
 	dst, err := os.Create(filePath)
 	if err != nil {
+		fmt.Printf("Failed to create file %s: %v\n", filePath, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create file"})
 		return
 	}

@@ -15,6 +15,7 @@ services:
       - "80:80"
     volumes:
       - blog_data:/app/data
+      - blog_uploads:/app/backend/uploads
     environment:
       - DB_PATH=/app/data/blog.db
       - GIN_MODE=release
@@ -36,4 +37,6 @@ services:
 
 volumes:
   blog_data:
+    driver: local
+  blog_uploads:
     driver: local

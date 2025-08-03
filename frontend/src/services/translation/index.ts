@@ -7,6 +7,7 @@ import { VolcanoProvider } from './providers/volcano'
 import { LibreTranslateProvider } from './providers/libre-translate'
 import { MyMemoryProvider } from './providers/mymemory'
 import { GoogleFreeProvider } from './providers/google-free'
+import { aiUsageTracker } from '../ai-usage-tracker'
 
 export * from './types'
 
@@ -235,10 +236,15 @@ export class TranslationService {
       return text
     }
 
+    const providerName = this.activeProvider!.name.toLowerCase()
+    const startTime = Date.now()
+    let success = false
+    let errorMessage: string | undefined
+    let usage: any = null
+
     try {
       // Translate the cleaned text normally
       let translatedText: string
-      let usage: any = null
 
       // Use translateWithUsage if available (for AI providers)
       if (this.activeProvider!.translateWithUsage) {
@@ -263,9 +269,53 @@ export class TranslationService {
       const restoredText = this.restoreCachedContent(translatedText, text)
       
       // Now handle selective comment translation on the result
-      return await this.applySelectiveCommentTranslation(restoredText, text, from, to)
+      const result = await this.applySelectiveCommentTranslation(restoredText, text, from, to)
+      success = true
+      
+      // Track usage with detailed metrics
+      const responseTime = Date.now() - startTime
+      await aiUsageTracker.trackUsage({
+        serviceType: 'translation',
+        provider: providerName,
+        operation: 'translate_text',
+        language: `${from}->${to}`,
+        inputLength: processedText.length,
+        outputLength: result.length,
+        inputTokens: usage?.inputTokens || 0,
+        outputTokens: usage?.outputTokens || 0,
+        totalTokens: usage?.totalTokens || 0,
+        estimatedCost: usage?.estimatedCost || 0,
+        currency: usage?.currency || 'USD',
+        success,
+        responseTime,
+        errorMessage
+      })
+      
+      return result
       
     } catch (error) {
+      success = false
+      errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      
+      // Track failed usage
+      const responseTime = Date.now() - startTime
+      await aiUsageTracker.trackUsage({
+        serviceType: 'translation',
+        provider: providerName,
+        operation: 'translate_text',
+        language: `${from}->${to}`,
+        inputLength: processedText.length,
+        outputLength: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        estimatedCost: 0,
+        currency: 'USD',
+        success,
+        responseTime,
+        errorMessage
+      })
+      
       console.error('Translation with selective comments failed:', error)
       return text
     }
@@ -414,33 +464,83 @@ export class TranslationService {
     }
 
     try {
-
-      let translatedText: string
+      const providerName = this.activeProvider.name.toLowerCase()
+      const startTime = Date.now()
+      let success = false
+      let errorMessage: string | undefined
       let usage: any = null
 
-      // Use translateWithUsage if available (for AI providers)
-      if (this.activeProvider.translateWithUsage) {
-        const result = await this.activeProvider.translateWithUsage(processedText, from, to)
-        translatedText = result.translatedText
-        usage = result.usage
-      } else {
-        // Fallback to regular translate
-        translatedText = await this.activeProvider.translate(processedText, from, to)
-      }
+      try {
+        let translatedText: string
 
-      // Update usage stats if available
-      if (usage) {
-        this.updateUsageStats({
-          translations: 1,
-          tokens: usage.totalTokens || 0,
-          cost: usage.estimatedCost || 0
+        // Use translateWithUsage if available (for AI providers)
+        if (this.activeProvider!.translateWithUsage) {
+          const result = await this.activeProvider!.translateWithUsage(processedText, from, to)
+          translatedText = result.translatedText
+          usage = result.usage
+        } else {
+          // Fallback to regular translate
+          translatedText = await this.activeProvider!.translate(processedText, from, to)
+        }
+
+        // Update local usage stats if available
+        if (usage) {
+          this.updateUsageStats({
+            translations: 1,
+            tokens: usage.totalTokens || 0,
+            cost: usage.estimatedCost || 0
+          })
+        }
+        
+        // Restore cached content
+        const result = this.restoreCachedContent(translatedText, text)
+        success = true
+        
+        // Track usage with detailed metrics
+        const responseTime = Date.now() - startTime
+        await aiUsageTracker.trackUsage({
+          serviceType: 'translation',
+          provider: providerName,
+          operation: 'translate_text',
+          language: `${from}->${to}`,
+          inputLength: processedText.length,
+          outputLength: result.length,
+          inputTokens: usage?.inputTokens || 0,
+          outputTokens: usage?.outputTokens || 0,
+          totalTokens: usage?.totalTokens || 0,
+          estimatedCost: usage?.estimatedCost || 0,
+          currency: usage?.currency || 'USD',
+          success,
+          responseTime,
+          errorMessage
         })
+        
+        return result
+      } catch (error) {
+        success = false
+        errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        
+        // Track failed usage
+        const responseTime = Date.now() - startTime
+        await aiUsageTracker.trackUsage({
+          serviceType: 'translation',
+          provider: providerName,
+          operation: 'translate_text',
+          language: `${from}->${to}`,
+          inputLength: processedText.length,
+          outputLength: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          estimatedCost: 0,
+          currency: 'USD',
+          success,
+          responseTime,
+          errorMessage
+        })
+        
+        throw error
       }
-      
-      // Restore cached content
-      const restoredText = this.restoreCachedContent(translatedText, text)
-      
-      return restoredText
     } catch (error) {
       console.error('Translation failed:', error)
       // Return original text if translation fails

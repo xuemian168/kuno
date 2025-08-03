@@ -1,6 +1,7 @@
 import { AISummaryProvider, AISummaryConfig, AISummaryResult, ArticleContent } from './types'
 import { OpenAISummaryProvider } from './providers/openai'
 import { GeminiSummaryProvider } from './providers/gemini'
+import { aiUsageTracker, trackSummaryGeneration, trackSEOGeneration } from '../ai-usage-tracker'
 
 export * from './types'
 
@@ -86,18 +87,46 @@ export class AISummaryService {
       throw new Error(`AI summary provider '${this.activeProvider.name}' is not configured`)
     }
 
+    const providerName = this.activeProvider.name.toLowerCase().includes('openai') ? 'openai' : 'gemini'
+    const model = (this.activeProvider as any).model || 'unknown'
+    
     try {
-      const result = await this.activeProvider.generateSummary(
-        articleContent.content,
-        articleContent.language
+      const result = await trackSummaryGeneration(
+        () => this.activeProvider!.generateSummary(
+          articleContent.content,
+          articleContent.language
+        ),
+        providerName,
+        model,
+        articleContent.language,
+        articleContent.content.length,
+        undefined // articleId not available in ArticleContent interface
       )
 
-      // Update usage stats if available
+      // Update local usage stats if available
       if (result.usage) {
         this.updateUsageStats({
           summaries: 1,
           tokens: result.usage.totalTokens || 0,
           cost: result.usage.estimatedCost || 0
+        })
+
+        // Track additional usage details
+        await aiUsageTracker.trackUsage({
+          serviceType: 'summary',
+          provider: providerName,
+          model: model,
+          operation: 'generate_summary',
+          inputTokens: result.usage.inputTokens,
+          outputTokens: result.usage.outputTokens,
+          totalTokens: result.usage.totalTokens,
+          estimatedCost: result.usage.estimatedCost,
+          currency: result.usage.currency || 'USD',
+          language: articleContent.language,
+          inputLength: articleContent.content.length,
+          outputLength: (result.title + result.summary + result.keywords.join(',')).length,
+          success: true,
+          articleId: undefined // articleId not available in ArticleContent interface
         })
       }
 
@@ -117,7 +146,15 @@ export class AISummaryService {
       throw new Error(`AI summary provider '${this.activeProvider.name}' is not configured`)
     }
 
-    return await this.activeProvider.generateSEOKeywords(content, language)
+    const providerName = this.activeProvider.name.toLowerCase().includes('openai') ? 'openai' : 'gemini'
+    
+    return await trackSEOGeneration(
+      () => this.activeProvider!.generateSEOKeywords(content, language),
+      providerName,
+      'keywords',
+      language,
+      content.length
+    )
   }
 
   async generateTitle(content: string, language: string): Promise<string> {
@@ -129,7 +166,15 @@ export class AISummaryService {
       throw new Error(`AI summary provider '${this.activeProvider.name}' is not configured`)
     }
 
-    return await this.activeProvider.generateTitle(content, language)
+    const providerName = this.activeProvider.name.toLowerCase().includes('openai') ? 'openai' : 'gemini'
+    
+    return await trackSEOGeneration(
+      () => this.activeProvider!.generateTitle(content, language),
+      providerName,
+      'title',
+      language,
+      content.length
+    )
   }
 
   configureFromSettings(config: AISummaryConfig): void {

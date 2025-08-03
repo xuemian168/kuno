@@ -244,7 +244,7 @@ class ApiClient {
     }
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}`
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

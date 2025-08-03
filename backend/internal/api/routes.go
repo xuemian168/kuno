@@ -78,6 +78,7 @@ func SetupRoutes() *gin.Engine {
 					adminArticles.PUT("/:id", UpdateArticle)
 					adminArticles.DELETE("/:id", DeleteArticle)
 					adminArticles.POST("/import", ImportMarkdown)
+					adminArticles.POST("/parse-wordpress", ParseWordPress)
 					adminArticles.POST("/import-wordpress", ImportWordPress)
 				}
 
@@ -135,6 +136,19 @@ func SetupRoutes() *gin.Engine {
 				{
 					adminSystem.GET("/check-updates", CheckUpdates)
 					adminSystem.POST("/clear-cache", ClearUpdateCache)
+				}
+
+				// AI Usage tracking
+				aiUsageController := NewAIUsageController()
+				adminAIUsage := admin.Group("/ai-usage")
+				{
+					adminAIUsage.POST("/track", aiUsageController.TrackUsage)
+					adminAIUsage.GET("/stats", aiUsageController.GetUsageStats)
+					adminAIUsage.GET("/cost", aiUsageController.GetTotalCost)
+					adminAIUsage.GET("/recent", aiUsageController.GetRecentUsage)
+					adminAIUsage.GET("/daily", aiUsageController.GetDailyUsage)
+					adminAIUsage.GET("/article/:id", aiUsageController.GetUsageByArticle)
+					adminAIUsage.DELETE("/cleanup", aiUsageController.CleanupOldRecords)
 				}
 			}
 		}

@@ -6,6 +6,7 @@ services:
     container_name: blog-backend
     volumes:
       - blog_data:/root/data
+      - blog_uploads:/root/uploads
     environment:
       - DB_PATH=/root/data/blog.db
       - GIN_MODE=release
@@ -52,4 +53,6 @@ services:
 
 volumes:
   blog_data:
+    driver: local
+  blog_uploads:
     driver: local

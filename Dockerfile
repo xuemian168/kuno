@@ -62,8 +62,9 @@ RUN mkdir -p /app/backend /app/frontend /var/log/supervisor /run/nginx
 # Copy backend binary
 COPY --from=backend-builder /app/backend/main /app/backend/
 
-# Create uploads directory
-RUN mkdir -p /app/backend/uploads
+# Create uploads directory with proper permissions
+RUN mkdir -p /app/backend/uploads/images /app/backend/uploads/videos /app/backend/uploads/branding && \
+    chmod -R 755 /app/backend/uploads
 
 # Copy frontend build
 COPY --from=frontend-builder /app/frontend/.next/standalone /app/frontend/
@@ -80,8 +81,10 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY inject-env.sh /app/
 RUN chmod +x /app/inject-env.sh
 
-# Create data directory for SQLite
-RUN mkdir -p /app/data && chown -R appuser:appgroup /app /var/log/supervisor
+# Create data directory for SQLite and set ownership
+RUN mkdir -p /app/data && \
+    chown -R appuser:appgroup /app /var/log/supervisor && \
+    chmod -R 755 /app/backend/uploads
 
 # Build arguments for metadata
 ARG BUILD_DATE

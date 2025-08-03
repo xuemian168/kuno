@@ -161,3 +161,51 @@ type SocialMedia struct {
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }
+
+// AIUsageRecord tracks AI service usage for analytics and cost monitoring
+type AIUsageRecord struct {
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	ServiceType  string    `gorm:"not null;size:50;index" json:"service_type"` // "summary", "translation", "seo"
+	Provider     string    `gorm:"not null;size:50;index" json:"provider"`     // "openai", "gemini", "deepl", etc.
+	Model        string    `gorm:"size:100" json:"model"`                      // specific model used
+	Operation    string    `gorm:"not null;size:100" json:"operation"`         // "generate_summary", "translate_text", etc.
+	
+	// Token usage
+	InputTokens  int       `gorm:"default:0" json:"input_tokens"`
+	OutputTokens int       `gorm:"default:0" json:"output_tokens"`
+	TotalTokens  int       `gorm:"default:0" json:"total_tokens"`
+	
+	// Cost tracking
+	EstimatedCost float64  `gorm:"type:decimal(10,6);default:0" json:"estimated_cost"`
+	Currency      string   `gorm:"size:10;default:'USD'" json:"currency"`
+	
+	// Request metadata
+	Language     string    `gorm:"size:10" json:"language"`
+	InputLength  int       `gorm:"default:0" json:"input_length"`  // character count of input
+	OutputLength int       `gorm:"default:0" json:"output_length"` // character count of output
+	
+	// Performance metrics
+	ResponseTime int       `gorm:"default:0" json:"response_time"` // milliseconds
+	Success      bool      `gorm:"default:true" json:"success"`
+	ErrorMessage string    `gorm:"type:text" json:"error_message,omitempty"`
+	
+	// Context
+	ArticleID    *uint     `gorm:"index" json:"article_id,omitempty"`    // if related to specific article
+	UserAgent    string    `gorm:"size:500" json:"user_agent,omitempty"`
+	IPAddress    string    `gorm:"size:45" json:"ip_address,omitempty"`
+	
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// AIUsageStats aggregated statistics for reporting
+type AIUsageStats struct {
+	ServiceType     string  `json:"service_type"`
+	Provider        string  `json:"provider"`
+	TotalRequests   int64   `json:"total_requests"`
+	SuccessRequests int64   `json:"success_requests"`
+	TotalTokens     int64   `json:"total_tokens"`
+	TotalCost       float64 `json:"total_cost"`
+	Currency        string  `json:"currency"`
+	AvgResponseTime float64 `json:"avg_response_time"`
+}

@@ -159,6 +159,10 @@ export class GeminiProvider extends BaseTranslationProvider {
         throw this.createError('No translation result returned', 'NO_RESULT')
       }
       
+      if (!data.candidates[0]?.content?.parts?.[0]?.text) {
+        throw this.createError('Invalid translation response format', 'INVALID_RESPONSE')
+      }
+      
       const translatedText = data.candidates[0].content.parts[0].text.trim()
       
       // Extract token usage if available

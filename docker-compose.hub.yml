@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   i18n-blog:
-    image: ictrun/echopaper:latest
+    image: ictrun/kuno:latest
     container_name: ${CONTAINER_NAME:-i18n-blog}
     restart: ${RESTART_POLICY:-unless-stopped}
     ports:

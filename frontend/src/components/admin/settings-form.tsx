@@ -25,7 +25,7 @@ import { setSoundEnabled } from "@/lib/sound"
 import { NotificationDialog, useNotificationDialog } from "@/components/ui/notification-dialog"
 import { AboutDialog } from "@/components/admin/about-dialog"
 import { UpdateChecker } from "@/components/admin/update-checker"
-import { TranslationStats } from "./translation-stats"
+import { AIUsageStatsComponent } from "./ai-usage-stats"
 
 // Dynamic languages based on user configuration - will be set in component
 
@@ -1416,19 +1416,19 @@ export function SettingsForm({ locale }: SettingsFormProps) {
               </CardContent>
             </Card>
 
-            {/* Translation Usage Statistics */}
-            <Card className="pt-0">
-              <CardHeader className="pt-6 pb-4 px-6">
+            {/* AI Usage Statistics Section */}
+            <Card>
+              <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2">
                   <Activity className="h-5 w-5" />
-                  {locale === 'zh' ? '翻译使用统计' : 'Translation Usage Statistics'}
+                  {locale === 'zh' ? 'AI使用统计' : 'AI Usage Statistics'}
                 </CardTitle>
                 <CardDescription>
-                  {locale === 'zh' ? '查看翻译API使用情况和费用统计' : 'View translation API usage and cost statistics'}
+                  {locale === 'zh' ? '查看AI服务API使用情况和费用统计' : 'View AI service API usage and cost statistics'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <TranslationStats showDetailed={true} locale={locale} />
+                <AIUsageStatsComponent showDetailed={true} locale={locale} />
               </CardContent>
             </Card>
 

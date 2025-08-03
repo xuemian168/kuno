@@ -7,6 +7,7 @@ import (
 	"html"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -285,9 +286,15 @@ func ImportWordPress(c *gin.Context) {
 		content := cleanWordPressContent(item.Content)
 		summary := generateSummary(item.Excerpt, content)
 
+		// Clean and decode title
+		title := html.UnescapeString(item.Title)
+		if decodedTitle, err := url.QueryUnescape(title); err == nil {
+			title = decodedTitle
+		}
+
 		// Create article
 		article := models.Article{
-			Title:       html.UnescapeString(item.Title),
+			Title:       title,
 			Content:     content,
 			ContentType: "markdown",
 			Summary:     summary,
@@ -408,6 +415,168 @@ func cleanWordPressContent(content string) string {
 	content = strings.ReplaceAll(content, "\x00", "")
 
 	return strings.TrimSpace(content)
+}
+
+// ParsedArticle represents an article from WordPress without database operations
+type ParsedArticle struct {
+	Title       string   `json:"title"`
+	Content     string   `json:"content"`
+	Excerpt     string   `json:"excerpt,omitempty"`
+	Author      string   `json:"author,omitempty"`
+	PublishDate string   `json:"publishDate,omitempty"`
+	Categories  []string `json:"categories"`
+	Tags        []string `json:"tags"`
+	Status      string   `json:"status"`
+}
+
+// ParseResult represents the result of parsing a WordPress file
+type ParseResult struct {
+	Articles         []ParsedArticle `json:"articles"`
+	Categories       []string        `json:"categories"`
+	TotalPosts       int             `json:"total_posts"`
+	PublishablePosts int             `json:"publishable_posts"`
+}
+
+// ParseWordPress handles WordPress WXR file parsing without importing
+func ParseWordPress(c *gin.Context) {
+	// Parse multipart form
+	err := c.Request.ParseMultipartForm(32 << 20) // 32 MB limit
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse form data"})
+		return
+	}
+
+	// Get the uploaded file
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		return
+	}
+	defer file.Close()
+
+	// Validate file type
+	if !strings.HasSuffix(strings.ToLower(header.Filename), ".xml") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File must be an XML file"})
+		return
+	}
+
+	// Read file content
+	fileContent, err := io.ReadAll(file)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read file"})
+		return
+	}
+
+	// Clean XML data
+	cleanedContent := cleanXMLData(fileContent)
+
+	// Parse XML
+	var rss struct {
+		XMLName xml.Name   `xml:"rss"`
+		Channel WXRChannel `xml:"channel"`
+	}
+
+	decoder := xml.NewDecoder(bytes.NewReader(cleanedContent))
+	decoder.Strict = false
+	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
+		return input, nil
+	}
+	
+	if err := decoder.Decode(&rss); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Failed to parse XML: %v", err)})
+		return
+	}
+
+	// Parse categories
+	var categories []string
+	categorySet := make(map[string]bool)
+	for _, wxrCat := range rss.Channel.Categories {
+		if wxrCat.Name != "" && !categorySet[wxrCat.Name] {
+			categories = append(categories, wxrCat.Name)
+			categorySet[wxrCat.Name] = true
+		}
+	}
+
+	// Parse articles
+	var articles []ParsedArticle
+	var totalPosts int
+	var publishablePosts int
+
+	for _, item := range rss.Channel.Items {
+		totalPosts++
+
+		// Skip non-post items (pages, attachments, etc.)
+		if item.PostType != "post" {
+			continue
+		}
+
+		// Skip empty titles
+		if strings.TrimSpace(item.Title) == "" {
+			continue
+		}
+
+		// Extract categories for this item
+		var itemCategories []string
+		var itemTags []string
+		for _, cat := range item.Categories {
+			if cat.Domain == "category" {
+				itemCategories = append(itemCategories, cat.Value)
+			} else if cat.Domain == "post_tag" {
+				itemTags = append(itemTags, cat.Value)
+			}
+		}
+
+		// Parse post date
+		var publishDate string
+		if item.PostDate != "" {
+			if parsedDate, err := time.Parse("2006-01-02 15:04:05", item.PostDate); err == nil {
+				publishDate = parsedDate.Format(time.RFC3339)
+			}
+		}
+
+		// Clean content for preview
+		content := cleanWordPressContent(item.Content)
+		excerpt := ""
+		if item.Excerpt != "" {
+			excerpt = generateSummary(item.Excerpt, "")
+		}
+
+		// Clean and decode title
+		title := html.UnescapeString(item.Title)
+		if decodedTitle, err := url.QueryUnescape(title); err == nil {
+			title = decodedTitle
+		}
+
+		article := ParsedArticle{
+			Title:       title,
+			Content:     content,
+			Excerpt:     excerpt,
+			Author:      item.Creator,
+			PublishDate: publishDate,
+			Categories:  itemCategories,
+			Tags:        itemTags,
+			Status:      item.PostStatus,
+		}
+
+		articles = append(articles, article)
+
+		// Count publishable posts (posts that are published and have titles)
+		if item.PostStatus == "publish" {
+			publishablePosts++
+		}
+	}
+
+	result := ParseResult{
+		Articles:         articles,
+		Categories:       categories,
+		TotalPosts:       totalPosts,
+		PublishablePosts: publishablePosts,
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "WordPress file parsed successfully",
+		"result":  result,
+	})
 }
 
 // generateSummary creates a summary from excerpt or content
