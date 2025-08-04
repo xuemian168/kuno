@@ -5,29 +5,43 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Get base URL from API URL
+/**
+ * Get base URL for API resources (backend)
+ * Uses API URL with /api suffix removed
+ */
 export function getBaseUrl(): string {
+  // In browser environment, use current origin for consistent URL generation
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+  
+  // Server-side: use API URL, remove /api suffix
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
-  return apiBaseUrl.replace('/api', '') // Remove /api suffix
+  return apiBaseUrl.replace('/api', '')
 }
 
-// Get the frontend website URL
+/**
+ * Get frontend site URL (for static assets)
+ * Prioritizes explicit configuration, falls back to smart defaults
+ */
 export function getSiteUrl(): string {
-  // In browser, use window.location
+  // In browser, use current location
   if (typeof window !== 'undefined') {
     return `${window.location.protocol}//${window.location.host}`
   }
   
-  // In server-side rendering, try to get from environment or fall back to API URL logic
+  // Check for explicit site URL first
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return process.env.NEXT_PUBLIC_SITE_URL
   }
   
-  // Fallback to deriving from API URL
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
-  const baseUrl = apiBaseUrl.replace('/api', '')
+  // In development, frontend is typically on port 3000
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:3000'
+  }
   
-  return baseUrl
+  // Production fallback - derive from API URL
+  return getBaseUrl()
 }
 
 // Convert relative API URLs to absolute URLs

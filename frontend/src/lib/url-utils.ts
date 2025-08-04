@@ -2,19 +2,14 @@
  * Utility functions for URL generation and handling
  */
 
+import { getBaseUrl as getBaseUrlCore } from './utils'
+
 /**
  * Get the base URL for the current environment
- * In production, this will use the current domain
- * In development, it will use the configured API URL
+ * Delegates to the unified implementation in utils.ts
  */
 export function getBaseUrl(): string {
-  if (typeof window !== 'undefined') {
-    // Client-side: use current origin
-    return window.location.origin
-  }
-  
-  // Server-side: use environment variable or default
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+  return getBaseUrlCore()
 }
 
 /**

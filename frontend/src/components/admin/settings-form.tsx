@@ -21,6 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { SocialMediaManager } from "@/components/admin/social-media-manager"
 import { getFullApiUrl } from "@/lib/utils"
+import { generateFaviconUrl, generateMediaUrl } from "@/lib/favicon-utils"
 import { setSoundEnabled } from "@/lib/sound"
 import { NotificationDialog, useNotificationDialog } from "@/components/ui/notification-dialog"
 import { AboutDialog } from "@/components/admin/about-dialog"
@@ -943,7 +944,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     {settings?.logo_url && (
                       <div className="flex items-center gap-2">
                         <img 
-                          src={getFullApiUrl(settings.logo_url)} 
+                          src={generateMediaUrl(settings.logo_url)} 
                           alt="Current Logo" 
                           className="h-12 w-auto object-contain rounded border bg-white"
                         />
@@ -992,7 +993,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     {settings?.favicon_url && (
                       <div className="flex items-center gap-2">
                         <img 
-                          src={getFullApiUrl(settings.favicon_url)} 
+                          src={generateFaviconUrl(settings.favicon_url).url} 
                           alt="Current Favicon" 
                           className="h-8 w-8 object-contain rounded border bg-white"
                         />

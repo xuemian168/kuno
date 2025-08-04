@@ -11,6 +11,7 @@ import { useSettings } from "@/contexts/settings-context"
 import { useAuth } from "@/contexts/auth-context"
 import { Link } from '@/i18n/routing'
 import { getFullApiUrl, cn } from "@/lib/utils"
+import { generateMediaUrl } from "@/lib/favicon-utils"
 
 export default function Header() {
   const t = useTranslations()
@@ -53,7 +54,7 @@ export default function Header() {
           <Link className="mr-6 flex items-center space-x-2" href="/">
             {settings?.logo_url && (
               <img 
-                src={getFullApiUrl(settings.logo_url)} 
+                src={generateMediaUrl(settings.logo_url)} 
                 alt="Logo" 
                 className="h-8 w-auto object-contain"
               />
@@ -156,7 +157,7 @@ export default function Header() {
             <Link className="flex items-center space-x-2 md:hidden" href="/">
               {settings?.logo_url && (
                 <img 
-                  src={getFullApiUrl(settings.logo_url)} 
+                  src={generateMediaUrl(settings.logo_url)} 
                   alt="Logo" 
                   className="h-7 w-auto object-contain"
                 />
