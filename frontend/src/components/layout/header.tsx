@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { LogOut, Home, Rss, LayoutDashboard, Settings, Image, Shield, User } from "lucide-react"
+import { LogOut, Home, Rss, LayoutDashboard, Settings, Image, Shield, User, Upload } from "lucide-react"
 import { useTranslations } from 'next-intl'
 import { usePathname } from 'next/navigation'
 import ModeToggle from "@/components/mode-toggle"
@@ -24,7 +24,7 @@ export default function Header() {
       return pathname === '/' || pathname.match(/^\/[a-z]{2}$/) || pathname.match(/^\/[a-z]{2}\/$/)
     }
     if (path === '/admin') {
-      return pathname.includes('/admin') && !pathname.includes('/admin/settings') && !pathname.includes('/admin/media')
+      return pathname.includes('/admin') && !pathname.includes('/admin/settings') && !pathname.includes('/admin/media') && !pathname.includes('/admin/import')
     }
     if (path === '/rss') {
       return pathname.includes('/rss')
@@ -34,6 +34,9 @@ export default function Header() {
     }
     if (path === '/admin/media') {
       return pathname.includes('/admin/media')
+    }
+    if (path === '/admin/import') {
+      return pathname.includes('/admin/import')
     }
     return pathname.includes(path)
   }
@@ -130,6 +133,18 @@ export default function Header() {
                   >
                     <Image className="h-4 w-4" />
                     <span>Media</span>
+                  </Link>
+                  <Link
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all hover:bg-accent",
+                      pathname.includes('/admin/import')
+                        ? "text-foreground font-semibold bg-accent" 
+                        : "text-foreground/60 hover:text-foreground/80"
+                    )}
+                    href="/admin/import"
+                  >
+                    <Upload className="h-4 w-4" />
+                    <span>Import</span>
                   </Link>
                 </div>
               </>

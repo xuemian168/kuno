@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { Plus, Edit, Trash2, Settings, Eye, BarChart3, Download, Check, X } from "lucide-react"
+import { Plus, Edit, Trash2, Settings, Eye, BarChart3, Download, Check, X, Upload } from "lucide-react"
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
 import { apiClient, Article, Category } from "@/lib/api"
-import { WordPressImport } from "@/components/admin/wordpress-import"
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog"
 import { useThrottle } from "@/hooks/use-debounce"
 import { Clock, Calendar } from "lucide-react"
@@ -118,22 +117,6 @@ export default function AdminPage({ params }: AdminPageProps) {
     }
   }
 
-  const handleImportComplete = async () => {
-    // Refresh data after import
-    setLoading(true)
-    try {
-      const [articlesData, categoriesData] = await Promise.all([
-        apiClient.getArticles({ lang: locale }),
-        apiClient.getCategories({ lang: locale })
-      ])
-      setArticles(articlesData)
-      setCategories(categoriesData)
-    } catch (error) {
-      console.error('Failed to refresh data after import:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleSelectArticle = (articleId: number, checked: boolean) => {
     const newSelection = new Set(selectedArticles)
@@ -401,6 +384,12 @@ export default function AdminPage({ params }: AdminPageProps) {
                     {t('analytics.title')}
                   </Button>
                 </Link>
+                <Link href="/admin/import">
+                  <Button variant="outline">
+                    <Upload className="mr-2 h-4 w-4" />
+                    {locale === 'zh' ? '内容导入' : 'Import Content'}
+                  </Button>
+                </Link>
                 <Button 
                   variant="outline" 
                   onClick={throttledExportAll}
@@ -571,14 +560,6 @@ export default function AdminPage({ params }: AdminPageProps) {
                 ))}
               </div>
             )}
-          </div>
-
-          <Separator className="mb-8" />
-
-          {/* WordPress Import */}
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold mb-6">{t('import.contentImport')}</h2>
-            <WordPressImport onImportComplete={handleImportComplete} />
           </div>
 
           <Separator className="mb-8" />

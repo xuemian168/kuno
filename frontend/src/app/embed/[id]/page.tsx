@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from 'next/navigation'
 import EmbedClient from './embed-client'
 import { apiClient } from '@/lib/api'
+import { generatePageMetadata } from '@/lib/metadata-utils'
 
 interface EmbedPageProps {
   params: Promise<{ id: string }>
@@ -14,22 +15,28 @@ export async function generateMetadata({ params }: EmbedPageProps): Promise<Meta
   try {
     const article = await apiClient.getArticle(parseInt(id))
     
-    return {
+    return generatePageMetadata({
+      locale: 'en', // Default locale for embed pages
       title: article.title,
       description: article.summary || '',
+      canonical: `/embed/${id}`,
+      includeRSS: false, // Embed pages don't need RSS
       robots: {
         index: true,
         follow: true,
-      },
-    }
+      }
+    })
   } catch (error) {
-    return {
+    return generatePageMetadata({
+      locale: 'en',
       title: 'Article Not Found',
+      canonical: `/embed/${id}`,
+      includeRSS: false,
       robots: {
         index: false,
         follow: false,
-      },
-    }
+      }
+    })
   }
 }
 

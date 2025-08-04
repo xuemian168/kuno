@@ -316,6 +316,31 @@ class ApiClient {
     })
   }
 
+  async importGhost(file: File): Promise<{ message: string, result: { imported_articles: number, imported_pages: number, imported_tags: number, errors: string[] } }> {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch(`${this.getBaseUrl()}/articles/import-ghost`, {
+      method: 'POST',
+      headers: {
+        'Authorization': this.token ? `Bearer ${this.token}` : '',
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        this.clearToken()
+        if (typeof window !== 'undefined') {
+          window.location.href = '/admin/login'
+        }
+      }
+      throw new Error(`Import failed: ${response.status} ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
   // Categories
   async getCategories(options?: { lang?: string }): Promise<Category[]> {
     const params = options?.lang ? `?lang=${options.lang}` : ''

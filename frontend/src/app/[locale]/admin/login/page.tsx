@@ -12,7 +12,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Lock, User, Shield, AlertTriangle, HelpCircle, Terminal, Copy } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
-import { apiClient } from '@/lib/api'
+import { apiClient, SiteSettings } from '@/lib/api'
+import Image from 'next/image'
 
 interface LoginPageProps {
   params: Promise<{ locale: string }>
@@ -28,23 +29,37 @@ export default function LoginPage({ params }: LoginPageProps) {
   const [recoveryMessage, setRecoveryMessage] = useState('')
   const [checkingRecovery, setCheckingRecovery] = useState(true)
   const [copySuccess, setCopySuccess] = useState<string | null>(null)
+  const [settings, setSettings] = useState<SiteSettings | null>(null)
   const { login } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    const checkRecoveryStatus = async () => {
+    const loadData = async () => {
       try {
-        const status = await apiClient.getRecoveryStatus()
-        setIsRecoveryMode(status.is_recovery_mode)
-        setRecoveryMessage(status.message || '')
+        // Load both recovery status and site settings
+        const [recoveryStatus, siteSettings] = await Promise.all([
+          apiClient.getRecoveryStatus(),
+          apiClient.getSettings()
+        ])
+        
+        setIsRecoveryMode(recoveryStatus.is_recovery_mode)
+        setRecoveryMessage(recoveryStatus.message || '')
+        setSettings(siteSettings)
       } catch (error) {
-        console.error('Failed to check recovery status:', error)
+        console.error('Failed to load data:', error)
+        // Still try to load settings even if recovery status fails
+        try {
+          const siteSettings = await apiClient.getSettings()
+          setSettings(siteSettings)
+        } catch (settingsError) {
+          console.error('Failed to load settings:', settingsError)
+        }
       } finally {
         setCheckingRecovery(false)
       }
     }
 
-    checkRecoveryStatus()
+    loadData()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,6 +99,24 @@ export default function LoginPage({ params }: LoginPageProps) {
       >
         <Card className="shadow-xl">
           <CardHeader className="space-y-1">
+            {/* Logo Section */}
+            <div className="flex justify-center mb-4">
+              {settings?.logo_url ? (
+                <Image
+                  src="/kuno.png"
+                  alt={settings.site_title || 'Site Logo'}
+                  width={80}
+                  height={80}
+                  className="max-h-20 w-auto object-contain"
+                  priority
+                />
+              ) : (
+                <div className="text-4xl font-bold text-primary">
+                  {settings?.site_title?.charAt(0) || 'B'}
+                </div>
+              )}
+            </div>
+            
             <CardTitle className="text-2xl font-bold text-center">{t('admin.login')}</CardTitle>
             <CardDescription className="text-center">
               {t('admin.enterCredentials')}
@@ -153,7 +186,7 @@ export default function LoginPage({ params }: LoginPageProps) {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={loading} style={{ backgroundColor: '#00b043', color: '#fff' }}>
                 {loading ? t('admin.signingin') : t('admin.signin')}
               </Button>
             </form>
