@@ -103,33 +103,50 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     },
   }
 
-  // Add favicon if available, with explicit overrides to prevent browser defaults
+  // Add favicon with comprehensive icon definitions to prevent browser defaults
+  let finalFaviconUrl: string
+  let faviconType: string = 'image/png'
+  
   if (faviconUrl) {
-    metadata.icons = {
-      icon: [
-        { url: faviconUrl, sizes: '32x32', type: 'image/png' },
-        { url: faviconUrl, sizes: '16x16', type: 'image/png' },
-      ],
-      shortcut: faviconUrl,
-      apple: faviconUrl,
-      other: [
-        {
-          rel: 'icon',
-          url: faviconUrl,
-        },
-      ],
+    finalFaviconUrl = faviconUrl
+    
+    // Detect favicon type from extension
+    if (faviconUrl.toLowerCase().includes('.ico')) {
+      faviconType = 'image/x-icon'
+    } else if (faviconUrl.toLowerCase().includes('.svg')) {
+      faviconType = 'image/svg+xml'
+    } else if (faviconUrl.toLowerCase().includes('.jpg') || faviconUrl.toLowerCase().includes('.jpeg')) {
+      faviconType = 'image/jpeg'
     }
   } else {
-    // Fallback to default favicon to prevent browser from requesting default
-    const defaultFavicon = `${baseUrl}/kuno.png`
-    metadata.icons = {
-      icon: [
-        { url: defaultFavicon, sizes: '32x32', type: 'image/png' },
-        { url: defaultFavicon, sizes: '16x16', type: 'image/png' },
-      ],
-      shortcut: defaultFavicon,
-      apple: defaultFavicon,
-    }
+    // Fallback to default favicon
+    finalFaviconUrl = `${baseUrl}/kuno.png`
+  }
+  
+  // Comprehensive icon metadata to override all browser defaults
+  metadata.icons = {
+    icon: [
+      { url: finalFaviconUrl, sizes: '16x16', type: faviconType },
+      { url: finalFaviconUrl, sizes: '32x32', type: faviconType },
+      { url: finalFaviconUrl, sizes: '48x48', type: faviconType },
+      { url: finalFaviconUrl, sizes: '64x64', type: faviconType },
+    ],
+    shortcut: finalFaviconUrl,
+    apple: [
+      { url: finalFaviconUrl, sizes: '180x180', type: faviconType },
+    ],
+    other: [
+      {
+        rel: 'icon',
+        url: finalFaviconUrl,
+        type: faviconType,
+      },
+      {
+        rel: 'shortcut icon',
+        url: finalFaviconUrl,
+        type: faviconType,
+      },
+    ],
   }
 
   return metadata

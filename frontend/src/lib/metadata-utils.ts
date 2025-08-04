@@ -130,37 +130,59 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
     }
   }
 
-  // Add favicon if available, with explicit overrides to prevent browser defaults
+  // Add favicon with comprehensive icon definitions to prevent browser defaults
+  let faviconUrl: string
+  let faviconType: string = 'image/png'
+  
   if (settings?.favicon_url) {
-    const faviconUrl = settings.favicon_url.startsWith('http') 
-      ? settings.favicon_url 
-      : `${baseUrl.replace('/api', '')}${settings.favicon_url}`
+    // Handle custom favicon from settings
+    if (settings.favicon_url.startsWith('http')) {
+      faviconUrl = settings.favicon_url
+    } else if (settings.favicon_url.startsWith('/')) {
+      // Absolute path from root
+      faviconUrl = `${baseUrl}${settings.favicon_url}`
+    } else {
+      // Relative path - assume it's from uploads
+      faviconUrl = `${baseUrl}/api/uploads/${settings.favicon_url}`
+    }
     
-    metadata.icons = {
-      icon: [
-        { url: faviconUrl, sizes: '32x32', type: 'image/png' },
-        { url: faviconUrl, sizes: '16x16', type: 'image/png' },
-      ],
-      shortcut: faviconUrl,
-      apple: faviconUrl,
-      other: [
-        {
-          rel: 'icon',
-          url: faviconUrl,
-        },
-      ],
+    // Detect favicon type from extension
+    if (settings.favicon_url.toLowerCase().includes('.ico')) {
+      faviconType = 'image/x-icon'
+    } else if (settings.favicon_url.toLowerCase().includes('.svg')) {
+      faviconType = 'image/svg+xml'
+    } else if (settings.favicon_url.toLowerCase().includes('.jpg') || settings.favicon_url.toLowerCase().includes('.jpeg')) {
+      faviconType = 'image/jpeg'
     }
   } else {
-    // Fallback to default favicon to prevent browser from requesting default
-    const defaultFavicon = `${baseUrl}/kuno.png`
-    metadata.icons = {
-      icon: [
-        { url: defaultFavicon, sizes: '32x32', type: 'image/png' },
-        { url: defaultFavicon, sizes: '16x16', type: 'image/png' },
-      ],
-      shortcut: defaultFavicon,
-      apple: defaultFavicon,
-    }
+    // Fallback to default favicon
+    faviconUrl = `${baseUrl}/kuno.png`
+  }
+  
+  // Comprehensive icon metadata to override all browser defaults
+  metadata.icons = {
+    icon: [
+      { url: faviconUrl, sizes: '16x16', type: faviconType },
+      { url: faviconUrl, sizes: '32x32', type: faviconType },
+      { url: faviconUrl, sizes: '48x48', type: faviconType },
+      { url: faviconUrl, sizes: '64x64', type: faviconType },
+    ],
+    shortcut: faviconUrl,
+    apple: [
+      { url: faviconUrl, sizes: '180x180', type: faviconType },
+    ],
+    other: [
+      {
+        rel: 'icon',
+        url: faviconUrl,
+        type: faviconType,
+      },
+      {
+        rel: 'shortcut icon',
+        url: faviconUrl,
+        type: faviconType,
+      },
+    ],
   }
 
   return metadata
@@ -187,37 +209,59 @@ export async function generateBasicMetadata(options: {
     metadataBase: new URL(baseUrl),
   }
 
-  // Add favicon if available, with explicit overrides to prevent browser defaults
+  // Add favicon with comprehensive icon definitions to prevent browser defaults
+  let faviconUrl: string
+  let faviconType: string = 'image/png'
+  
   if (settings?.favicon_url) {
-    const faviconUrl = settings.favicon_url.startsWith('http') 
-      ? settings.favicon_url 
-      : `${baseUrl.replace('/api', '')}${settings.favicon_url}`
+    // Handle custom favicon from settings
+    if (settings.favicon_url.startsWith('http')) {
+      faviconUrl = settings.favicon_url
+    } else if (settings.favicon_url.startsWith('/')) {
+      // Absolute path from root
+      faviconUrl = `${baseUrl}${settings.favicon_url}`
+    } else {
+      // Relative path - assume it's from uploads
+      faviconUrl = `${baseUrl}/api/uploads/${settings.favicon_url}`
+    }
     
-    metadata.icons = {
-      icon: [
-        { url: faviconUrl, sizes: '32x32', type: 'image/png' },
-        { url: faviconUrl, sizes: '16x16', type: 'image/png' },
-      ],
-      shortcut: faviconUrl,
-      apple: faviconUrl,
-      other: [
-        {
-          rel: 'icon',
-          url: faviconUrl,
-        },
-      ],
+    // Detect favicon type from extension
+    if (settings.favicon_url.toLowerCase().includes('.ico')) {
+      faviconType = 'image/x-icon'
+    } else if (settings.favicon_url.toLowerCase().includes('.svg')) {
+      faviconType = 'image/svg+xml'
+    } else if (settings.favicon_url.toLowerCase().includes('.jpg') || settings.favicon_url.toLowerCase().includes('.jpeg')) {
+      faviconType = 'image/jpeg'
     }
   } else {
-    // Fallback to default favicon to prevent browser from requesting default
-    const defaultFavicon = `${baseUrl}/kuno.png`
-    metadata.icons = {
-      icon: [
-        { url: defaultFavicon, sizes: '32x32', type: 'image/png' },
-        { url: defaultFavicon, sizes: '16x16', type: 'image/png' },
-      ],
-      shortcut: defaultFavicon,
-      apple: defaultFavicon,
-    }
+    // Fallback to default favicon
+    faviconUrl = `${baseUrl}/kuno.png`
+  }
+  
+  // Comprehensive icon metadata to override all browser defaults
+  metadata.icons = {
+    icon: [
+      { url: faviconUrl, sizes: '16x16', type: faviconType },
+      { url: faviconUrl, sizes: '32x32', type: faviconType },
+      { url: faviconUrl, sizes: '48x48', type: faviconType },
+      { url: faviconUrl, sizes: '64x64', type: faviconType },
+    ],
+    shortcut: faviconUrl,
+    apple: [
+      { url: faviconUrl, sizes: '180x180', type: faviconType },
+    ],
+    other: [
+      {
+        rel: 'icon',
+        url: faviconUrl,
+        type: faviconType,
+      },
+      {
+        rel: 'shortcut icon',
+        url: faviconUrl,
+        type: faviconType,
+      },
+    ],
   }
 
   return metadata
