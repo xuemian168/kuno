@@ -130,16 +130,93 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
     }
   }
 
-  // Add favicon if available
+  // Add favicon if available, with explicit overrides to prevent browser defaults
   if (settings?.favicon_url) {
     const faviconUrl = settings.favicon_url.startsWith('http') 
       ? settings.favicon_url 
       : `${baseUrl.replace('/api', '')}${settings.favicon_url}`
     
     metadata.icons = {
-      icon: faviconUrl,
+      icon: [
+        { url: faviconUrl, sizes: '32x32', type: 'image/png' },
+        { url: faviconUrl, sizes: '16x16', type: 'image/png' },
+      ],
       shortcut: faviconUrl,
       apple: faviconUrl,
+      other: [
+        {
+          rel: 'icon',
+          url: faviconUrl,
+        },
+      ],
+    }
+  } else {
+    // Fallback to default favicon to prevent browser from requesting default
+    const defaultFavicon = `${baseUrl}/kuno.png`
+    metadata.icons = {
+      icon: [
+        { url: defaultFavicon, sizes: '32x32', type: 'image/png' },
+        { url: defaultFavicon, sizes: '16x16', type: 'image/png' },
+      ],
+      shortcut: defaultFavicon,
+      apple: defaultFavicon,
+    }
+  }
+
+  return metadata
+}
+
+/**
+ * Generate basic metadata without locale dependency (for client components or simple pages)
+ */
+export async function generateBasicMetadata(options: {
+  title?: string
+  description?: string
+}): Promise<Metadata> {
+  const baseUrl = getBaseUrl()
+  
+  // Try to fetch settings without locale dependency
+  const settings = await fetchSiteSettings('zh') // Use default locale
+  
+  const finalTitle = options.title || settings?.site_title || 'Admin Panel'
+  const finalDescription = options.description || settings?.site_subtitle || 'Content Management System'
+  
+  const metadata: Metadata = {
+    title: finalTitle,
+    description: finalDescription,
+    metadataBase: new URL(baseUrl),
+  }
+
+  // Add favicon if available, with explicit overrides to prevent browser defaults
+  if (settings?.favicon_url) {
+    const faviconUrl = settings.favicon_url.startsWith('http') 
+      ? settings.favicon_url 
+      : `${baseUrl.replace('/api', '')}${settings.favicon_url}`
+    
+    metadata.icons = {
+      icon: [
+        { url: faviconUrl, sizes: '32x32', type: 'image/png' },
+        { url: faviconUrl, sizes: '16x16', type: 'image/png' },
+      ],
+      shortcut: faviconUrl,
+      apple: faviconUrl,
+      other: [
+        {
+          rel: 'icon',
+          url: faviconUrl,
+        },
+      ],
+    }
+  } else {
+    // Fallback to default favicon to prevent browser from requesting default
+    const defaultFavicon = `${baseUrl}/kuno.png`
+    metadata.icons = {
+      icon: [
+        { url: defaultFavicon, sizes: '32x32', type: 'image/png' },
+        { url: defaultFavicon, sizes: '16x16', type: 'image/png' },
+      ],
+      shortcut: defaultFavicon,
+      apple: defaultFavicon,
     }
   }
 

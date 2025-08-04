@@ -103,12 +103,32 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     },
   }
 
-  // Add favicon if available
+  // Add favicon if available, with explicit overrides to prevent browser defaults
   if (faviconUrl) {
     metadata.icons = {
-      icon: faviconUrl,
+      icon: [
+        { url: faviconUrl, sizes: '32x32', type: 'image/png' },
+        { url: faviconUrl, sizes: '16x16', type: 'image/png' },
+      ],
       shortcut: faviconUrl,
       apple: faviconUrl,
+      other: [
+        {
+          rel: 'icon',
+          url: faviconUrl,
+        },
+      ],
+    }
+  } else {
+    // Fallback to default favicon to prevent browser from requesting default
+    const defaultFavicon = `${baseUrl}/kuno.png`
+    metadata.icons = {
+      icon: [
+        { url: defaultFavicon, sizes: '32x32', type: 'image/png' },
+        { url: defaultFavicon, sizes: '16x16', type: 'image/png' },
+      ],
+      shortcut: defaultFavicon,
+      apple: defaultFavicon,
     }
   }
 

@@ -1,8 +1,11 @@
 import type { Metadata } from 'next'
+import { generateBasicMetadata } from '@/lib/metadata-utils'
 
-export const metadata: Metadata = {
-  title: 'Blog',
-  description: 'A modern blog platform',
+export async function generateMetadata(): Promise<Metadata> {
+  return generateBasicMetadata({
+    title: 'Blog',
+    description: 'A modern blog platform'
+  })
 }
 
 // Root layout for non-locale routes (sitemap.xml, robots.txt, etc.)
