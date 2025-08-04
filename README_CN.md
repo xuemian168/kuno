@@ -59,9 +59,15 @@ cd /opt/kuno
 curl -sSL "https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh?$(date +%s)" -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
 ```
 
+部署脚本会引导您完成简化的配置：
+1. **选择协议**：HTTP 或 HTTPS（推荐 HTTPS）
+2. **输入域名**：例如 `qut.edu.kg`
+3. **自动构建 API URL**：系统会自动生成完整的 API URL，如 `https://qut.edu.kg/api`
+
 **重要提示**：
 - 不要使用 `curl | bash` 的方式，这会导致语法错误
 - 建议在 `/opt/kuno` 目录下部署，避免污染用户主目录
+- 新版部署脚本简化了配置流程，用户只需选择协议和输入域名即可
 
 ### 方法二：手动部署
 

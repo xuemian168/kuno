@@ -56,12 +56,25 @@ if [ "$CONTAINER_NAME" = "" ]; then
 fi
 
 echo ""
-echo -e "${YELLOW}📝 Please provide your API URL (e.g., https://your-domain.com/api)${NC}"
-read -p "API URL: " API_URL
-while [ "$API_URL" = "" ]; do
-    echo -e "${RED}❌ API URL is required for the blog to function properly.${NC}"
-    read -p "API URL: " API_URL
+echo -e "${YELLOW}📝 Please configure your API endpoint${NC}"
+echo "Choose protocol:"
+echo "1) HTTP"
+echo "2) HTTPS (recommended)"
+read -p "Select protocol (1 or 2, default: 2): " PROTOCOL_CHOICE
+if [ "$PROTOCOL_CHOICE" = "1" ]; then
+    PROTOCOL="http"
+else
+    PROTOCOL="https"
+fi
+
+read -p "Enter your domain (e.g., qut.edu.kg): " DOMAIN
+while [ "$DOMAIN" = "" ]; do
+    echo -e "${RED}❌ Domain is required for the blog to function properly.${NC}"
+    read -p "Enter your domain: " DOMAIN
 done
+
+# Construct the full API URL
+API_URL="${PROTOCOL}://${DOMAIN}/api"
 
 echo ""
 echo -e "${BLUE}📋 Deployment Summary:${NC}"
@@ -69,6 +82,8 @@ echo -e "  🐳 Image: ${IMAGE}"
 echo -e "  🌐 Port: ${PORT}"
 echo -e "  📦 Container: ${CONTAINER_NAME}"
 echo -e "  🔗 API URL: ${API_URL}"
+echo -e "  🌍 Protocol: ${PROTOCOL^^}"
+echo -e "  🏠 Domain: ${DOMAIN}"
 echo ""
 
 read -p "Continue with deployment? (y/n): " -n 1 -r

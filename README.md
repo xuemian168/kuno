@@ -61,9 +61,15 @@ cd /opt/kuno
 curl -sSL "https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh?$(date +%s)" -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
 ```
 
+The deployment script will guide you through a simplified configuration process:
+1. **Choose Protocol**: HTTP or HTTPS (HTTPS recommended)
+2. **Enter Domain**: e.g., `qut.edu.kg`
+3. **Auto-construct API URL**: The system will automatically generate the complete API URL, e.g., `https://qut.edu.kg/api`
+
 > **Important Notes**:
 > - Do not use `curl | bash` as it will cause syntax errors
 > - Deploy in `/opt/kuno` to avoid cluttering the home directory
+> - The new deployment script simplifies the configuration process - users only need to select protocol and enter domain
 
 ### Manual Deployment
 
