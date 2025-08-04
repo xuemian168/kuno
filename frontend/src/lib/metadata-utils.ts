@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from 'next-intl/server'
-import { getBaseUrl } from '@/lib/utils'
+import { getBaseUrl, getSiteUrl } from '@/lib/utils'
 import { routing } from '@/i18n/routing'
 
 export interface SiteSettings {
@@ -59,7 +59,8 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
   } = options
 
   const t = await getTranslations({ locale })
-  const baseUrl = getBaseUrl()
+  const baseUrl = getBaseUrl() // For API calls
+  const siteUrl = getSiteUrl() // For frontend URLs
   
   // Use custom settings if provided, otherwise fetch from API
   const settings = customSettings || await fetchSiteSettings(locale)
@@ -78,14 +79,14 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
     const langPath = loc === routing.defaultLocale 
       ? path 
       : `/${loc}${path === '/' ? '' : path}`
-    languages[loc] = `${baseUrl}${langPath}`
+    languages[loc] = `${siteUrl}${langPath}`
   })
   
   // Build metadata object
   const metadata: Metadata = {
     title: finalTitle,
     description: finalDescription,
-    metadataBase: new URL(baseUrl),
+    metadataBase: new URL(siteUrl),
     alternates: {
       canonical: canonical || (locale === routing.defaultLocale ? '/' : `/${locale}/`),
       languages,
@@ -93,7 +94,7 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
     openGraph: {
       title: finalTitle,
       description: finalDescription,
-      url: canonical ? `${baseUrl}${canonical}` : (locale === routing.defaultLocale ? `${baseUrl}/` : `${baseUrl}/${locale}/`),
+      url: canonical ? `${siteUrl}${canonical}` : (locale === routing.defaultLocale ? `${siteUrl}/` : `${siteUrl}/${locale}/`),
       siteName: siteTitle,
       locale: locale,
       type: 'website',
@@ -138,12 +139,15 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
     // Handle custom favicon from settings
     if (settings.favicon_url.startsWith('http')) {
       faviconUrl = settings.favicon_url
-    } else if (settings.favicon_url.startsWith('/')) {
-      // Absolute path from root
+    } else if (settings.favicon_url.startsWith('/api/uploads/') || settings.favicon_url.startsWith('/uploads/')) {
+      // API uploads path - use baseUrl for backend resources
       faviconUrl = `${baseUrl}${settings.favicon_url}`
+    } else if (settings.favicon_url.startsWith('/')) {
+      // Other absolute paths - use siteUrl for frontend static resources
+      faviconUrl = `${siteUrl}${settings.favicon_url}`
     } else {
-      // Relative path - assume it's from uploads
-      faviconUrl = `${baseUrl}/api/uploads/${settings.favicon_url}`
+      // Relative path - assume it's from uploads (use baseUrl for API)
+      faviconUrl = `${baseUrl}/uploads/${settings.favicon_url}`
     }
     
     // Detect favicon type from extension
@@ -155,8 +159,8 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
       faviconType = 'image/jpeg'
     }
   } else {
-    // Fallback to default favicon
-    faviconUrl = `${baseUrl}/kuno.png`
+    // Fallback to default favicon - use siteUrl for frontend static files
+    faviconUrl = `${siteUrl}/kuno.png`
   }
   
   // Comprehensive icon metadata to override all browser defaults
@@ -195,7 +199,8 @@ export async function generateBasicMetadata(options: {
   title?: string
   description?: string
 }): Promise<Metadata> {
-  const baseUrl = getBaseUrl()
+  const baseUrl = getBaseUrl() // For API calls
+  const siteUrl = getSiteUrl() // For frontend URLs
   
   // Try to fetch settings without locale dependency
   const settings = await fetchSiteSettings('zh') // Use default locale
@@ -206,7 +211,7 @@ export async function generateBasicMetadata(options: {
   const metadata: Metadata = {
     title: finalTitle,
     description: finalDescription,
-    metadataBase: new URL(baseUrl),
+    metadataBase: new URL(siteUrl),
   }
 
   // Add favicon with comprehensive icon definitions to prevent browser defaults
@@ -217,12 +222,15 @@ export async function generateBasicMetadata(options: {
     // Handle custom favicon from settings
     if (settings.favicon_url.startsWith('http')) {
       faviconUrl = settings.favicon_url
-    } else if (settings.favicon_url.startsWith('/')) {
-      // Absolute path from root
+    } else if (settings.favicon_url.startsWith('/api/uploads/') || settings.favicon_url.startsWith('/uploads/')) {
+      // API uploads path - use baseUrl for backend resources
       faviconUrl = `${baseUrl}${settings.favicon_url}`
+    } else if (settings.favicon_url.startsWith('/')) {
+      // Other absolute paths - use siteUrl for frontend static resources
+      faviconUrl = `${siteUrl}${settings.favicon_url}`
     } else {
-      // Relative path - assume it's from uploads
-      faviconUrl = `${baseUrl}/api/uploads/${settings.favicon_url}`
+      // Relative path - assume it's from uploads (use baseUrl for API)
+      faviconUrl = `${baseUrl}/uploads/${settings.favicon_url}`
     }
     
     // Detect favicon type from extension
@@ -234,8 +242,8 @@ export async function generateBasicMetadata(options: {
       faviconType = 'image/jpeg'
     }
   } else {
-    // Fallback to default favicon
-    faviconUrl = `${baseUrl}/kuno.png`
+    // Fallback to default favicon - use siteUrl for frontend static files
+    faviconUrl = `${siteUrl}/kuno.png`
   }
   
   // Comprehensive icon metadata to override all browser defaults

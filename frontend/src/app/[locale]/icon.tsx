@@ -38,7 +38,7 @@ export default async function Icon({ params }: { params: Promise<{ locale: strin
     try {
       // For now, return the default kuno image since we can't easily fetch and convert images in edge runtime
       // This would require more complex image processing
-      const kunoResponse = await fetch(new URL('/kuno.png', process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'))
+      const kunoResponse = await fetch(new URL('/kuno.png', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'))
       if (kunoResponse.ok) {
         return new Response(await kunoResponse.arrayBuffer(), {
           headers: {

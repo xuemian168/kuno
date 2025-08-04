@@ -27,11 +27,6 @@ export function getSiteUrl(): string {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
   const baseUrl = apiBaseUrl.replace('/api', '')
   
-  // If API is on a different port (like 8080), assume frontend is on port 3000 in dev
-  if (baseUrl.includes(':8080')) {
-    return baseUrl.replace(':8080', ':3000')
-  }
-  
   return baseUrl
 }
 

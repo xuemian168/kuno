@@ -10,7 +10,7 @@ import { AuthProvider } from '@/contexts/auth-context'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import '../globals.css'
-import { getBaseUrl } from '@/lib/utils'
+import { getBaseUrl, getSiteUrl } from '@/lib/utils'
 import { apiClient } from '@/lib/api'
 
 const geistSans = Geist({
@@ -27,7 +27,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params
   const t = await getTranslations({ locale })
   
-  const baseUrl = getBaseUrl()
+  const baseUrl = getBaseUrl() // For API calls
+  const siteUrl = getSiteUrl() // For frontend URLs
   
   let siteTitle = t('site.title')
   let siteDescription = t('site.description')
@@ -58,14 +59,14 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const languages: Record<string, string> = {}
   routing.locales.forEach(loc => {
     languages[loc] = loc === routing.defaultLocale 
-      ? `${baseUrl}/` 
-      : `${baseUrl}/${loc}/`
+      ? `${siteUrl}/` 
+      : `${siteUrl}/${loc}/`
   })
   
   const metadata: Metadata = {
     title: siteTitle,
     description: siteDescription,
-    metadataBase: new URL(baseUrl),
+    metadataBase: new URL(siteUrl),
     alternates: {
       canonical: locale === routing.defaultLocale ? '/' : `/${locale}/`,
       languages,
@@ -81,7 +82,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     openGraph: {
       title: siteTitle,
       description: siteDescription,
-      url: locale === routing.defaultLocale ? `${baseUrl}/` : `${baseUrl}/${locale}/`,
+      url: locale === routing.defaultLocale ? `${siteUrl}/` : `${siteUrl}/${locale}/`,
       siteName: siteTitle,
       locale: locale,
       type: 'website',
@@ -119,8 +120,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       faviconType = 'image/jpeg'
     }
   } else {
-    // Fallback to default favicon
-    finalFaviconUrl = `${baseUrl}/kuno.png`
+    // Fallback to default favicon - use siteUrl for frontend static files
+    finalFaviconUrl = `${siteUrl}/kuno.png`
   }
   
   // Comprehensive icon metadata to override all browser defaults
