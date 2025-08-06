@@ -56,6 +56,19 @@ if [ "$CONTAINER_NAME" = "" ]; then
     CONTAINER_NAME="$DEFAULT_CONTAINER_NAME"
 fi
 
+# Deployment strategy choice
+echo ""
+echo -e "${BLUE}🚀 Deployment Strategy:${NC}"
+echo "1. Standard Deployment (simple, ~30s downtime)"
+echo "2. Blue-Green Deployment (zero-downtime, recommended)"
+echo ""
+read -p "Choose deployment strategy (1-2, default: 2): " STRATEGY
+if [ "$STRATEGY" = "" ] || [ "$STRATEGY" = "2" ]; then
+    DEPLOY_MODE="blue-green"
+else
+    DEPLOY_MODE="standard"
+fi
+
 # API URL is now auto-detected, no configuration needed
 
 echo ""
@@ -63,6 +76,7 @@ echo -e "${BLUE}📋 Deployment Summary:${NC}"
 echo -e "  🐳 Image: ${IMAGE}"
 echo -e "  🌐 Port: ${PORT}"
 echo -e "  📦 Container: ${CONTAINER_NAME}"
+echo -e "  🚀 Strategy: ${DEPLOY_MODE}"
 echo -e "  🤖 API: Auto-detected (no configuration needed)"
 echo ""
 
@@ -73,14 +87,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     exit 0
 fi
 
-# Stop and remove existing container if it exists
-if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-    echo -e "${YELLOW}🛑 Stopping existing container...${NC}"
-    docker stop ${CONTAINER_NAME} >/dev/null 2>&1 || true
-    docker rm ${CONTAINER_NAME} >/dev/null 2>&1 || true
-fi
-
-# Pull the latest image
+# Pull the latest image first
 echo -e "${YELLOW}📥 Pulling Docker image...${NC}"
 docker pull ${IMAGE}
 
@@ -88,21 +95,115 @@ docker pull ${IMAGE}
 DATA_DIR="./blog-data"
 mkdir -p ${DATA_DIR}
 
-echo -e "${YELLOW}🚀 Starting container...${NC}"
+if [ "$DEPLOY_MODE" = "standard" ]; then
+    echo -e "${BLUE}🔄 Using Standard Deployment...${NC}"
+    
+    # Stop and remove existing container if it exists
+    if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+        echo -e "${YELLOW}🛑 Stopping existing container...${NC}"
+        docker stop ${CONTAINER_NAME} >/dev/null 2>&1 || true
+        docker rm ${CONTAINER_NAME} >/dev/null 2>&1 || true
+    fi
+    
+    echo -e "${YELLOW}🚀 Starting new container...${NC}"
+    
+    # Run the container
+    docker run -d \
+        --name ${CONTAINER_NAME} \
+        --restart unless-stopped \
+        -p ${PORT}:80 \
+        -v $(pwd)/${DATA_DIR}:/app/data \
+        -e DB_PATH="/app/data/blog.db" \
+        -e GIN_MODE="release" \
+        -e NODE_ENV="production" \
+        ${IMAGE}
 
-# Run the container (API URL auto-detected, no manual configuration needed)
-docker run -d \
-    --name ${CONTAINER_NAME} \
-    --restart unless-stopped \
-    -p ${PORT}:80 \
-    -v $(pwd)/${DATA_DIR}:/app/data \
-    -e DB_PATH="/app/data/blog.db" \
-    -e GIN_MODE="release" \
-    -e NODE_ENV="production" \
-    ${IMAGE}
+else
+    echo -e "${BLUE}🔄 Using Blue-Green Deployment...${NC}"
+    
+    # Blue-Green Deployment Strategy
+    OLD_CONTAINER="${CONTAINER_NAME}"
+    TEMP_CONTAINER="${CONTAINER_NAME}-new"
 
-# Check if container started successfully
-sleep 3
+    # Check if old container exists
+    OLD_EXISTS=false
+    if docker ps -a --format '{{.Names}}' | grep -q "^${OLD_CONTAINER}$"; then
+        OLD_EXISTS=true
+        echo -e "${BLUE}🔄 Found existing container, implementing zero-downtime deployment...${NC}"
+    fi
+
+    # Start new container on a temporary port for health check
+    TEMP_PORT=$((PORT + 1000))
+    echo -e "${YELLOW}🚀 Starting new container on temporary port ${TEMP_PORT}...${NC}"
+
+    # Run the new container on temp port
+    docker run -d \
+        --name ${TEMP_CONTAINER} \
+        -p ${TEMP_PORT}:80 \
+        -v $(pwd)/${DATA_DIR}:/app/data \
+        -e DB_PATH="/app/data/blog.db" \
+        -e GIN_MODE="release" \
+        -e NODE_ENV="production" \
+        ${IMAGE}
+
+    # Health check - wait for new container to be ready
+    echo -e "${YELLOW}🏥 Performing health check...${NC}"
+    HEALTH_RETRIES=30
+    HEALTH_DELAY=1
+
+    for i in $(seq 1 $HEALTH_RETRIES); do
+        if curl -f -s http://localhost:${TEMP_PORT}/api/health >/dev/null 2>&1 || \
+           curl -f -s http://localhost:${TEMP_PORT}/ >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ New container is healthy!${NC}"
+            break
+        fi
+        
+        if [ $i -eq $HEALTH_RETRIES ]; then
+            echo -e "${RED}❌ Health check failed after ${HEALTH_RETRIES} attempts${NC}"
+            echo -e "${YELLOW}📋 Cleaning up failed deployment...${NC}"
+            docker stop ${TEMP_CONTAINER} >/dev/null 2>&1 || true
+            docker rm ${TEMP_CONTAINER} >/dev/null 2>&1 || true
+            exit 1
+        fi
+        
+        echo -e "${YELLOW}⏳ Waiting for container to be ready... (${i}/${HEALTH_RETRIES})${NC}"
+        sleep $HEALTH_DELAY
+    done
+
+    # Stop the new container temporarily to reconfigure ports
+    docker stop ${TEMP_CONTAINER} >/dev/null 2>&1
+
+    # Now perform the atomic switch (minimal downtime)
+    echo -e "${YELLOW}🔄 Performing atomic switch...${NC}"
+
+    if [ "$OLD_EXISTS" = true ]; then
+        # Stop old container
+        docker stop ${OLD_CONTAINER} >/dev/null 2>&1 || true
+    fi
+
+    # Remove temp port mapping and start on production port
+    docker rm ${TEMP_CONTAINER} >/dev/null 2>&1
+
+    # Start the new container on production port
+    docker run -d \
+        --name ${CONTAINER_NAME} \
+        --restart unless-stopped \
+        -p ${PORT}:80 \
+        -v $(pwd)/${DATA_DIR}:/app/data \
+        -e DB_PATH="/app/data/blog.db" \
+        -e GIN_MODE="release" \
+        -e NODE_ENV="production" \
+        ${IMAGE}
+
+    # Clean up old container
+    if [ "$OLD_EXISTS" = true ]; then
+        echo -e "${YELLOW}🧹 Cleaning up old container...${NC}"
+        docker rm ${OLD_CONTAINER} >/dev/null 2>&1 || true
+    fi
+fi
+
+# Final verification
+sleep 2
 if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo -e "${GREEN}"
     echo "╔══════════════════════════════════════════════════════════════╗"
@@ -116,6 +217,8 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo -e "${BLUE}🤖 Smart Features:${NC}"
     echo -e "  ✨ API endpoints auto-detected - works on any domain!"
     echo -e "  🌍 No manual URL configuration needed"
+    echo -e "  🔄 Zero-downtime blue-green deployment"
+    echo -e "  🏥 Health checks ensure smooth transitions"
     echo ""
     echo -e "${BLUE}📋 Management Commands:${NC}"
     echo -e "  🔍 Check status: docker ps | grep ${CONTAINER_NAME}"

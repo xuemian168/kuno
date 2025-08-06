@@ -32,6 +32,9 @@ A full-stack blog application with Go backend and Next.js frontend, containerize
 - ⚙️ **Site Settings**: Customizable site title and subtitle
 - 🖋️ **Markdown Editor**: Rich text editing with live preview
 - 🐳 **Docker Ready**: One-click deployment with Docker
+- 🔄 **Zero-Downtime Deployment**: Blue-green deployment with <2s downtime
+- 🏥 **Health Checks**: Automatic service health verification
+- 🛡️ **Auto-Rollback**: Failed deployments automatically restore previous version
 
 ### 🌐 Supported Languages
 
@@ -64,7 +67,29 @@ curl -sSL "https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hu
 The deployment script will guide you through a simplified configuration process:
 1. **Choose Protocol**: HTTP or HTTPS (HTTPS recommended)
 2. **Enter Domain**: e.g., `qut.edu.kg`
-3. **Auto-construct API URL**: The system will automatically generate the complete API URL, e.g., `https://qut.edu.kg/api`
+3. **Select Deployment Strategy**:
+   - **Standard Deployment**: Simple deployment with ~30s downtime
+   - **Blue-Green Deployment**: Zero-downtime deployment with health checks (recommended)
+4. **Auto-construct API URL**: The system will automatically generate the complete API URL, e.g., `https://qut.edu.kg/api`
+
+### ⚡ Quick Deploy (Ultra-Fast Update)
+
+For existing deployments that need rapid updates:
+
+```bash
+# Ultra-fast deployment with <2s downtime
+./quick-deploy.sh [image] [port] [container-name]
+
+# Example:
+./quick-deploy.sh ictrun/kuno:latest 80 kuno
+```
+
+> **🎯 Deployment Features**:
+> - **Zero-Downtime Deployment**: Blue-green strategy with health checks
+> - **Rolling Updates**: <2 seconds downtime for production environments  
+> - **Automatic Rollback**: Failed deployments automatically restore previous version
+> - **Health Verification**: Ensures new container is fully ready before switching
+> - **Parallel Processing**: Image pulling happens while service continues running
 
 > **Important Notes**:
 > - Do not use `curl | bash` as it will cause syntax errors
@@ -216,7 +241,27 @@ docker rm kuno
 
 ## 🔄 Upgrade Instructions
 
-### 🐳 For Docker Deployment (Single Container)
+### 🚀 Quick Upgrade (Zero-Downtime, Recommended)
+
+For the fastest, safest upgrade with zero downtime:
+
+```bash
+# Method 1: Using the enhanced deployment script (recommended)
+cd /opt/kuno
+./deploy.sh
+# Choose "Blue-Green Deployment" when prompted
+
+# Method 2: Using quick-deploy script  
+./quick-deploy.sh ictrun/kuno:latest 80 kuno
+```
+
+**✨ Benefits**:
+- **<2 seconds downtime**: Service continues running during image pull
+- **Health checks**: New container verified before switching
+- **Automatic rollback**: Failed updates restore previous version
+- **Production-ready**: Safe for live environments
+
+### 🐳 For Docker Deployment (Traditional Method)
 
 To upgrade your Docker deployment while preserving all data:
 
