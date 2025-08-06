@@ -2,7 +2,7 @@
  * Favicon utilities for consistent icon handling across the application
  */
 
-import { getBaseUrl, getSiteUrl } from './config'
+import { getBaseUrl, getSiteUrl, getMediaUrl } from './config'
 
 export interface FaviconConfig {
   url: string
@@ -40,55 +40,34 @@ export function generateFaviconUrl(faviconUrl: string | null | undefined): Favic
     return defaultFavicon
   }
   
-  let finalUrl: string
-  
   // Handle different URL formats
   if (faviconUrl.startsWith('http://') || faviconUrl.startsWith('https://')) {
     // Absolute URL - use as-is
-    finalUrl = faviconUrl
-  } else if (faviconUrl.startsWith('/api/')) {
-    // API resource - use proper API URL construction
-    if (typeof window !== 'undefined') {
-      // Client side - use current origin
-      finalUrl = `${window.location.origin}${faviconUrl}`
-    } else {
-      // Server side - use appropriate backend URL
-      if (process.env.NODE_ENV === 'development') {
-        finalUrl = `http://localhost:8085${faviconUrl}`
-      } else {
-        finalUrl = `${getBaseUrl()}${faviconUrl}`
-      }
+    return {
+      url: faviconUrl,
+      type: getMimeType(faviconUrl)
     }
-  } else if (faviconUrl.startsWith('/uploads/')) {
-    // Direct uploads path - add /api prefix
-    if (typeof window !== 'undefined') {
-      finalUrl = `${window.location.origin}/api${faviconUrl}`
-    } else {
-      if (process.env.NODE_ENV === 'development') {
-        finalUrl = `http://localhost:8085/api${faviconUrl}`
-      } else {
-        finalUrl = `${getBaseUrl()}/api${faviconUrl}`
-      }
+  } else if (faviconUrl.startsWith('/api/uploads/') || faviconUrl.startsWith('/uploads/') || faviconUrl.startsWith('uploads/')) {
+    // Backend media resource - use getMediaUrl for consistent handling
+    const mediaUrl = getMediaUrl(faviconUrl)
+    return {
+      url: mediaUrl,
+      type: getMimeType(mediaUrl)
     }
   } else if (faviconUrl.startsWith('/')) {
     // Frontend static resource - use site URL
-    finalUrl = `${getSiteUrl()}${faviconUrl}`
-  } else {
-    // Relative path - assume it's from uploads
-    if (typeof window !== 'undefined') {
-      finalUrl = `${window.location.origin}/api/uploads/${faviconUrl}`
-    } else {
-      if (process.env.NODE_ENV === 'development') {
-        finalUrl = `http://localhost:8085/api/uploads/${faviconUrl}`
-      } else {
-        finalUrl = `${getBaseUrl()}/api/uploads/${faviconUrl}`
-      }
+    const staticUrl = `${getSiteUrl()}${faviconUrl}`
+    return {
+      url: staticUrl,
+      type: getMimeType(staticUrl)
     }
-  }
-  
-  return {
-    url: finalUrl,
-    type: getMimeType(finalUrl)
+  } else {
+    // Relative path - assume it's from uploads and use getMediaUrl
+    const mediaUrl = getMediaUrl(faviconUrl)
+    return {
+      url: mediaUrl,
+      type: getMimeType(mediaUrl)
+    }
   }
 }
 
@@ -101,20 +80,8 @@ export function generateMediaUrl(mediaUrl: string | null | undefined): string {
     return ''
   }
   
-  // Handle different URL formats - same logic as favicon
-  if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) {
-    // Absolute URL - use as-is
-    return mediaUrl
-  } else if (mediaUrl.startsWith('/api/uploads/') || mediaUrl.startsWith('/uploads/')) {
-    // Backend API resource - use media base URL
-    return `${getBaseUrl()}${mediaUrl}`
-  } else if (mediaUrl.startsWith('/')) {
-    // Frontend static resource - use site URL
-    return `${getSiteUrl()}${mediaUrl}`
-  } else {
-    // Relative path - assume it's from uploads
-    return `${getBaseUrl()}/uploads/${mediaUrl}`
-  }
+  // Use the centralized getMediaUrl function for consistency
+  return getMediaUrl(mediaUrl)
 }
 
 /**

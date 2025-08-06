@@ -19,9 +19,8 @@ export function getApiUrl(): string {
     return 'http://localhost:8085/api'
   }
   
-  // 生产环境服务端：需要返回完整 URL 用于 fetch
-  // 在构建时，使用 localhost 作为占位符，实际运行时会被容器内的服务替代
-  return 'http://localhost/api'
+  // 生产环境服务端：使用 getBaseUrl 确保正确的域名
+  return `${getBaseUrl()}/api`
 }
 
 /**
@@ -63,20 +62,27 @@ export function getMediaUrl(path: string): string {
     return path
   }
   
-  // 标准化路径
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  // 标准化路径 - 对于 uploads 路径，确保有 /api 前缀
+  let normalizedPath = path.startsWith('/') ? path : `/${path}`
+  if (normalizedPath.startsWith('/uploads/')) {
+    normalizedPath = `/api${normalizedPath}`
+  } else if (!normalizedPath.startsWith('/api/') && normalizedPath.includes('uploads/')) {
+    // 处理不带前导斜杠的 uploads 路径
+    normalizedPath = `/api/uploads/${path}`
+  }
   
   // 客户端环境：直接使用当前域名
   if (typeof window !== 'undefined') {
     return `${window.location.origin}${normalizedPath}`
   }
   
-  // 服务端环境：开发时连接到后端，生产时使用相对路径
-  const baseUrl = process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:8085' 
-    : ''
-    
-  return `${baseUrl}${normalizedPath}`
+  // 服务端环境：使用统一的 getApiUrl 逻辑
+  if (process.env.NODE_ENV === 'development') {
+    return `http://localhost:8085${normalizedPath}`
+  } else {
+    // 生产环境：使用 getBaseUrl 确保正确的域名
+    return `${getBaseUrl()}${normalizedPath}`
+  }
 }
 
 /**

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getApiUrl } from "@/lib/config"
+import { getApiUrl, getMediaUrl } from "@/lib/config"
 import { motion } from 'framer-motion'
 import { 
   Image as ImageIcon, 
@@ -204,7 +204,7 @@ export default function MediaPicker({ open, onOpenChange, onMediaSelect }: Media
                           <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-t-lg overflow-hidden relative">
                             {item.media_type === 'image' ? (
                               <img
-                                src={`${getApiUrl()}${item.url}`}
+                                src={getMediaUrl(item.url)}
                                 alt={item.alt}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                               />

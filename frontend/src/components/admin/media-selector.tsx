@@ -14,6 +14,7 @@ import MediaUpload from '@/components/admin/media-upload'
 import VideoAdd from '@/components/admin/video-add'
 import { apiClient, MediaLibrary } from '@/lib/api'
 import { generateBilibiliThumbnail } from '@/lib/bilibili-utils'
+import { getMediaUrl } from '@/lib/config'
 
 interface OnlineVideo {
   id: string
@@ -177,7 +178,7 @@ export default function MediaSelector({
                         <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-t-lg overflow-hidden relative">
                           {item.media_type === 'image' ? (
                             <img
-                              src={`http://localhost:8080/api${item.url}`}
+                              src={getMediaUrl(item.url)}
                               alt={item.alt}
                               className="w-full h-full object-cover"
                             />

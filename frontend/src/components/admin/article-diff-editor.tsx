@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { getApiUrl } from "@/lib/config"
 import { useRouter } from "@/i18n/routing"
 import { useTranslations } from 'next-intl'
@@ -1162,13 +1162,13 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }, 10)
   }
 
-  const swapLanguages = () => {
+  const swapLanguages = useCallback(() => {
     if (!sourceLanguage || !targetLanguage) return
     
     const tempLang = sourceLanguage
     setSourceLanguage(targetLanguage)
     setTargetLanguage(tempLang)
-  }
+  }, [sourceLanguage, targetLanguage])
 
   const updateTranslation = (language: string | null, field: keyof Pick<ArticleTranslation, 'title' | 'content' | 'summary'>, value: string) => {
     // If language is null, don't update anything
