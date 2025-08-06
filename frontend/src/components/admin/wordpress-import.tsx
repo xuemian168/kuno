@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { getApiUrl } from "@/lib/config"
 import { motion } from "framer-motion"
 import { Upload, FileText, AlertCircle, CheckCircle, Loader2, Eye, Calendar, User, Tag, ArrowLeft } from "lucide-react"
 import { useTranslations } from 'next-intl'
@@ -17,7 +18,7 @@ import { apiClient } from "@/lib/api"
 
 // Get API URL from environment variable or default
 function getApiBaseUrl(): string {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL
+  const apiUrl = getApiUrl()
   if (!apiUrl || apiUrl === '' || apiUrl === 'undefined') {
     return 'http://localhost:8080/api'
   }

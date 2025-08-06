@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# kuno - One-Click Deployment from Docker Hub
+# kuno - Simplified One-Click Deployment from Docker Hub
+# No API URL configuration needed - auto-detects endpoints!
 # Usage: curl -sSL https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh | bash
 
 set -e
@@ -20,7 +21,7 @@ NC='\033[0m' # No Color
 echo -e "${BLUE}"
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║                    KUNO Deployment                           ║"
-echo "║                  One-Click Docker Hub Deploy                 ║"
+echo "║                    One-Click Deploy                          ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -55,35 +56,14 @@ if [ "$CONTAINER_NAME" = "" ]; then
     CONTAINER_NAME="$DEFAULT_CONTAINER_NAME"
 fi
 
-echo ""
-echo -e "${YELLOW}📝 Please configure your API endpoint${NC}"
-echo "Choose protocol:"
-echo "1) HTTP"
-echo "2) HTTPS (recommended)"
-read -p "Select protocol (1 or 2, default: 2): " PROTOCOL_CHOICE
-if [ "$PROTOCOL_CHOICE" = "1" ]; then
-    PROTOCOL="http"
-else
-    PROTOCOL="https"
-fi
-
-read -p "Enter your domain (e.g., qut.edu.kg): " DOMAIN
-while [ "$DOMAIN" = "" ]; do
-    echo -e "${RED}❌ Domain is required for the blog to function properly.${NC}"
-    read -p "Enter your domain: " DOMAIN
-done
-
-# Construct the full API URL
-API_URL="${PROTOCOL}://${DOMAIN}/api"
+# API URL is now auto-detected, no configuration needed
 
 echo ""
 echo -e "${BLUE}📋 Deployment Summary:${NC}"
 echo -e "  🐳 Image: ${IMAGE}"
 echo -e "  🌐 Port: ${PORT}"
 echo -e "  📦 Container: ${CONTAINER_NAME}"
-echo -e "  🔗 API URL: ${API_URL}"
-echo -e "  🌍 Protocol: ${PROTOCOL^^}"
-echo -e "  🏠 Domain: ${DOMAIN}"
+echo -e "  🤖 API: Auto-detected (no configuration needed)"
 echo ""
 
 read -p "Continue with deployment? (y/n): " -n 1 -r
@@ -110,13 +90,12 @@ mkdir -p ${DATA_DIR}
 
 echo -e "${YELLOW}🚀 Starting container...${NC}"
 
-# Run the container
+# Run the container (API URL auto-detected, no manual configuration needed)
 docker run -d \
     --name ${CONTAINER_NAME} \
     --restart unless-stopped \
     -p ${PORT}:80 \
     -v $(pwd)/${DATA_DIR}:/app/data \
-    -e NEXT_PUBLIC_API_URL="${API_URL}" \
     -e DB_PATH="/app/data/blog.db" \
     -e GIN_MODE="release" \
     -e NODE_ENV="production" \
@@ -133,6 +112,10 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo -e "${GREEN}✅ Blog is now running at: http://localhost:${PORT}${NC}"
     echo -e "${GREEN}📱 Admin panel: http://localhost:${PORT}/admin${NC}"
     echo -e "${GREEN}🔑 Default login: admin / xuemian168${NC}"
+    echo ""
+    echo -e "${BLUE}🤖 Smart Features:${NC}"
+    echo -e "  ✨ API endpoints auto-detected - works on any domain!"
+    echo -e "  🌍 No manual URL configuration needed"
     echo ""
     echo -e "${BLUE}📋 Management Commands:${NC}"
     echo -e "  🔍 Check status: docker ps | grep ${CONTAINER_NAME}"

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useRef } from "react"
+import { getApiUrl } from "@/lib/config"
 import { useRouter } from "@/i18n/routing"
 import { useTranslations } from 'next-intl'
 import { useTheme } from "next-themes"
@@ -1226,9 +1227,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     if (type === 'upload') {
       const uploadedMedia = media as MediaLibrary
       if (uploadedMedia.media_type === 'image') {
-        markdownText = `![${uploadedMedia.alt || uploadedMedia.original_name}](${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${uploadedMedia.url})`
+        markdownText = `![${uploadedMedia.alt || uploadedMedia.original_name}](${getApiUrl()}${uploadedMedia.url})`
       } else {
-        markdownText = `<video src="${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${uploadedMedia.url}" controls>\n  Your browser does not support the video tag.\n</video>`
+        markdownText = `<video src="${getApiUrl()}${uploadedMedia.url}" controls>\n  Your browser does not support the video tag.\n</video>`
       }
     } else {
       const onlineVideo = media as OnlineVideo

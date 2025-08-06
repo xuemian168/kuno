@@ -1,16 +1,8 @@
-import { getApiUrl } from './url-utils'
+import { getApiUrl } from './config'
 
-// Get API URL from environment variable or default
+// 使用统一的配置管理，自动检测 API URL
 function getApiBaseUrl(): string {
-  // Use environment variable if available, otherwise use default
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL
-  
-  // If no environment variable is set, use default localhost
-  if (!apiUrl || apiUrl === '' || apiUrl === 'undefined') {
-    return 'http://localhost:8080/api'
-  }
-  
-  return apiUrl
+  return getApiUrl()
 }
 
 export interface ArticleTranslation {

@@ -24,7 +24,6 @@ services:
       dockerfile: Dockerfile
     container_name: blog-frontend
     environment:
-      - NEXT_PUBLIC_API_URL=http://nginx/api
       - NODE_ENV=production
     depends_on:
       backend:

@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button"
 import { useSettings } from "@/contexts/settings-context"
 import { useAuth } from "@/contexts/auth-context"
 import { Link } from '@/i18n/routing'
-import { getFullApiUrl, cn } from "@/lib/utils"
+import { cn } from "@/lib/utils"
+import { getMediaUrl } from "@/lib/config"
 import { generateMediaUrl } from "@/lib/favicon-utils"
 
 export default function Header() {

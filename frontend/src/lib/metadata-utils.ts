@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from 'next-intl/server'
-import { getBaseUrl, getSiteUrl } from '@/lib/utils'
+import { getBaseUrl, getSiteUrl, getApiUrl } from '@/lib/config'
 import { generateIconsMetadata } from '@/lib/favicon-utils'
 import { routing } from '@/i18n/routing'
 
@@ -30,7 +30,7 @@ export interface PageMetadataOptions {
  */
 async function fetchSiteSettings(locale: string): Promise<SiteSettings | null> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
+    const apiUrl = getApiUrl()
     const response = await fetch(`${apiUrl}/settings?lang=${locale}`, {
       next: { revalidate: 300 } // Cache for 5 minutes
     })
@@ -123,7 +123,7 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
       types: {
         'application/rss+xml': [
           {
-            url: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/rss?lang=${locale}`,
+            url: `${getApiUrl()}/rss?lang=${locale}`,
             title: `${siteTitle} RSS Feed`,
           },
         ],

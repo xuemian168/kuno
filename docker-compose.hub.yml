@@ -11,7 +11,6 @@ services:
       - blog-data:/app/data
       - blog-uploads:/app/backend/uploads
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
       - DB_PATH=${DB_PATH:-/app/data/blog.db}
       - GIN_MODE=${GIN_MODE:-release}
       - NODE_ENV=${NODE_ENV:-production}

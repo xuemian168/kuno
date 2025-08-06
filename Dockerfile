@@ -33,10 +33,7 @@ RUN npm ci && npm cache clean --force
 # Copy frontend source
 COPY frontend/ .
 
-# Build arguments for environment variables (leave empty for runtime configuration)
-ARG NEXT_PUBLIC_API_URL=""
-
-# Don't set NEXT_PUBLIC_API_URL at build time to allow runtime configuration
+# Build arguments for environment variables
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 ENV NEXT_TELEMETRY_DISABLED=1
 

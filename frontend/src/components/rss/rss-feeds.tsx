@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { getApiUrl } from "@/lib/config"
 import { useTranslations } from 'next-intl'
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
@@ -51,7 +52,7 @@ export function RSSFeeds({ locale }: RSSFeedsProps) {
   }, [])
 
   const getRSSUrl = (categoryId?: number) => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
+    const baseUrl = getApiUrl()
     const path = categoryId ? `/rss/category/${categoryId}` : '/rss'
     return `${baseUrl}${path}?lang=${selectedLanguage}`
   }

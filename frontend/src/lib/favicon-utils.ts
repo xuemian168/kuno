@@ -2,41 +2,11 @@
  * Favicon utilities for consistent icon handling across the application
  */
 
+import { getBaseUrl, getSiteUrl } from './config'
+
 export interface FaviconConfig {
   url: string
   type: string
-}
-
-/**
- * Get the appropriate base URL for media resources
- * Always uses backend API URL for uploads and media resources
- */
-function getMediaBaseUrl(): string {
-  // For media resources, always use the backend API URL
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
-  return apiUrl.replace('/api', '')
-}
-
-/**
- * Get the frontend site URL (for static assets)
- */
-function getSiteUrl(): string {
-  if (typeof window !== 'undefined') {
-    return `${window.location.protocol}//${window.location.host}`
-  }
-  
-  // Check for explicit site URL first
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL
-  }
-  
-  // In development, frontend is typically on port 3000
-  if (process.env.NODE_ENV === 'development') {
-    return 'http://localhost:3000'
-  }
-  
-  // Fall back to API URL logic
-  return getMediaBaseUrl()
 }
 
 /**
@@ -60,9 +30,9 @@ function getMimeType(url: string): string {
  * Generate favicon URL from settings
  */
 export function generateFaviconUrl(faviconUrl: string | null | undefined): FaviconConfig {
-  // Default fallback
+  // Default fallback - use relative path for better compatibility
   const defaultFavicon: FaviconConfig = {
-    url: `${getSiteUrl()}/kuno.png`,
+    url: '/kuno.png',
     type: 'image/png'
   }
   
@@ -76,15 +46,44 @@ export function generateFaviconUrl(faviconUrl: string | null | undefined): Favic
   if (faviconUrl.startsWith('http://') || faviconUrl.startsWith('https://')) {
     // Absolute URL - use as-is
     finalUrl = faviconUrl
-  } else if (faviconUrl.startsWith('/api/uploads/') || faviconUrl.startsWith('/uploads/')) {
-    // Backend API resource - use media base URL
-    finalUrl = `${getMediaBaseUrl()}${faviconUrl}`
+  } else if (faviconUrl.startsWith('/api/')) {
+    // API resource - use proper API URL construction
+    if (typeof window !== 'undefined') {
+      // Client side - use current origin
+      finalUrl = `${window.location.origin}${faviconUrl}`
+    } else {
+      // Server side - use appropriate backend URL
+      if (process.env.NODE_ENV === 'development') {
+        finalUrl = `http://localhost:8085${faviconUrl}`
+      } else {
+        finalUrl = `${getBaseUrl()}${faviconUrl}`
+      }
+    }
+  } else if (faviconUrl.startsWith('/uploads/')) {
+    // Direct uploads path - add /api prefix
+    if (typeof window !== 'undefined') {
+      finalUrl = `${window.location.origin}/api${faviconUrl}`
+    } else {
+      if (process.env.NODE_ENV === 'development') {
+        finalUrl = `http://localhost:8085/api${faviconUrl}`
+      } else {
+        finalUrl = `${getBaseUrl()}/api${faviconUrl}`
+      }
+    }
   } else if (faviconUrl.startsWith('/')) {
     // Frontend static resource - use site URL
     finalUrl = `${getSiteUrl()}${faviconUrl}`
   } else {
     // Relative path - assume it's from uploads
-    finalUrl = `${getMediaBaseUrl()}/uploads/${faviconUrl}`
+    if (typeof window !== 'undefined') {
+      finalUrl = `${window.location.origin}/api/uploads/${faviconUrl}`
+    } else {
+      if (process.env.NODE_ENV === 'development') {
+        finalUrl = `http://localhost:8085/api/uploads/${faviconUrl}`
+      } else {
+        finalUrl = `${getBaseUrl()}/api/uploads/${faviconUrl}`
+      }
+    }
   }
   
   return {
@@ -108,13 +107,13 @@ export function generateMediaUrl(mediaUrl: string | null | undefined): string {
     return mediaUrl
   } else if (mediaUrl.startsWith('/api/uploads/') || mediaUrl.startsWith('/uploads/')) {
     // Backend API resource - use media base URL
-    return `${getMediaBaseUrl()}${mediaUrl}`
+    return `${getBaseUrl()}${mediaUrl}`
   } else if (mediaUrl.startsWith('/')) {
     // Frontend static resource - use site URL
     return `${getSiteUrl()}${mediaUrl}`
   } else {
     // Relative path - assume it's from uploads
-    return `${getMediaBaseUrl()}/uploads/${mediaUrl}`
+    return `${getBaseUrl()}/uploads/${mediaUrl}`
   }
 }
 

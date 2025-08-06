@@ -4,7 +4,6 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://b.zli.li/api}
         NEXT_PUBLIC_APP_VERSION: ${NEXT_PUBLIC_APP_VERSION:-1.0.0}
         NEXT_PUBLIC_BUILD_NUMBER: ${NEXT_PUBLIC_BUILD_NUMBER:-dev}
         NEXT_PUBLIC_BUILD_DATE: ${NEXT_PUBLIC_BUILD_DATE:-unknown}
@@ -20,7 +19,6 @@ services:
       - DB_PATH=/app/data/blog.db
       - GIN_MODE=release
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://b.zli.li/api}
       - RECOVERY_MODE=${RECOVERY_MODE:-false}
       - NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION:-1.0.0}
       - NEXT_PUBLIC_BUILD_NUMBER=${NEXT_PUBLIC_BUILD_NUMBER:-dev}

@@ -1,9 +1,10 @@
 import { MetadataRoute } from 'next'
+import { getApiUrl, getSiteUrl } from '@/lib/config'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Get base URL from environment or use default
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
-  const baseUrl = apiUrl.replace('/api', '')
+  // Get URLs using unified configuration
+  const apiUrl = getApiUrl()
+  const baseUrl = getSiteUrl()
   
   // Define supported locales (keeping it simple to avoid routing import issues)
   const locales = ['zh', 'en', 'ja', 'ko', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ar', 'hi']

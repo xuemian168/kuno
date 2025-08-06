@@ -10,7 +10,7 @@ import { AuthProvider } from '@/contexts/auth-context'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import '../globals.css'
-import { getBaseUrl, getSiteUrl } from '@/lib/utils'
+import { getBaseUrl, getSiteUrl, getApiUrl } from '@/lib/config'
 import { apiClient } from '@/lib/api'
 
 const geistSans = Geist({
@@ -36,8 +36,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   
   try {
     // Try to fetch site settings
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
-    const baseApiUrl = apiUrl.replace('/api', '')
+    const apiUrl = getApiUrl()
+    const baseApiUrl = getBaseUrl()
     const response = await fetch(`${apiUrl}/settings?lang=${locale}`)
     if (response.ok) {
       const settings = await response.json()
@@ -46,9 +46,27 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       
       // Handle favicon URL
       if (settings.favicon_url) {
-        faviconUrl = settings.favicon_url.startsWith('http') 
-          ? settings.favicon_url 
-          : `${baseApiUrl}${settings.favicon_url}`
+        if (settings.favicon_url.startsWith('http')) {
+          // Absolute URL - use as-is
+          faviconUrl = settings.favicon_url
+        } else if (settings.favicon_url.startsWith('/api/')) {
+          // API relative path - use proper backend URL
+          if (process.env.NODE_ENV === 'development') {
+            faviconUrl = `http://localhost:8085${settings.favicon_url}`
+          } else {
+            faviconUrl = `${baseApiUrl}${settings.favicon_url}`
+          }
+        } else if (settings.favicon_url.startsWith('/')) {
+          // Frontend static path - use site URL
+          faviconUrl = `${siteUrl}${settings.favicon_url}`
+        } else {
+          // Relative path - assume it's an API upload
+          if (process.env.NODE_ENV === 'development') {
+            faviconUrl = `http://localhost:8085/api/uploads/${settings.favicon_url}`
+          } else {
+            faviconUrl = `${baseApiUrl}/api/uploads/${settings.favicon_url}`
+          }
+        }
       }
     }
   } catch (error) {
@@ -73,7 +91,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       types: {
         'application/rss+xml': [
           {
-            url: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/rss?lang=${locale}`,
+            url: `${getApiUrl()}/rss?lang=${locale}`,
             title: `${siteTitle} RSS Feed`,
           },
         ],
@@ -120,8 +138,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       faviconType = 'image/jpeg'
     }
   } else {
-    // Fallback to default favicon - use siteUrl for frontend static files
-    finalFaviconUrl = `${siteUrl}/kuno.png`
+    // Fallback to default favicon - use relative path for better compatibility
+    finalFaviconUrl = '/kuno.png'
   }
   
   // Comprehensive icon metadata to override all browser defaults

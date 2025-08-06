@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useSettings } from '@/contexts/settings-context'
-import { getFullApiUrl } from '@/lib/utils'
+import { getMediaUrl } from '@/lib/config'
 
 // This component updates the favicon on the client side when settings change
 // It's mainly used in admin interface for immediate feedback
@@ -12,7 +12,7 @@ export function FaviconUpdater() {
   useEffect(() => {
     if (!settings?.favicon_url) return
 
-    const fullUrl = getFullApiUrl(settings.favicon_url)
+    const fullUrl = getMediaUrl(settings.favicon_url)
 
     // Get existing favicon link or create new one
     let faviconLink = document.querySelector('link[rel="icon"]') as HTMLLinkElement

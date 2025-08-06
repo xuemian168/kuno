@@ -1,14 +1,14 @@
 "use client"
 
 import { useEffect } from 'react'
-import { getFullApiUrl } from '@/lib/utils'
+import { getMediaUrl } from '@/lib/config'
 
 export function useFavicon(faviconUrl?: string) {
   useEffect(() => {
     if (!faviconUrl) return
 
     // Get the full URL
-    const fullUrl = getFullApiUrl(faviconUrl)
+    const fullUrl = getMediaUrl(faviconUrl)
 
     // Get existing favicon link or create new one
     let faviconLink = document.querySelector('link[rel="icon"]') as HTMLLinkElement
