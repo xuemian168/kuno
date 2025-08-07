@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { usePathname } from 'next/navigation'
 import ModeToggle from "@/components/mode-toggle"
 import LanguageSwitcher from "@/components/language-switcher"
+import { ArticleSearch } from "@/components/article-search"
 import { Button } from "@/components/ui/button"
 import { useSettings } from "@/contexts/settings-context"
 import { useAuth } from "@/contexts/auth-context"
@@ -190,6 +191,7 @@ export default function Header() {
                 </Button>
               </>
             )}
+            <ArticleSearch />
             <LanguageSwitcher />
             <ModeToggle />
           </nav>

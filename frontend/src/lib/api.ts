@@ -754,6 +754,31 @@ class ApiClient {
       method: 'POST'
     })
   }
+
+  // Search endpoints
+  async searchArticles(query: string, options?: {
+    page?: number
+    limit?: number
+    lang?: string
+  }): Promise<{
+    articles: Article[]
+    pagination: {
+      page: number
+      limit: number
+      total: number
+      total_pages: number
+    }
+    query: string
+  }> {
+    const params = new URLSearchParams({
+      q: query,
+      ...(options?.page && { page: options.page.toString() }),
+      ...(options?.limit && { limit: options.limit.toString() }),
+      ...(options?.lang && { lang: options.lang })
+    })
+
+    return this.request(`/articles/search?${params.toString()}`)
+  }
 }
 
 export const apiClient = new ApiClient()

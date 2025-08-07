@@ -417,3 +417,89 @@ func trackArticleView(articleID uint, c *gin.Context) {
 	}
 	// If view already exists, do nothing (unique visitor already counted)
 }
+
+// SearchArticles handles article search functionality
+func SearchArticles(c *gin.Context) {
+	query := strings.TrimSpace(c.Query("q"))
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Search query is required"})
+		return
+	}
+
+	// Get pagination parameters
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 10
+	}
+	offset := (page - 1) * limit
+
+	var articles []models.Article
+	var total int64
+
+	// Build search query
+	searchQuery := database.DB.Preload("Category").Preload("Translations")
+	
+	// Filter future articles for non-admin requests
+	if !isAdminRequest(c) {
+		searchQuery = searchQuery.Where("created_at <= ?", time.Now())
+	}
+
+	// Search in title, content, summary, and SEO fields
+	searchPattern := "%" + query + "%"
+	searchQuery = searchQuery.Where(
+		"title LIKE ? OR content LIKE ? OR summary LIKE ? OR seo_title LIKE ? OR seo_description LIKE ? OR seo_keywords LIKE ?",
+		searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern,
+	)
+
+	// Also search in translations
+	searchQuery = searchQuery.Or(
+		database.DB.Where("id IN (?)", 
+			database.DB.Table("article_translations").
+				Select("article_id").
+				Where("title LIKE ? OR content LIKE ? OR summary LIKE ?", searchPattern, searchPattern, searchPattern),
+		),
+	)
+
+	// Get total count
+	searchQuery.Model(&models.Article{}).Count(&total)
+
+	// Get paginated results
+	if err := searchQuery.Offset(offset).Limit(limit).Order("created_at DESC").Find(&articles).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Apply language filtering if requested
+	lang := c.Query("lang")
+	defaultLang := getArticleDefaultLanguage()
+	
+	if lang != "" && lang != defaultLang {
+		for i := range articles {
+			for _, translation := range articles[i].Translations {
+				if translation.Language == lang {
+					articles[i].Title = translation.Title
+					articles[i].Content = translation.Content
+					articles[i].Summary = translation.Summary
+					// Note: SEO fields are not translated, keep original values
+					break
+				}
+			}
+		}
+	}
+
+	// Return paginated results
+	c.JSON(http.StatusOK, gin.H{
+		"articles": articles,
+		"pagination": gin.H{
+			"page":       page,
+			"limit":      limit,
+			"total":      total,
+			"total_pages": (total + int64(limit) - 1) / int64(limit),
+		},
+		"query": query,
+	})
+}

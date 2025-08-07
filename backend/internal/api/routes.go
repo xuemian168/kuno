@@ -32,6 +32,7 @@ func SetupRoutes() *gin.Engine {
 		articles := api.Group("/articles")
 		{
 			articles.GET("", GetArticles)
+			articles.GET("/search", SearchArticles)
 			articles.GET("/:id", GetArticle)
 		}
 
