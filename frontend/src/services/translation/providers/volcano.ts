@@ -1,164 +1,93 @@
 import { BaseTranslationProvider } from './base'
 
 export class VolcanoProvider extends BaseTranslationProvider {
-  name = 'Volcano'
-  private accessKeyId: string
-  private accessKeySecret: string
-  private region = 'cn-beijing'
+  name = 'Volcano Engine'
+  private arkApiKey: string
+  private model: string
+  private endpoint = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
   
-  constructor(apiKey?: string, apiSecret?: string, region?: string) {
-    super(apiKey, apiSecret)
-    this.accessKeyId = apiKey || ''
-    this.accessKeySecret = apiSecret || ''
-    if (region) this.region = region
+  constructor(apiKey?: string, model?: string, region?: string) {
+    super(apiKey)
+    this.arkApiKey = apiKey || ''
+    this.model = model || 'doubao-seed-1-6-250615'
   }
 
   isConfigured(): boolean {
-    return !!this.accessKeyId && !!this.accessKeySecret
-  }
-
-  private async generateSignature(method: string, canonicalUri: string, queryString: string, headers: Record<string, string>, payload: string): Promise<Record<string, string>> {
-    const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '')
-    const date = timestamp.slice(0, 8)
-    
-    // Create canonical headers
-    const canonicalHeaders = Object.entries(headers)
-      .sort(([a], [b]) => a.toLowerCase().localeCompare(b.toLowerCase()))
-      .map(([key, value]) => `${key.toLowerCase()}:${value}`)
-      .join('\n')
-    
-    const signedHeaders = Object.keys(headers)
-      .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
-      .map(h => h.toLowerCase())
-      .join(';')
-    
-    // Create hash of payload
-    const encoder = new TextEncoder()
-    const data = encoder.encode(payload)
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-    const hashedPayload = Array.from(new Uint8Array(hashBuffer))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('')
-    
-    // Create canonical request
-    const canonicalRequest = [
-      method,
-      canonicalUri,
-      queryString,
-      canonicalHeaders + '\n',
-      signedHeaders,
-      hashedPayload
-    ].join('\n')
-    
-    // Create string to sign
-    const scope = `${date}/${this.region}/translate/request`
-    const stringToSign = [
-      'HMAC-SHA256',
-      timestamp,
-      scope,
-      await this.sha256(canonicalRequest)
-    ].join('\n')
-    
-    // Calculate signature
-    const kDate = await this.hmacSHA256(`VOLCENGINE${this.accessKeySecret}`, date)
-    const kRegion = await this.hmacSHA256(kDate, this.region)
-    const kService = await this.hmacSHA256(kRegion, 'translate')
-    const kSigning = await this.hmacSHA256(kService, 'request')
-    const signature = await this.hmacSHA256Hex(kSigning, stringToSign)
-    
-    // Create authorization header
-    const authorization = `HMAC-SHA256 Credential=${this.accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
-    
-    return {
-      ...headers,
-      'Authorization': authorization,
-      'X-Date': timestamp,
-      'X-Content-Sha256': hashedPayload
-    }
-  }
-  
-  private async sha256(message: string): Promise<string> {
-    const encoder = new TextEncoder()
-    const data = encoder.encode(message)
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-    return Array.from(new Uint8Array(hashBuffer))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('')
-  }
-  
-  private async hmacSHA256(key: ArrayBuffer | string, message: string): Promise<ArrayBuffer> {
-    const encoder = new TextEncoder()
-    const keyData = typeof key === 'string' ? encoder.encode(key) : key
-    const messageData = encoder.encode(message)
-    
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      keyData,
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    )
-    
-    return await crypto.subtle.sign('HMAC', cryptoKey, messageData)
-  }
-  
-  private async hmacSHA256Hex(key: ArrayBuffer, message: string): Promise<string> {
-    const result = await this.hmacSHA256(key, message)
-    return Array.from(new Uint8Array(result))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('')
+    return !!this.arkApiKey
   }
 
   async translate(text: string, from: string, to: string): Promise<string> {
     if (!this.isConfigured()) {
-      throw this.createError('Volcano Engine credentials not configured', 'NOT_CONFIGURED')
+      throw this.createError('Volcano Engine ARK API key not configured', 'NOT_CONFIGURED')
     }
 
     this.validateLanguages(from, to)
 
+    const fromLang = this.getLanguageName(this.mapLanguageCode(from))
+    const toLang = this.getLanguageName(this.mapLanguageCode(to))
+
+    const systemPrompt = `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}. Return ONLY the translated text without any explanations or additional content.`
+    
+    const userPrompt = text
+
     try {
-      const endpoint = 'https://translate.volcengineapi.com'
-      const action = 'TranslateText'
-      const version = '2020-06-01'
-      
-      const payload = JSON.stringify({
-        SourceLanguage: this.mapLanguageCode(from),
-        TargetLanguage: this.mapLanguageCode(to),
-        TextList: [text]
-      })
-      
-      const headers = {
-        'Content-Type': 'application/json',
-        'Host': 'translate.volcengineapi.com',
-        'X-Service': 'translate',
-        'X-Action': action,
-        'X-Version': version,
-        'X-Region': this.region
-      }
-      
-      const signedHeaders = await this.generateSignature('POST', '/', '', headers, payload)
-      
-      const response = await fetch(endpoint, {
+      const response = await fetch(this.endpoint, {
         method: 'POST',
-        headers: signedHeaders,
-        body: payload
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.arkApiKey}`
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [
+            {
+              role: 'system',
+              content: systemPrompt
+            },
+            {
+              role: 'user', 
+              content: userPrompt
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 2000,
+          stream: false
+        })
       })
 
       if (!response.ok) {
-        const error = await response.json()
+        const errorData = await response.json().catch(() => ({}))
         throw this.createError(
-          error.ResponseMetadata?.Error?.Message || 'Translation failed',
-          error.ResponseMetadata?.Error?.Code || 'TRANSLATION_ERROR'
+          errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`,
+          'API_ERROR'
         )
       }
 
       const data = await response.json()
       
-      if (!data.TranslationList || data.TranslationList.length === 0) {
+      if (!data.choices || data.choices.length === 0) {
         throw this.createError('No translation result returned', 'NO_RESULT')
       }
-      
-      return data.TranslationList[0].Translation
+
+      const translatedText = data.choices[0].message?.content?.trim()
+      if (!translatedText) {
+        throw this.createError('Empty translation result', 'EMPTY_RESULT')
+      }
+
+      // Log usage statistics for monitoring
+      if (data.usage) {
+        console.log('Volcano Translation Usage:', {
+          inputTokens: data.usage.prompt_tokens,
+          outputTokens: data.usage.completion_tokens,
+          totalTokens: data.usage.total_tokens,
+          estimatedCost: this.estimateCost(data.usage.total_tokens),
+          model: data.model || this.model,
+          inputLength: text.length,
+          outputLength: translatedText.length
+        })
+      }
+
+      return translatedText
     } catch (error) {
       if (error instanceof Error && 'code' in error) {
         throw error
@@ -172,67 +101,39 @@ export class VolcanoProvider extends BaseTranslationProvider {
 
   async translateBatch(texts: string[], from: string, to: string): Promise<string[]> {
     if (!this.isConfigured()) {
-      throw this.createError('Volcano Engine credentials not configured', 'NOT_CONFIGURED')
+      throw this.createError('Volcano Engine ARK API key not configured', 'NOT_CONFIGURED')
     }
 
     this.validateLanguages(from, to)
 
-    try {
-      const endpoint = 'https://translate.volcengineapi.com'
-      const action = 'TranslateText'
-      const version = '2020-06-01'
-      
-      const payload = JSON.stringify({
-        SourceLanguage: this.mapLanguageCode(from),
-        TargetLanguage: this.mapLanguageCode(to),
-        TextList: texts
-      })
-      
-      const headers = {
-        'Content-Type': 'application/json',
-        'Host': 'translate.volcengineapi.com',
-        'X-Service': 'translate',
-        'X-Action': action,
-        'X-Version': version,
-        'X-Region': this.region
-      }
-      
-      const signedHeaders = await this.generateSignature('POST', '/', '', headers, payload)
-      
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: signedHeaders,
-        body: payload
-      })
+    const fromLang = this.getLanguageName(this.mapLanguageCode(from))
+    const toLang = this.getLanguageName(this.mapLanguageCode(to))
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw this.createError(
-          error.ResponseMetadata?.Error?.Message || 'Translation failed',
-          error.ResponseMetadata?.Error?.Code || 'TRANSLATION_ERROR'
-        )
-      }
+    // For batch translation, we'll process them one by one to avoid token limits
+    // In production, you might want to combine multiple texts smartly
+    const results: string[] = []
 
-      const data = await response.json()
-      
-      if (!data.TranslationList || data.TranslationList.length === 0) {
-        throw this.createError('No translation result returned', 'NO_RESULT')
+    for (const text of texts) {
+      try {
+        const translated = await this.translate(text, from, to)
+        results.push(translated)
+      } catch (error) {
+        // For batch processing, we'll return the original text if translation fails
+        console.warn('Volcano batch translation failed for text:', text.substring(0, 50), error)
+        results.push(text)
       }
-      
-      return data.TranslationList.map((item: any) => item.Translation)
-    } catch (error) {
-      if (error instanceof Error && 'code' in error) {
-        throw error
-      }
-      throw this.createError(
-        `Volcano Engine error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        'PROVIDER_ERROR'
-      )
     }
+
+    console.log('Volcano Batch Translation completed:', {
+      totalTexts: texts.length,
+      successfulTranslations: results.filter((result, index) => result !== texts[index]).length,
+      model: this.model
+    })
+
+    return results
   }
 
   getSupportedLanguages(): string[] {
-    // Volcano Engine supports these languages
     return [
       'zh', 'en', 'ja', 'ko', 'es', 'fr', 'de', 'ru', 'ar', 'pt',
       'it', 'nl', 'sv', 'da', 'no', 'fi', 'pl', 'cs', 'sk', 'hu',
@@ -240,6 +141,55 @@ export class VolcanoProvider extends BaseTranslationProvider {
       'tr', 'he', 'fa', 'ur', 'hi', 'bn', 'ta', 'te', 'vi', 'th',
       'id', 'ms', 'tl'
     ]
+  }
+
+  private getLanguageName(code: string): string {
+    const names: Record<string, string> = {
+      'zh': 'Chinese',
+      'en': 'English',
+      'ja': 'Japanese',
+      'ko': 'Korean',
+      'es': 'Spanish',
+      'fr': 'French',
+      'de': 'German',
+      'ru': 'Russian',
+      'ar': 'Arabic',
+      'pt': 'Portuguese',
+      'it': 'Italian',
+      'nl': 'Dutch',
+      'sv': 'Swedish',
+      'da': 'Danish',
+      'no': 'Norwegian',
+      'fi': 'Finnish',
+      'pl': 'Polish',
+      'cs': 'Czech',
+      'sk': 'Slovak',
+      'hu': 'Hungarian',
+      'ro': 'Romanian',
+      'bg': 'Bulgarian',
+      'hr': 'Croatian',
+      'sr': 'Serbian',
+      'sl': 'Slovenian',
+      'et': 'Estonian',
+      'lv': 'Latvian',
+      'lt': 'Lithuanian',
+      'uk': 'Ukrainian',
+      'be': 'Belarusian',
+      'tr': 'Turkish',
+      'he': 'Hebrew',
+      'fa': 'Persian',
+      'ur': 'Urdu',
+      'hi': 'Hindi',
+      'bn': 'Bengali',
+      'ta': 'Tamil',
+      'te': 'Telugu',
+      'vi': 'Vietnamese',
+      'th': 'Thai',
+      'id': 'Indonesian',
+      'ms': 'Malay',
+      'tl': 'Tagalog'
+    }
+    return names[code] || code
   }
 
   private mapLanguageCode(code: string): string {
@@ -291,5 +241,12 @@ export class VolcanoProvider extends BaseTranslationProvider {
     }
     
     return mapping[code] || code
+  }
+
+  private estimateCost(totalTokens: number): number {
+    // Volcano Engine pricing estimation (approximate)
+    // This is an estimate - actual pricing may vary by model
+    const costPerThousandTokens = this.model.includes('flash') ? 0.0005 : 0.002 // Flash models are cheaper
+    return (totalTokens / 1000) * costPerThousandTokens
   }
 }

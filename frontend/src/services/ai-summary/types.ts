@@ -21,7 +21,7 @@ export interface AISummaryResult {
 }
 
 export interface AISummaryConfig {
-  provider: 'openai' | 'gemini'
+  provider: 'openai' | 'gemini' | 'volcano'
   apiKey?: string
   model?: string
   maxKeywords?: number

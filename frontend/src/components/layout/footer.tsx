@@ -136,7 +136,7 @@ export default function Footer() {
               className="flex items-center space-x-1 text-xs text-muted-foreground/60 hover:text-muted-foreground/80 transition-colors"
             >
               <Github className="h-3 w-3" />
-              <span>Powered by ICT.RUN</span>
+              <span>Powered by KUNO</span>
             </a>
           </div>
 

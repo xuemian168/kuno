@@ -1,6 +1,7 @@
 import { AISummaryProvider, AISummaryConfig, AISummaryResult, ArticleContent } from './types'
 import { OpenAISummaryProvider } from './providers/openai'
 import { GeminiSummaryProvider } from './providers/gemini'
+import { VolcanoSummaryProvider } from './providers/volcano'
 import { aiUsageTracker, trackSummaryGeneration, trackSEOGeneration } from '../ai-usage-tracker'
 
 export * from './types'
@@ -87,7 +88,8 @@ export class AISummaryService {
       throw new Error(`AI summary provider '${this.activeProvider.name}' is not configured`)
     }
 
-    const providerName = this.activeProvider.name.toLowerCase().includes('openai') ? 'openai' : 'gemini'
+    const providerName = this.activeProvider.name.toLowerCase().includes('openai') ? 'openai' 
+      : this.activeProvider.name.toLowerCase().includes('volcano') ? 'volcano' : 'gemini'
     const model = (this.activeProvider as any).model || 'unknown'
     
     try {
@@ -146,7 +148,8 @@ export class AISummaryService {
       throw new Error(`AI summary provider '${this.activeProvider.name}' is not configured`)
     }
 
-    const providerName = this.activeProvider.name.toLowerCase().includes('openai') ? 'openai' : 'gemini'
+    const providerName = this.activeProvider.name.toLowerCase().includes('openai') ? 'openai' 
+      : this.activeProvider.name.toLowerCase().includes('volcano') ? 'volcano' : 'gemini'
     
     return await trackSEOGeneration(
       () => this.activeProvider!.generateSEOKeywords(content, language),
@@ -166,7 +169,8 @@ export class AISummaryService {
       throw new Error(`AI summary provider '${this.activeProvider.name}' is not configured`)
     }
 
-    const providerName = this.activeProvider.name.toLowerCase().includes('openai') ? 'openai' : 'gemini'
+    const providerName = this.activeProvider.name.toLowerCase().includes('openai') ? 'openai' 
+      : this.activeProvider.name.toLowerCase().includes('volcano') ? 'volcano' : 'gemini'
     
     return await trackSEOGeneration(
       () => this.activeProvider!.generateTitle(content, language),
@@ -191,6 +195,14 @@ export class AISummaryService {
         break
       case 'gemini':
         provider = new GeminiSummaryProvider(
+          config.apiKey, 
+          config.model,
+          config.maxKeywords,
+          config.summaryLength
+        )
+        break
+      case 'volcano':
+        provider = new VolcanoSummaryProvider(
           config.apiKey, 
           config.model,
           config.maxKeywords,

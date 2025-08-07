@@ -1093,7 +1093,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                           <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                           </svg>
-                          <span>Powered by ICT.RUN</span>
+                          <span>Powered by KUNO</span>
                         </div>
                       </div>
                     </div>
@@ -1274,7 +1274,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         translationConfig.provider === 'deepl' ? 'Enter your DeepL API key' :
                         translationConfig.provider === 'openai' ? 'Enter your OpenAI API key' :
                         translationConfig.provider === 'gemini' ? 'Enter your Google AI Studio API key' :
-                        translationConfig.provider === 'volcano' ? 'Enter your Volcano Engine Access Key ID' :
+                        translationConfig.provider === 'volcano' ? 'Enter your ARK API Key' :
                         translationConfig.provider === 'libretranslate' ? 'API key (if required by instance)' :
                         'API key for higher rate limits (optional)'
                       }
@@ -1282,34 +1282,13 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                   </div>
                 )}
 
-                {/* API Secret field for Volcano Engine */}
-                {translationConfig.provider === 'volcano' && (
-                  <div className="space-y-2">
-                    <Label>{t('settings.apiSecret') || 'API Secret'}</Label>
-                    <Input
-                      type="password"
-                      value={translationConfig.apiSecret || ''}
-                      onChange={(e) => {
-                        const newConfig = { ...translationConfig, apiSecret: e.target.value }
-                        setTranslationConfig(newConfig)
-                        try {
-                          translationService.configureFromSettings(newConfig)
-                          setHasTranslationProvider(translationService.isConfigured())
-                        } catch (error) {
-                          console.error('Failed to configure translation service:', error)
-                        }
-                      }}
-                      placeholder="Enter your Volcano Engine Access Key Secret"
-                    />
-                  </div>
-                )}
 
-                {/* Model selection for OpenAI and Gemini */}
-                {['openai', 'gemini'].includes(translationConfig.provider) && (
+                {/* Model selection for OpenAI, Gemini and Volcano */}
+                {['openai', 'gemini', 'volcano'].includes(translationConfig.provider) && (
                   <div className="space-y-2">
                     <Label>{t('settings.model') || 'Model'}</Label>
                     <Select
-                      value={translationConfig.model || (translationConfig.provider === 'openai' ? 'gpt-3.5-turbo' : 'gemini-1.5-flash')}
+                      value={translationConfig.model || (translationConfig.provider === 'openai' ? 'gpt-3.5-turbo' : translationConfig.provider === 'volcano' ? 'doubao-seed-1-6-250615' : 'gemini-1.5-flash')}
                       onValueChange={(value) => {
                         const newConfig = { ...translationConfig, model: value }
                         setTranslationConfig(newConfig)
@@ -1333,6 +1312,12 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                             <SelectItem value="gpt-4o">GPT-4o</SelectItem>
                             <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
                           </>
+                        ) : translationConfig.provider === 'volcano' ? (
+                          <>
+                            <SelectItem value="doubao-seed-1-6-250615">Doubao-1.6 (Pro-32k)</SelectItem>
+                            <SelectItem value="doubao-seed-1-6-flash-250615">Doubao-1.6-Flash (Lite)</SelectItem>
+                            <SelectItem value="doubao-1-5-lite-32k-250115">Doubao-1.5-lite-32k</SelectItem>
+                          </>
                         ) : (
                           <>
                             <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
@@ -1344,6 +1329,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     </Select>
                   </div>
                 )}
+
 
                 {/* API URL field for LibreTranslate */}
                 {translationConfig.provider === 'libretranslate' && (
@@ -1397,13 +1383,13 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                       {t('settings.readyToUse')}
                     </Badge>
                   ) : translationConfig.provider === 'volcano' ? (
-                    translationConfig.apiKey && translationConfig.apiSecret ? (
+                    translationConfig.apiKey ? (
                       <Badge variant="default" className="gap-1">
                         <Check className="h-3 w-3" />
                         {t('settings.configured')}
                       </Badge>
                     ) : (
-                      <Badge variant="secondary">{locale === 'zh' ? '需要Access Key ID和Secret' : 'Access Key ID and Secret required'}</Badge>
+                      <Badge variant="secondary">{locale === 'zh' ? '需要ARK API Key' : 'ARK API Key required'}</Badge>
                     )
                   ) : translationConfig.apiKey ? (
                     <Badge variant="default" className="gap-1">
@@ -1453,7 +1439,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                 </Alert>
 
                 {/* Copy Translation API Configuration */}
-                {(translationConfig.provider === 'openai' || translationConfig.provider === 'gemini') && translationConfig.apiKey && (
+                {(translationConfig.provider === 'openai' || translationConfig.provider === 'gemini' || translationConfig.provider === 'volcano') && translationConfig.apiKey && (
                   <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -1466,13 +1452,15 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          if (translationConfig.provider === 'openai' || translationConfig.provider === 'gemini') {
+                          if (translationConfig.provider === 'openai' || translationConfig.provider === 'gemini' || translationConfig.provider === 'volcano') {
                             const newConfig = {
                               ...aiSummaryConfig,
                               provider: translationConfig.provider as any,
                               apiKey: translationConfig.apiKey,
                               model: translationConfig.provider === 'openai' 
                                 ? (translationConfig.model || 'gpt-3.5-turbo')
+                                : translationConfig.provider === 'volcano'
+                                ? 'doubao-seed-1-6-250615'
                                 : 'gemini-1.5-flash'
                             }
                             setAISummaryConfig(newConfig)
@@ -1493,8 +1481,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     </div>
                     <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
                       {locale === 'zh' 
-                        ? `使用${translationConfig.provider === 'openai' ? 'OpenAI' : 'Gemini'}翻译服务的API配置来设置AI摘要服务`
-                        : `Use your ${translationConfig.provider === 'openai' ? 'OpenAI' : 'Gemini'} translation service API configuration for AI summary service`
+                        ? `使用${translationConfig.provider === 'openai' ? 'OpenAI' : translationConfig.provider === 'volcano' ? '火山引擎' : 'Gemini'}翻译服务的API配置来设置AI摘要服务`
+                        : `Use your ${translationConfig.provider === 'openai' ? 'OpenAI' : translationConfig.provider === 'volcano' ? 'Volcano Engine' : 'Gemini'} translation service API configuration for AI summary service`
                       }
                     </p>
                   </div>
@@ -1522,11 +1510,12 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     <SelectContent>
                       <SelectItem value="openai">OpenAI GPT</SelectItem>
                       <SelectItem value="gemini">Google Gemini</SelectItem>
+                      <SelectItem value="volcano">Volcano Engine (豆包)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {(aiSummaryConfig.provider === 'openai' || aiSummaryConfig.provider === 'gemini') && (
+                {(aiSummaryConfig.provider === 'openai' || aiSummaryConfig.provider === 'gemini' || aiSummaryConfig.provider === 'volcano') && (
                   <div className="space-y-2">
                     <Label>{locale === 'zh' ? 'API密钥' : 'API Key'}</Label>
                     <div className="relative">
@@ -1546,7 +1535,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         }}
                         placeholder={
                           aiSummaryConfig.provider === 'openai' ? 'sk-...' :
-                          aiSummaryConfig.provider === 'gemini' ? 'AI...' : 'Enter your API key'
+                          aiSummaryConfig.provider === 'gemini' ? 'AI...' :
+                          aiSummaryConfig.provider === 'volcano' ? 'Enter your ARK API Key' : 'Enter your API key'
                         }
                       />
                     </div>
@@ -1588,9 +1578,17 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                           <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
                         </>
                       )}
+                      {aiSummaryConfig.provider === 'volcano' && (
+                        <>
+                          <SelectItem value="doubao-seed-1-6-250615">Doubao-1.6 (Pro-32k)</SelectItem>
+                          <SelectItem value="doubao-seed-1-6-flash-250615">Doubao-1.6-Flash (Lite)</SelectItem>
+                          <SelectItem value="doubao-1-5-lite-32k-250115">Doubao-1.5-lite-32k</SelectItem>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
+
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
