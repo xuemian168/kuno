@@ -4,8 +4,8 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
-  // Change from 'standalone' to support static generation with ISR
-  // output: 'standalone', // 移除此行以启用 SSG + ISR
+  // Keep standalone mode for production deployment, it's compatible with SSG + ISR
+  output: 'standalone',
   
   // Enable static generation with ISR support
   experimental: {
