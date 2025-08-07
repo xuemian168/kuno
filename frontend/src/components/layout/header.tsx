@@ -51,7 +51,7 @@ export default function Header() {
       animate={{ y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="container mx-auto px-4 flex h-14 items-center max-w-7xl">
+      <div className="container mx-auto px-4 flex h-12 md:h-14 items-center max-w-7xl">
         <div className="mr-4 hidden md:flex">
           <Link className="mr-6 flex items-center space-x-2" href="/">
             {settings?.logo_url && (
@@ -161,17 +161,17 @@ export default function Header() {
                 <img 
                   src={generateMediaUrl(settings.logo_url)} 
                   alt="Logo" 
-                  className="h-7 w-auto object-contain"
+                  className="h-6 w-auto object-contain"
                 />
               )}
               {(settings?.show_site_title ?? true) && (
-                <span className="font-bold">
+                <span className="font-bold text-sm sm:text-base truncate">
                   {settings?.site_title || t('site.title')}
                 </span>
               )}
             </Link>
           </div>
-          <nav className="flex items-center space-x-2">
+          <nav className="flex items-center space-x-1 sm:space-x-2">
             {isAuthenticated && user && (
               <>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-accent/50 hidden sm:flex">
@@ -184,14 +184,22 @@ export default function Header() {
                   variant="ghost"
                   size="sm"
                   onClick={logout}
-                  className="gap-2"
+                  className="gap-1 sm:gap-2"
+                  title={t('admin.logout')}
                 >
                   <LogOut className="h-4 w-4" />
                   <span className="hidden sm:inline">{t('admin.logout')}</span>
                 </Button>
               </>
             )}
-            <ArticleSearch />
+            {/* Desktop search */}
+            <div className="hidden sm:block">
+              <ArticleSearch />
+            </div>
+            {/* Mobile compact search */}
+            <div className="sm:hidden">
+              <ArticleSearch compact />
+            </div>
             <LanguageSwitcher />
             <ModeToggle />
           </nav>

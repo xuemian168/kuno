@@ -25,9 +25,10 @@ interface SearchResult {
 interface ArticleSearchProps {
   trigger?: React.ReactNode
   placeholder?: string
+  compact?: boolean // For mobile/compact view
 }
 
-export function ArticleSearch({ trigger, placeholder }: ArticleSearchProps) {
+export function ArticleSearch({ trigger, placeholder, compact = false }: ArticleSearchProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult | null>(null)
@@ -394,7 +395,13 @@ export function ArticleSearch({ trigger, placeholder }: ArticleSearchProps) {
     }
   }
 
-  const defaultTrigger = (
+  const defaultTrigger = compact ? (
+    // Compact/Mobile version - icon only
+    <Button variant="ghost" size="sm" className="w-9 h-9 p-0" title={currentLocale === 'zh' ? '搜索文章' : 'Search Articles'}>
+      <Search className="h-4 w-4" />
+    </Button>
+  ) : (
+    // Full desktop version
     <Button variant="outline" size="sm" className="relative">
       <Search className="h-4 w-4 mr-2" />
       {currentLocale === 'zh' ? '搜索文章' : 'Search Articles'}
