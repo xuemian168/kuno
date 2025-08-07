@@ -47,6 +47,7 @@
     "category": "分类",
     "language": "语言",
     "defaultLanguage": "默认语言",
+    "tableOfContents": "目录",
     "createArticle": "创建文章",
     "editArticle": "编辑文章",
     "updateArticle": "更新文章",

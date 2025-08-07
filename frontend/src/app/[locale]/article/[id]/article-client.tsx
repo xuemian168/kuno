@@ -9,6 +9,8 @@ import { ArrowLeft, Calendar, Tag, Eye, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { MarkdownRenderer } from '@/components/markdown/markdown-renderer'
+import { TableOfContents } from '@/components/table-of-contents'
+import { generateTocFromMarkdown } from '@/lib/markdown-utils'
 import { apiClient, Article } from '@/lib/api'
 import { ArticleStructuredData, BreadcrumbStructuredData } from '@/components/seo/structured-data'
 import { getBaseUrl, getSiteUrl } from '@/lib/utils'
@@ -31,6 +33,7 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [siteSettings, setSiteSettings] = useState<{ site_title: string; site_subtitle: string; show_view_count?: boolean } | null>(null)
+  const [tocItems, setTocItems] = useState<any[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,6 +45,12 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
         ])
         setArticle(articleData)
         setSiteSettings(settingsData)
+        
+        // Generate table of contents
+        if (articleData?.content) {
+          const toc = generateTocFromMarkdown(articleData.content)
+          setTocItems(toc)
+        }
       } catch (err) {
         console.error('Failed to fetch article:', err)
         // If it's a 404 error (article not found), trigger the 404 page
@@ -186,6 +195,11 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
               includeStructuredData={true}
             />
           </article>
+          
+          {/* Table of Contents - Floating/Fixed position */}
+          {tocItems.length > 0 && (
+            <TableOfContents tocItems={tocItems} />
+          )}
 
           {/* Share Call-to-Action */}
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 text-center space-y-4">

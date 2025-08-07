@@ -47,6 +47,7 @@
     "category": "Category",
     "language": "Language",
     "defaultLanguage": "Default Language",
+    "tableOfContents": "Table of Contents",
     "createArticle": "Create Article",
     "editArticle": "Edit Article",
     "updateArticle": "Update Article",

@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
+import rehypeSlug from 'rehype-slug'
 import { useEffect } from 'react'
 import YouTubeEmbed from '@/components/youtube-embed'
 import BiliBiliEmbed from '@/components/bilibili-embed'
@@ -90,7 +91,7 @@ export function MarkdownRenderer({ content, className = "", includeStructuredDat
     <div className={`prose prose-neutral dark:prose-invert max-w-none ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={[rehypeHighlight, rehypeRaw]}
+        rehypePlugins={[rehypeHighlight, rehypeRaw, rehypeSlug]}
         components={{
           // Custom component for code blocks
           code({ className, children, ...props }) {
@@ -105,21 +106,36 @@ export function MarkdownRenderer({ content, className = "", includeStructuredDat
               </code>
             )
           },
-          // Custom component for headings with better spacing
-          h1: ({ children }) => (
-            <h1 className="text-3xl font-bold mt-8 mb-4 first:mt-0">
+          // Custom component for headings with better spacing and IDs
+          h1: ({ children, id }) => (
+            <h1 id={id} className="text-3xl font-bold mt-8 mb-4 first:mt-0 scroll-mt-20">
               {children}
             </h1>
           ),
-          h2: ({ children }) => (
-            <h2 className="text-2xl font-semibold mt-6 mb-3">
+          h2: ({ children, id }) => (
+            <h2 id={id} className="text-2xl font-semibold mt-6 mb-3 scroll-mt-20">
               {children}
             </h2>
           ),
-          h3: ({ children }) => (
-            <h3 className="text-xl font-semibold mt-5 mb-2">
+          h3: ({ children, id }) => (
+            <h3 id={id} className="text-xl font-semibold mt-5 mb-2 scroll-mt-20">
               {children}
             </h3>
+          ),
+          h4: ({ children, id }) => (
+            <h4 id={id} className="text-lg font-semibold mt-4 mb-2 scroll-mt-20">
+              {children}
+            </h4>
+          ),
+          h5: ({ children, id }) => (
+            <h5 id={id} className="text-base font-semibold mt-3 mb-2 scroll-mt-20">
+              {children}
+            </h5>
+          ),
+          h6: ({ children, id }) => (
+            <h6 id={id} className="text-sm font-semibold mt-3 mb-2 scroll-mt-20">
+              {children}
+            </h6>
           ),
           // Custom component for tables
           table: ({ children }) => (
