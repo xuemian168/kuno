@@ -7,35 +7,71 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Calendar, ArrowRight, Eye, Rss } from 'lucide-react'
-import { apiClient, Article, Category } from '@/lib/api'
+import { apiClient, Article, Category, SiteSettings } from '@/lib/api'
 import NextLink from 'next/link'
 import { WebsiteStructuredData } from '@/components/seo/structured-data'
 import { getBaseUrl } from '@/lib/utils'
 
 interface HomePageClientProps {
   locale: string
+  initialArticles?: Article[]
+  initialCategories?: Category[]
+  initialSettings?: SiteSettings
 }
 
-export default function HomePageClient({ locale }: HomePageClientProps) {
+export default function HomePageClient({ 
+  locale, 
+  initialArticles = [], 
+  initialCategories = [], 
+  initialSettings 
+}: HomePageClientProps) {
   const t = useTranslations()
-  const [articles, setArticles] = useState<Article[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const [articles, setArticles] = useState<Article[]>(initialArticles)
+  const [categories, setCategories] = useState<Category[]>(initialCategories)
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [siteSettings, setSiteSettings] = useState<{ site_title: string; site_subtitle: string; show_view_count?: boolean } | null>(null)
+  const [loading, setLoading] = useState(!initialArticles.length)
+  const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(initialSettings || null)
 
   useEffect(() => {
+    // If we have initial data and no category filter, skip client-side fetching
+    if (initialArticles.length && initialCategories.length && selectedCategory === null) {
+      return
+    }
+
     const fetchData = async () => {
       try {
         setLoading(true)
-        const [articlesData, categoriesData, settingsData] = await Promise.all([
-          apiClient.getArticles({ categoryId: selectedCategory || undefined, lang: locale }),
-          apiClient.getCategories({ lang: locale }),
-          apiClient.getSettings({ lang: locale })
-        ])
-        setArticles(articlesData)
-        setCategories(categoriesData)
-        setSiteSettings(settingsData)
+        
+        // Only fetch articles if category filter changes
+        if (selectedCategory !== null) {
+          const articlesData = await apiClient.getArticles({ 
+            categoryId: selectedCategory, 
+            lang: locale 
+          })
+          setArticles(articlesData)
+        }
+        
+        // Only fetch categories and settings if not provided initially
+        const promises: Promise<any>[] = []
+        if (!initialCategories.length) {
+          promises.push(apiClient.getCategories({ lang: locale }).then(data => ({ type: 'categories', data })))
+        }
+        if (!initialSettings) {
+          promises.push(apiClient.getSettings({ lang: locale }).then(data => ({ type: 'settings', data })))
+        }
+        
+        if (promises.length > 0) {
+          const results = await Promise.all(promises)
+          
+          for (const result of results) {
+            if (result.type === 'categories') {
+              setCategories(result.data)
+            } else if (result.type === 'settings') {
+              setSiteSettings(result.data)
+            }
+          }
+        }
+        
       } catch (error) {
         console.error('Failed to fetch data:', error)
       } finally {
@@ -44,7 +80,7 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
     }
 
     fetchData()
-  }, [locale, selectedCategory])
+  }, [locale, selectedCategory, initialArticles.length, initialCategories.length, initialSettings])
 
   const handleCategoryFilter = (categoryId: number | null) => {
     setSelectedCategory(categoryId)

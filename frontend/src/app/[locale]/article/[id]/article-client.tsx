@@ -9,7 +9,7 @@ import { ArrowLeft, Calendar, Tag, Eye, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { MarkdownRenderer } from '@/components/markdown/markdown-renderer'
-import { apiClient, Article } from '@/lib/api'
+import { apiClient, Article, SiteSettings } from '@/lib/api'
 import { ArticleStructuredData, BreadcrumbStructuredData } from '@/components/seo/structured-data'
 import { getBaseUrl, getSiteUrl } from '@/lib/utils'
 import EmbedCodeGenerator from '@/components/embed-code-generator'
@@ -21,27 +21,53 @@ import { Link } from '@/i18n/routing'
 interface ArticlePageClientProps {
   id: string
   locale: string
+  initialArticle?: Article
+  initialSettings?: SiteSettings
 }
 
-export default function ArticlePageClient({ id, locale }: ArticlePageClientProps) {
+export default function ArticlePageClient({ 
+  id, 
+  locale, 
+  initialArticle, 
+  initialSettings 
+}: ArticlePageClientProps) {
   const t = useTranslations()
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
-  const [article, setArticle] = useState<Article | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [article, setArticle] = useState<Article | null>(initialArticle || null)
+  const [loading, setLoading] = useState(!initialArticle)
   const [error, setError] = useState('')
-  const [siteSettings, setSiteSettings] = useState<{ site_title: string; site_subtitle: string; show_view_count?: boolean } | null>(null)
+  const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(initialSettings || null)
 
   useEffect(() => {
+    // If we have initial data, skip client-side fetching
+    if (initialArticle && initialSettings) {
+      return
+    }
+
     const fetchData = async () => {
       try {
         setLoading(true)
-        const [articleData, settingsData] = await Promise.all([
-          apiClient.getArticle(parseInt(id), locale),
-          apiClient.getSettings({ lang: locale })
-        ])
-        setArticle(articleData)
-        setSiteSettings(settingsData)
+        
+        const promises: Promise<any>[] = []
+        
+        if (!initialArticle) {
+          promises.push(apiClient.getArticle(parseInt(id), locale).then(data => ({ type: 'article', data })))
+        }
+        if (!initialSettings) {
+          promises.push(apiClient.getSettings({ lang: locale }).then(data => ({ type: 'settings', data })))
+        }
+        
+        const results = await Promise.all(promises)
+        
+        for (const result of results) {
+          if (result.type === 'article') {
+            setArticle(result.data)
+          } else if (result.type === 'settings') {
+            setSiteSettings(result.data)
+          }
+        }
+        
       } catch (err) {
         console.error('Failed to fetch article:', err)
         // If it's a 404 error (article not found), trigger the 404 page
@@ -55,7 +81,7 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
     }
 
     fetchData()
-  }, [id, locale])
+  }, [id, locale, initialArticle, initialSettings])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US', {
