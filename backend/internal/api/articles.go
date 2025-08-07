@@ -10,6 +10,7 @@ import (
 	"blog-backend/internal/database"
 	"blog-backend/internal/models"
 	"blog-backend/internal/services"
+	"blog-backend/internal/search"
 	"github.com/gin-gonic/gin"
 )
 
@@ -418,11 +419,24 @@ func trackArticleView(articleID uint, c *gin.Context) {
 	// If view already exists, do nothing (unique visitor already counted)
 }
 
-// SearchArticles handles article search functionality
+// SearchArticles handles article search functionality with advanced search syntax
 func SearchArticles(c *gin.Context) {
 	query := strings.TrimSpace(c.Query("q"))
 	if query == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Search query is required"})
+		return
+	}
+
+	// Parse advanced search syntax
+	parsedQuery, err := search.ParseSearchQuery(query)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid search syntax: " + err.Error()})
+		return
+	}
+
+	// Validate the parsed query
+	if err := parsedQuery.ValidateQuery(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid search parameters: " + err.Error()})
 		return
 	}
 
@@ -440,7 +454,7 @@ func SearchArticles(c *gin.Context) {
 	var articles []models.Article
 	var total int64
 
-	// Build search query
+	// Build base query with joins
 	searchQuery := database.DB.Preload("Category").Preload("Translations")
 	
 	// Filter future articles for non-admin requests
@@ -448,27 +462,51 @@ func SearchArticles(c *gin.Context) {
 		searchQuery = searchQuery.Where("created_at <= ?", time.Now())
 	}
 
-	// Search in title, content, summary, and SEO fields
-	searchPattern := "%" + query + "%"
-	searchQuery = searchQuery.Where(
-		"title LIKE ? OR content LIKE ? OR summary LIKE ? OR seo_title LIKE ? OR seo_description LIKE ? OR seo_keywords LIKE ?",
-		searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern,
-	)
+	// Build advanced search conditions
+	sqlCondition, params := parsedQuery.BuildSQLQuery()
+	if sqlCondition != "" {
+		searchQuery = searchQuery.Where(sqlCondition, params...)
+	}
 
-	// Also search in translations
-	searchQuery = searchQuery.Or(
-		database.DB.Where("id IN (?)", 
-			database.DB.Table("article_translations").
-				Select("article_id").
-				Where("title LIKE ? OR content LIKE ? OR summary LIKE ?", searchPattern, searchPattern, searchPattern),
-		),
-	)
+	// Also search in translations if there are free text terms
+	if len(parsedQuery.FreeText) > 0 {
+		translationConditions := []string{}
+		var translationParams []interface{}
+		
+		for _, term := range parsedQuery.FreeText {
+			translationConditions = append(translationConditions, 
+				"(title LIKE ? OR content LIKE ? OR summary LIKE ?)")
+			pattern := "%" + term + "%"
+			translationParams = append(translationParams, pattern, pattern, pattern)
+		}
+		
+		if len(translationConditions) > 0 {
+			var translationSQL string
+			if parsedQuery.Logic == "OR" {
+				translationSQL = strings.Join(translationConditions, " OR ")
+			} else {
+				translationSQL = strings.Join(translationConditions, " AND ")
+			}
+			
+			// Add OR condition for translations
+			searchQuery = searchQuery.Or(
+				database.DB.Where("id IN (?)", 
+					database.DB.Table("article_translations").
+						Select("article_id").
+						Where(translationSQL, translationParams...),
+				),
+			)
+		}
+	}
 
 	// Get total count
 	searchQuery.Model(&models.Article{}).Count(&total)
 
+	// Apply sorting
+	sortClause := parsedQuery.GetSortClause()
+	
 	// Get paginated results
-	if err := searchQuery.Offset(offset).Limit(limit).Order("created_at DESC").Find(&articles).Error; err != nil {
+	if err := searchQuery.Offset(offset).Limit(limit).Order(sortClause).Find(&articles).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -491,7 +529,7 @@ func SearchArticles(c *gin.Context) {
 		}
 	}
 
-	// Return paginated results
+	// Return paginated results with parsed query info
 	c.JSON(http.StatusOK, gin.H{
 		"articles": articles,
 		"pagination": gin.H{
@@ -501,5 +539,8 @@ func SearchArticles(c *gin.Context) {
 			"total_pages": (total + int64(limit) - 1) / int64(limit),
 		},
 		"query": query,
+		"parsed_query": parsedQuery,
+		"sort_by": parsedQuery.SortBy,
+		"sort_order": parsedQuery.SortOrder,
 	})
 }
