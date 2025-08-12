@@ -170,7 +170,14 @@
     "create": "Create",
     "back": "Back",
     "next": "Next",
-    "loading": "Loading...",
+    "refresh": "Refresh",
+    "download": "Download", 
+    "preview": "Preview",
+    "loading": "Loading",
+    "characters": "characters",
+    "lines": "lines",
+    "minutes_ago": "minutes ago",
+    "view_live": "View Live",
     "submit": "Submit",
     "yes": "Yes",
     "no": "No",
@@ -186,7 +193,9 @@
     "uploaded": "Uploaded",
     "altText": "Alt Text",
     "updateAltText": "Update Alt Text",
-    "important": "Important"
+    "important": "Important",
+    "language": "Language",
+    "days": "Days"
   },
   "status": {
     "fetchFailed": "Failed to fetch",
@@ -626,5 +635,31 @@
     "previewUrl": "Preview URL",
     "autoAdjustNote": "The embedded article will automatically adjust to your container width if set to 100%.",
     "readOnOriginalSite": "Read on original site →"
+  },
+  "ai": {
+    "llms_txt_manager": "LLMs.txt Manager",
+    "llms_txt_description": "Generate and manage LLMs.txt files for AI search engines and language models, providing structured website content descriptions.",
+    "generator": "Generator",
+    "cache_management": "Cache Management",
+    "generate_llms_txt": "Generate LLMs.txt",
+    "cache_statistics": "Cache Statistics",
+    "clear_cache": "Clear Cache",
+    "cache_entries": "Cache Entries",
+    "cache_expiry": "Cache Expiry",
+    "cached_entries": "Cached Entries",
+    "no_cached_entries": "No cached entries",
+    "llms_txt_preview_description": "Preview the LLMs.txt content that will be generated in the selected language",
+    "select_language_to_preview": "Select a language to preview content",
+    "usage_statistics": "Usage Statistics",
+    "api_calls": "API Calls",
+    "success_rate": "Success Rate",
+    "avg_response_time": "Avg Response Time",
+    "average_response_time": "Average Response Time",
+    "daily_usage": "Daily Usage",
+    "last_30_days": "Last 30 Days",
+    "requests": "Requests",
+    "success": "Success",
+    "avg_time": "Avg Time",
+    "statistics_period": "Statistics Period"
   }
 }

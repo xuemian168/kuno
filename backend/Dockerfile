@@ -31,15 +31,16 @@ WORKDIR /root/
 # Copy the binary from builder stage
 COPY --from=builder /app/main .
 
-# Create data directory for SQLite and uploads directory for media files
-RUN mkdir -p ./data ./uploads/images ./uploads/videos ./uploads/branding && \
-    chmod -R 755 ./uploads
+# Create data directory with uploads subdirectory
+RUN mkdir -p ./data/uploads/images ./data/uploads/videos ./data/uploads/branding && \
+    chmod -R 755 ./data/uploads
 
 # Expose port
 EXPOSE 8085
 
 # Set environment variables
 ENV DB_PATH=./data/blog.db
+ENV UPLOAD_DIR=./data/uploads
 ENV GIN_MODE=release
 
 # Run the application

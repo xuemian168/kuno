@@ -15,8 +15,9 @@ import (
 
 const (
 	MaxFileSize = 100 * 1024 * 1024 // 100MB
-	UploadDir   = "./uploads"
 )
+
+var UploadDir = getUploadDir()
 
 var allowedImageTypes = map[string]bool{
 	"image/jpeg": true,
@@ -34,11 +35,19 @@ var allowedVideoTypes = map[string]bool{
 	"video/mov":  true,
 }
 
+func getUploadDir() string {
+	if dir := os.Getenv("UPLOAD_DIR"); dir != "" {
+		return dir
+	}
+	return "/app/data/uploads" // Default path
+}
+
 func init() {
 	// Create upload directory if it doesn't exist
 	if _, err := os.Stat(UploadDir); os.IsNotExist(err) {
 		os.MkdirAll(UploadDir+"/images", 0755)
 		os.MkdirAll(UploadDir+"/videos", 0755)
+		os.MkdirAll(UploadDir+"/branding", 0755)
 	}
 }
 

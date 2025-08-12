@@ -170,7 +170,14 @@
     "create": "创建",
     "back": "返回",
     "next": "下一步",
-    "loading": "加载中...",
+    "refresh": "刷新",
+    "download": "下载",
+    "preview": "预览",
+    "loading": "加载中",
+    "characters": "字符",
+    "lines": "行",
+    "minutes_ago": "分钟前",
+    "view_live": "查看实时版本",
     "submit": "提交",
     "yes": "是",
     "no": "否",
@@ -187,7 +194,9 @@
     "altText": "替代文本",
     "updateAltText": "更新替代文本",
     "disabled": "已禁用",
-    "important": "重要"
+    "important": "重要",
+    "language": "语言",
+    "days": "天"
   },
   "status": {
     "fetchFailed": "获取失败",
@@ -627,5 +636,31 @@
     "previewUrl": "预览链接",
     "autoAdjustNote": "如果宽度设置为100%，嵌入的文章将自动适应您的容器宽度。",
     "readOnOriginalSite": "在原网站阅读 →"
+  },
+  "ai": {
+    "llms_txt_manager": "LLMs.txt 管理器",
+    "llms_txt_description": "为AI搜索引擎和语言模型生成和管理 LLMs.txt 文件，提供结构化的网站内容描述。",
+    "generator": "生成器",
+    "cache_management": "缓存管理",
+    "generate_llms_txt": "生成 LLMs.txt",
+    "cache_statistics": "缓存统计",
+    "clear_cache": "清除缓存",
+    "cache_entries": "缓存条目",
+    "cache_expiry": "缓存过期时间",
+    "cached_entries": "已缓存条目",
+    "no_cached_entries": "暂无缓存条目",
+    "llms_txt_preview_description": "预览将在选定语言中生成的 LLMs.txt 内容",
+    "select_language_to_preview": "选择语言以预览内容",
+    "usage_statistics": "使用统计",
+    "api_calls": "API调用",
+    "success_rate": "成功率",
+    "avg_response_time": "平均响应时间",
+    "average_response_time": "平均响应时间",
+    "daily_usage": "每日使用量",
+    "last_30_days": "最近30天",
+    "requests": "请求",
+    "success": "成功",
+    "avg_time": "平均时间",
+    "statistics_period": "统计周期"
   }
 }

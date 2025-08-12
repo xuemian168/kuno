@@ -779,6 +779,107 @@ class ApiClient {
 
     return this.request(`/articles/search?${params.toString()}`)
   }
+
+  // LLMs.txt endpoints
+  async generateLLMsTxt(lang: string = 'zh'): Promise<string> {
+    const response = await fetch(`${this.getBaseUrl()}/llms-txt/generate?lang=${lang}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        'Content-Type': 'text/plain',
+      },
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to generate LLMs.txt: ${response.statusText}`)
+    }
+    
+    return await response.text()
+  }
+
+  async previewLLMsTxt(lang: string = 'zh'): Promise<string> {
+    const response = await fetch(`${this.getBaseUrl()}/llms-txt/preview?lang=${lang}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        'Content-Type': 'text/plain',
+      },
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to preview LLMs.txt: ${response.statusText}`)
+    }
+    
+    return await response.text()
+  }
+
+  async clearLLMsTxtCache(): Promise<{ message: string }> {
+    return this.request('/llms-txt/clear-cache', {
+      method: 'POST'
+    })
+  }
+
+  async getLLMsTxtCacheStats(): Promise<{
+    cache_entries: number
+    cache_expiry_hours: number
+    entries: Array<{
+      key: string
+      language: string
+      timestamp: string
+      age_minutes: number
+    }>
+  }> {
+    return this.request('/llms-txt/cache-stats')
+  }
+
+  // Public LLMs.txt endpoint (no authentication required)
+  async getLLMsTxtPublic(lang: string = 'zh'): Promise<string> {
+    const response = await fetch(`${this.getBaseUrl()}/llms.txt?lang=${lang}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'text/plain',
+      },
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch LLMs.txt: ${response.statusText}`)
+    }
+    
+    return await response.text()
+  }
+
+  async getLLMsTxtUsageStats(days: number = 30): Promise<{
+    period_days: number
+    summary: Array<{
+      service_type: string
+      provider: string
+      total_requests: number
+      success_requests: number
+      total_tokens: number
+      total_cost: number
+      currency: string
+      avg_response_time: number
+    }>
+    daily_usage: Array<{
+      date: string
+      total_requests: number
+      success_requests: number
+      total_cost: number
+      avg_response_time: number
+    }>
+    cache_stats: {
+      cache_entries: number
+      cache_expiry_hours: number
+      entries: Array<{
+        key: string
+        language: string
+        timestamp: string
+        age_minutes: number
+      }>
+    }
+  }> {
+    return this.request(`/llms-txt/usage-stats?days=${days}`)
+  }
 }
 
 export const apiClient = new ApiClient()

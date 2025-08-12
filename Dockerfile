@@ -59,9 +59,9 @@ RUN mkdir -p /app/backend /app/frontend /var/log/supervisor /run/nginx
 # Copy backend binary
 COPY --from=backend-builder /app/backend/main /app/backend/
 
-# Create uploads directory with proper permissions
-RUN mkdir -p /app/backend/uploads/images /app/backend/uploads/videos /app/backend/uploads/branding && \
-    chmod -R 755 /app/backend/uploads
+# Create data directory with uploads subdirectory
+RUN mkdir -p /app/data/uploads/images /app/data/uploads/videos /app/data/uploads/branding && \
+    chmod -R 755 /app/data/uploads
 
 # Copy frontend build
 COPY --from=frontend-builder /app/frontend/.next/standalone /app/frontend/
@@ -78,10 +78,8 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY inject-env.sh /app/
 RUN chmod +x /app/inject-env.sh
 
-# Create data directory for SQLite and set ownership
-RUN mkdir -p /app/data && \
-    chown -R appuser:appgroup /app /var/log/supervisor && \
-    chmod -R 755 /app/backend/uploads
+# Set ownership for all app directories
+RUN chown -R appuser:appgroup /app /var/log/supervisor
 
 # Build arguments for metadata
 ARG BUILD_DATE
@@ -95,6 +93,7 @@ ARG NEXT_PUBLIC_GIT_BRANCH=unknown
 
 # Set default environment variables (will be overridden by docker-compose)
 ENV DB_PATH=/app/data/blog.db
+ENV UPLOAD_DIR=/app/data/uploads
 ENV GIN_MODE=release
 ENV NODE_ENV=production
 

@@ -103,7 +103,7 @@ export default function LoginPage({ params }: LoginPageProps) {
             <div className="flex justify-center mb-4">
               {settings?.logo_url ? (
                 <Image
-                  src="/kuno.png"
+                  src={settings.logo_url}
                   alt={settings.site_title || 'Site Logo'}
                   width={80}
                   height={80}
@@ -112,7 +112,7 @@ export default function LoginPage({ params }: LoginPageProps) {
                 />
               ) : (
                 <div className="text-4xl font-bold text-primary">
-                  {settings?.site_title?.charAt(0) || 'B'}
+                  KUNO
                 </div>
               )}
             </div>

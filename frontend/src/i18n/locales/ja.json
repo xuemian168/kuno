@@ -185,7 +185,9 @@
     "uploaded": "アップロード済み",
     "altText": "代替テキスト",
     "updateAltText": "代替テキストを更新",
-    "important": "重要"
+    "important": "重要",
+    "language": "言語",
+    "days": "日"
   },
   "status": {
     "fetchFailed": "取得に失敗しました",

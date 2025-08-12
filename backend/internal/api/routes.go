@@ -1,6 +1,7 @@
 package api
 
 import (
+	"net/http"
 	"blog-backend/internal/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/cors"
@@ -21,6 +22,9 @@ func SetupRoutes() *gin.Engine {
 	config.AllowCredentials = true
 	config.MaxAge = 12 * 3600
 	r.Use(cors.New(config))
+
+	// Root level LLMs.txt endpoint for AI crawlers
+	r.GET("/llms.txt", ServeLLMsTxt)
 
 	api := r.Group("/api")
 	{
@@ -55,13 +59,16 @@ func SetupRoutes() *gin.Engine {
 		}
 
 		// Media serving - public access
-		api.Static("/uploads", "./uploads")
+		api.Static("/uploads", UploadDir)
 
 		// Social media links - public access
 		api.GET("/social-media", GetSocialMediaList)
 
 		// System information - public access
 		api.GET("/system/info", GetSystemInfo)
+
+		// LLMs.txt - public access for AI crawlers
+		api.GET("/llms.txt", ServeLLMsTxt)
 
 		// Protected routes - require authentication
 		protected := api.Group("/")
@@ -153,6 +160,22 @@ func SetupRoutes() *gin.Engine {
 					adminAIUsage.GET("/daily", aiUsageController.GetDailyUsage)
 					adminAIUsage.GET("/article/:id", aiUsageController.GetUsageByArticle)
 					adminAIUsage.DELETE("/cleanup", aiUsageController.CleanupOldRecords)
+				}
+
+				// LLMs.txt management
+				adminLLMs := admin.Group("/llms-txt")
+				{
+					adminLLMs.GET("/generate", AdminGenerateLLMsTxt)
+					adminLLMs.GET("/preview", AdminPreviewLLMsTxt)
+					adminLLMs.POST("/clear-cache", func(c *gin.Context) {
+						ClearLLMsTxtCache()
+						c.JSON(http.StatusOK, gin.H{"message": "LLMs.txt cache cleared successfully"})
+					})
+					adminLLMs.GET("/cache-stats", func(c *gin.Context) {
+						stats := GetCacheStats()
+						c.JSON(http.StatusOK, stats)
+					})
+					adminLLMs.GET("/usage-stats", GetLLMsTxtUsageStats)
 				}
 			}
 		}

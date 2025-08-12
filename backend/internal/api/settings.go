@@ -194,7 +194,7 @@ func uploadBrandingFile(c *gin.Context, fileType string) {
 	}
 
 	// Create uploads directory if it doesn't exist
-	uploadDir := "./uploads/branding"
+	uploadDir := filepath.Join(UploadDir, "branding")
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
 		return
@@ -212,7 +212,7 @@ func uploadBrandingFile(c *gin.Context, fileType string) {
 	}
 
 	// Generate URL - use relative path for now, can be made configurable later
-	fileURL := fmt.Sprintf("/api/uploads/branding/%s", filename)
+	fileURL := fmt.Sprintf("/uploads/branding/%s", filename)
 
 	// Update settings
 	var settings models.SiteSettings
@@ -225,12 +225,22 @@ func uploadBrandingFile(c *gin.Context, fileType string) {
 	var oldFile string
 	if fileType == "logo" {
 		if settings.LogoURL != "" {
-			oldFile = strings.TrimPrefix(settings.LogoURL, "/api/uploads/branding/")
+			// Handle both old and new URL patterns
+			if strings.HasPrefix(settings.LogoURL, "/api/uploads/branding/") {
+				oldFile = strings.TrimPrefix(settings.LogoURL, "/api/uploads/branding/")
+			} else {
+				oldFile = strings.TrimPrefix(settings.LogoURL, "/uploads/branding/")
+			}
 		}
 		settings.LogoURL = fileURL
 	} else if fileType == "favicon" {
 		if settings.FaviconURL != "" {
-			oldFile = strings.TrimPrefix(settings.FaviconURL, "/api/uploads/branding/")
+			// Handle both old and new URL patterns
+			if strings.HasPrefix(settings.FaviconURL, "/api/uploads/branding/") {
+				oldFile = strings.TrimPrefix(settings.FaviconURL, "/api/uploads/branding/")
+			} else {
+				oldFile = strings.TrimPrefix(settings.FaviconURL, "/uploads/branding/")
+			}
 		}
 		settings.FaviconURL = fileURL
 	}

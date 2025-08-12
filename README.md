@@ -35,6 +35,8 @@ A full-stack blog application with Go backend and Next.js frontend, containerize
 - 🔄 **Zero-Downtime Deployment**: Blue-green deployment with <2s downtime
 - 🏥 **Health Checks**: Automatic service health verification
 - 🛡️ **Auto-Rollback**: Failed deployments automatically restore previous version
+- 🤖 **LLMs.txt Support**: AI-friendly content description for search engines and language models
+- 📊 **Usage Analytics**: Comprehensive usage statistics and performance monitoring
 
 ### 🌐 Supported Languages
 
@@ -133,7 +135,12 @@ docker run -d \
 
 **Directory Structure**:
 - `/opt/kuno/` - Application main directory
-- `/opt/kuno/blog-data/` - Data storage (database and uploads)
+- `/opt/kuno/blog-data/` - Unified data storage
+  - `/opt/kuno/blog-data/blog.db` - SQLite database
+  - `/opt/kuno/blog-data/uploads/` - Upload files directory
+    - `/opt/kuno/blog-data/uploads/images/` - Image files
+    - `/opt/kuno/blog-data/uploads/videos/` - Video files
+    - `/opt/kuno/blog-data/uploads/branding/` - Branding files
 - `/opt/kuno/deploy.sh` - Deployment script (one-click method)
 
 ### 🛠️ Development Setup
@@ -208,6 +215,7 @@ docker run -d \
 |----------|---------|-------------|
 | `NEXT_PUBLIC_API_URL` | `https://your-domain.com/api` | Your API endpoint URL |
 | `DB_PATH` | `/app/data/blog.db` | SQLite database path |
+| `UPLOAD_DIR` | `/app/data/uploads` | Upload files directory path |
 | `GIN_MODE` | `release` | Go Gin mode (release/debug) |
 | `NODE_ENV` | `production` | Node.js environment |
 | `RECOVERY_MODE` | `false` | Password recovery mode |
@@ -573,7 +581,9 @@ The frontend will automatically use:
 
 ### Docker Volumes
 
-- `blog_data`: Persistent storage for SQLite database
+- `blog_data`: Unified persistent storage for SQLite database and upload files
+  - Database: `/app/data/blog.db`
+  - Uploads: `/app/data/uploads/` (images, videos, branding)
 
 ## Management Commands
 
@@ -759,6 +769,51 @@ docker-compose logs -f frontend
 - Update Nginx configuration for your domain
 - Set up backup for the SQLite database
 - Configure monitoring and logging
+
+## 🤖 LLMs.txt Support
+
+KUNO provides comprehensive support for AI search engines and language models through the LLMs.txt standard, making your content easily discoverable and analyzable by AI systems.
+
+### Features
+
+- **🌍 Multi-language Generation**: Generate LLMs.txt files in 8 major languages (Chinese, English, Japanese, Korean, Spanish, French, German, Russian)
+- **🧠 Intelligent Content Analysis**: Automatically extracts key topics, categories, and article summaries
+- **⚡ Smart Caching**: 1-hour cache strategy with automatic invalidation when content changes
+- **📈 Usage Statistics**: Comprehensive analytics including API calls, response times, and success rates
+- **🔄 Auto-refresh**: Cache automatically updates when articles or site settings change
+
+### Design Benefits
+
+1. **AI Search Engine Friendly**: Provides structured information for Claude, ChatGPT, and other AI models to understand your site content
+2. **SEO Enhancement**: Improves discoverability by AI-powered search systems
+3. **Performance Optimized**: Smart caching reduces server load while ensuring fresh content
+4. **Multilingual Support**: Localized content descriptions in multiple languages
+5. **Rich Metadata**: Includes article counts, view statistics, categories, and key topics
+6. **Structured Format**: Follows LLMs.txt standard with proper markdown formatting
+
+### Access Points
+
+- **Public Endpoint**: `https://yourdomain.com/llms.txt` (supports `?lang=en` parameter)
+- **API Endpoint**: `https://yourdomain.com/api/llms.txt` (with language parameter)
+- **Admin Interface**: Manage and preview LLMs.txt content through the admin panel
+
+### Usage Statistics Tracking
+
+The system tracks comprehensive usage metrics:
+
+- **📊 API Call Statistics**: Total requests, success rate, and failure analysis
+- **⏱️ Performance Monitoring**: Average response times and cache hit rates
+- **📅 Daily Usage Reports**: Historical data for the past 30 days
+- **🌐 Language Distribution**: Usage breakdown by language
+- **💾 Cache Performance**: Cache entries, expiry times, and efficiency metrics
+
+### Admin Management
+
+Access the LLMs.txt manager in the admin panel to:
+- Generate and preview content in different languages
+- View usage statistics and performance metrics
+- Manage cache and clear cached content
+- Download generated LLMs.txt files
 
 ## Sponsorship
 This project is sponsored by [TIKHUB.IO](https://tikhub.io/)

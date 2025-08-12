@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { Plus, Edit, Trash2, Settings, Eye, BarChart3, Download, Check, X, Upload } from "lucide-react"
+import { Plus, Edit, Trash2, Settings, Eye, BarChart3, Download, Check, X, Upload, FileText } from "lucide-react"
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import { Button } from "@/components/ui/button"
@@ -382,6 +382,12 @@ export default function AdminPage({ params }: AdminPageProps) {
                   <Button variant="outline">
                     <BarChart3 className="mr-2 h-4 w-4" />
                     {t('analytics.title')}
+                  </Button>
+                </Link>
+                <Link href="/admin/llms-txt">
+                  <Button variant="outline">
+                    <FileText className="mr-2 h-4 w-4" />
+                    LLMs.txt
                   </Button>
                 </Link>
                 <Link href="/admin/import">

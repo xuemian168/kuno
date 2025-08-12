@@ -33,6 +33,8 @@ KUNO 旨在打造一个 轻量、极速、国际化优先 的内容管理系统�
 - 🔄 **零停机部署**：蓝绿部署策略，停机时间 < 2 秒
 - 🏥 **健康检查**：自动服务健康状态验证
 - 🛡️ **自动回滚**：部署失败时自动恢复到之前版本
+- 🤖 **LLMs.txt 支持**：为AI搜索引擎和语言模型提供友好的内容描述
+- 📊 **使用统计**：全面的使用情况统计和性能监控
 
 ### 🌐 支持的语言
 
@@ -131,7 +133,12 @@ docker run -d \
 
 **目录说明**：
 - `/opt/kuno/` - 应用主目录
-- `/opt/kuno/blog-data/` - 数据存储目录（包含数据库和上传文件）
+- `/opt/kuno/blog-data/` - 统一数据存储目录
+  - `/opt/kuno/blog-data/blog.db` - SQLite 数据库
+  - `/opt/kuno/blog-data/uploads/` - 上传文件目录
+    - `/opt/kuno/blog-data/uploads/images/` - 图片文件
+    - `/opt/kuno/blog-data/uploads/videos/` - 视频文件
+    - `/opt/kuno/blog-data/uploads/branding/` - 品牌文件
 - `/opt/kuno/deploy.sh` - 部署脚本（方法一）
 
 ## 📋 环境要求
@@ -148,6 +155,20 @@ docker run -d \
 - **默认账号**：admin / xuemian168
 
 ⚠️ **重要**：首次登录后请立即修改默认密码！
+
+## 🔧 配置参数
+
+### 环境变量
+
+| 变量名 | 默认值 | 说明 |
+|--------|--------|------|
+| `NEXT_PUBLIC_API_URL` | `https://your-domain.com/api` | API 接口地址 |
+| `DB_PATH` | `/app/data/blog.db` | SQLite 数据库路径 |
+| `UPLOAD_DIR` | `/app/data/uploads` | 上传文件目录路径 |
+| `GIN_MODE` | `release` | Go Gin 模式（release/debug）|
+| `NODE_ENV` | `production` | Node.js 环境 |
+| `RECOVERY_MODE` | `false` | 密码恢复模式 |
+| `JWT_SECRET` | *(自动生成)* | JWT 签名密钥（生产环境建议设置）|
 
 ## 📖 使用说明
 
@@ -197,7 +218,7 @@ docker rm -f kuno
 
 ## 📊 数据备份
 
-博客数据存储在 `/opt/kuno/blog-data` 目录中，建议定期备份：
+博客数据统一存储在 `/opt/kuno/blog-data` 目录中，包括数据库和上传文件，建议定期备份：
 
 ```bash
 # 进入应用目录
@@ -348,6 +369,51 @@ A: 确保环境变量设置正确 (`RECOVERY_MODE=true`)，并检查 Docker 日�
 1. 查看容器日志：`docker logs kuno`
 2. 访问项目主页：https://github.com/xuemian168/kuno
 3. 提交 Issue 获取帮助
+
+## 🤖 LLMs.txt 支持
+
+KUNO 通过 LLMs.txt 标准为 AI 搜索引擎和语言模型提供全面支持，让您的内容更容易被 AI 系统发现和分析。
+
+### 功能特性
+
+- **🌍 多语言生成**：支持8种主要语言（中文、英文、日文、韩文、西班牙文、法文、德文、俄文）的LLMs.txt文件生成
+- **🧠 智能内容分析**：自动提取关键主题、分类和文章摘要
+- **⚡ 智能缓存**：1小时缓存策略，内容变更时自动失效
+- **📈 使用统计**：全面的分析数据包括API调用、响应时间和成功率
+- **🔄 自动刷新**：文章或站点设置变更时缓存自动更新
+
+### 设计优势
+
+1. **AI搜索引擎友好**：为Claude、ChatGPT等AI模型提供结构化的网站内容信息
+2. **SEO增强**：提升在AI驱动搜索系统中的可发现性
+3. **性能优化**：智能缓存减少服务器负载的同时确保内容新鲜度
+4. **多语言支持**：多种语言的本地化内容描述
+5. **丰富元数据**：包含文章数量、查看统计、分类和关键主题
+6. **结构化格式**：遵循LLMs.txt标准，采用标准Markdown格式
+
+### 访问端点
+
+- **公开端点**：`https://yourdomain.com/llms.txt`（支持`?lang=zh`参数）
+- **API端点**：`https://yourdomain.com/api/llms.txt`（支持语言参数）
+- **管理界面**：通过管理后台管理和预览LLMs.txt内容
+
+### 使用情况统计追踪
+
+系统追踪全面的使用指标：
+
+- **📊 API调用统计**：总请求数、成功率和失败分析
+- **⏱️ 性能监控**：平均响应时间和缓存命中率
+- **📅 每日使用报告**：过去30天的历史数据
+- **🌐 语言分布**：按语言划分的使用情况
+- **💾 缓存性能**：缓存条目、过期时间和效率指标
+
+### 管理功能
+
+在管理后台访问LLMs.txt管理器可以：
+- 生成和预览不同语言的内容
+- 查看使用统计和性能指标
+- 管理缓存和清理缓存内容
+- 下载生成的LLMs.txt文件
 
 ## 赞助
 本项目由 [TIKHUB.IO](https://tikhub.io/) 提供支持

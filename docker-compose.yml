@@ -14,9 +14,9 @@ services:
       - "80:80"
     volumes:
       - blog_data:/app/data
-      - blog_uploads:/app/backend/uploads
     environment:
       - DB_PATH=/app/data/blog.db
+      - UPLOAD_DIR=/app/data/uploads
       - GIN_MODE=release
       - NODE_ENV=production
       - RECOVERY_MODE=${RECOVERY_MODE:-false}
@@ -35,6 +35,4 @@ services:
 
 volumes:
   blog_data:
-    driver: local
-  blog_uploads:
     driver: local
