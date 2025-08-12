@@ -117,6 +117,7 @@ func SetupRoutes() *gin.Engine {
 					adminMedia.GET("/:id", GetMedia)
 					adminMedia.PUT("/:id", UpdateMedia)
 					adminMedia.DELETE("/:id", DeleteMedia)
+					adminMedia.DELETE("/bulk", BulkDeleteMedia)
 				}
 
 				// Analytics

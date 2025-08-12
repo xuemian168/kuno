@@ -572,6 +572,18 @@ class ApiClient {
     })
   }
 
+  async bulkDeleteMedia(ids: number[]): Promise<{
+    success_count: number
+    total_count: number
+    failed: Array<{ id: number; filename: string; error: string }>
+    message: string
+  }> {
+    return this.request('/media/bulk', {
+      method: 'DELETE',
+      body: JSON.stringify({ ids }),
+    })
+  }
+
   // Analytics endpoints
   async getAnalytics(params?: { lang?: string }): Promise<AnalyticsData> {
     const queryParams = new URLSearchParams()

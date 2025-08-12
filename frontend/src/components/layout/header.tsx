@@ -54,13 +54,31 @@ export default function Header() {
       <div className="container mx-auto px-4 flex h-12 md:h-14 items-center max-w-7xl">
         <div className="mr-4 hidden md:flex">
           <Link className="mr-6 flex items-center space-x-2" href="/">
-            {settings?.logo_url && (
+            {settings?.logo_url ? (
               <img 
                 src={generateMediaUrl(settings.logo_url)} 
                 alt="Logo" 
                 className="h-8 w-auto object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                  const fallback = e.currentTarget.nextElementSibling as HTMLElement
+                  if (fallback) {
+                    fallback.style.display = 'inline-block'
+                  }
+                }}
               />
+            ) : null}
+            {!settings?.logo_url && (
+              <div className="text-lg font-bold text-primary">
+                KUNO
+              </div>
             )}
+            <div 
+              className="text-lg font-bold text-primary hidden"
+              style={{ display: 'none' }}
+            >
+              KUNO
+            </div>
             {(settings?.show_site_title ?? true) && (
               <span className="hidden font-bold sm:inline-block">
                 {settings?.site_title || t('site.title')}
@@ -157,13 +175,31 @@ export default function Header() {
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
           <div className="w-full flex-1 md:w-auto md:flex-none">
             <Link className="flex items-center space-x-2 md:hidden" href="/">
-              {settings?.logo_url && (
+              {settings?.logo_url ? (
                 <img 
                   src={generateMediaUrl(settings.logo_url)} 
                   alt="Logo" 
                   className="h-6 w-auto object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement
+                    if (fallback) {
+                      fallback.style.display = 'inline-block'
+                    }
+                  }}
                 />
+              ) : null}
+              {!settings?.logo_url && (
+                <div className="text-base font-bold text-primary">
+                  KUNO
+                </div>
               )}
+              <div 
+                className="text-base font-bold text-primary hidden"
+                style={{ display: 'none' }}
+              >
+                KUNO
+              </div>
               {(settings?.show_site_title ?? true) && (
                 <span className="font-bold text-sm sm:text-base truncate">
                   {settings?.site_title || t('site.title')}

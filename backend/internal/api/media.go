@@ -244,6 +244,73 @@ func DeleteMedia(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Media deleted successfully"})
 }
 
+// BulkDeleteMedia handles bulk deletion of media files
+func BulkDeleteMedia(c *gin.Context) {
+	var req struct {
+		IDs []int `json:"ids" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	if len(req.IDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No media IDs provided"})
+		return
+	}
+
+	// Limit the number of items that can be deleted at once
+	if len(req.IDs) > 100 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete more than 100 items at once"})
+		return
+	}
+
+	var failedDeletions []map[string]interface{}
+	var successCount int
+
+	// Get all media files to be deleted
+	var mediaFiles []models.MediaLibrary
+	if err := database.DB.Where("id IN ?", req.IDs).Find(&mediaFiles).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch media files"})
+		return
+	}
+
+	// Delete each file
+	for _, media := range mediaFiles {
+		// Delete the file from filesystem
+		if err := os.Remove(media.FilePath); err != nil {
+			// Log the error but continue with database deletion
+			fmt.Printf("Warning: Failed to delete file %s: %v\n", media.FilePath, err)
+		}
+
+		// Delete from database
+		if err := database.DB.Delete(&media).Error; err != nil {
+			failedDeletions = append(failedDeletions, map[string]interface{}{
+				"id":       media.ID,
+				"filename": media.OriginalName,
+				"error":    err.Error(),
+			})
+		} else {
+			successCount++
+		}
+	}
+
+	response := map[string]interface{}{
+		"success_count": successCount,
+		"total_count":   len(req.IDs),
+		"failed":        failedDeletions,
+	}
+
+	if len(failedDeletions) > 0 {
+		response["message"] = fmt.Sprintf("Successfully deleted %d of %d files", successCount, len(req.IDs))
+	} else {
+		response["message"] = fmt.Sprintf("Successfully deleted %d files", successCount)
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 func ServeMedia(c *gin.Context) {
 	subDir := c.Param("subdir")
 	fileName := c.Param("filename")

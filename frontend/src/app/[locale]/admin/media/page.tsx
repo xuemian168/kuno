@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Image as ImageIcon, Video, Trash2, Edit2, Search, Filter, Youtube, Play, ExternalLink, MoreVertical } from 'lucide-react'
+import { Image as ImageIcon, Video, Trash2, Edit2, Search, Filter, Youtube, Play, ExternalLink, MoreVertical, CheckSquare, Square, Minus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -49,6 +49,11 @@ export default function MediaPage({ params }: MediaPageProps) {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [fileSizeFilter, setFileSizeFilter] = useState<'all' | 'small' | 'medium' | 'large'>('all')
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all')
+  
+  // Multi-select states
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
+  const [selectedMediaIds, setSelectedMediaIds] = useState<Set<number>>(new Set())
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
 
   useEffect(() => {
     params.then(({ locale: paramLocale }) => {
@@ -75,7 +80,7 @@ export default function MediaPage({ params }: MediaPageProps) {
         const response = await apiClient.getMediaList(
           selectedType === 'all' ? undefined : selectedType as 'image' | 'video'
         )
-        setMedia(response.media)
+        setMedia(response.media || [])
       }
       // Load online videos from localStorage
       const savedOnlineVideos = localStorage.getItem('online-videos')
@@ -90,7 +95,7 @@ export default function MediaPage({ params }: MediaPageProps) {
   }
 
   const handleUploadComplete = (newMedia: MediaLibrary) => {
-    setMedia(prev => [newMedia, ...prev])
+    setMedia(prev => [newMedia, ...(prev || [])])
   }
 
   const handleVideoAdd = (video: OnlineVideo) => {
@@ -144,12 +149,66 @@ export default function MediaPage({ params }: MediaPageProps) {
     setEditingVideoTitle('')
   }
 
+  // Multi-select handlers
+  const toggleMultiSelectMode = () => {
+    setIsMultiSelectMode(!isMultiSelectMode)
+    if (isMultiSelectMode) {
+      setSelectedMediaIds(new Set())
+    }
+  }
+
+  const toggleMediaSelection = (mediaId: number) => {
+    const newSelection = new Set(selectedMediaIds)
+    if (newSelection.has(mediaId)) {
+      newSelection.delete(mediaId)
+    } else {
+      newSelection.add(mediaId)
+    }
+    setSelectedMediaIds(newSelection)
+  }
+
+
+  const handleBulkDelete = async () => {
+    if (selectedMediaIds.size === 0) return
+
+    const confirmMessage = t('media.confirmBulkDelete', { count: selectedMediaIds.size })
+    if (!confirm(confirmMessage)) return
+
+    setBulkDeleteLoading(true)
+    try {
+      const ids = Array.from(selectedMediaIds)
+      const result = await apiClient.bulkDeleteMedia(ids)
+      
+      // Remove successfully deleted items from state
+      setMedia(prev => (prev || []).filter(m => !selectedMediaIds.has(m.id)))
+      setSelectedMediaIds(new Set())
+      
+      if (result.failed.length > 0) {
+        setError(`${result.message}. Some files could not be deleted.`)
+      } else {
+        // Clear any previous errors
+        setError('')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('media.failedToBulkDelete'))
+    } finally {
+      setBulkDeleteLoading(false)
+    }
+  }
+
+  const handleBulkCopyUrls = () => {
+    const selectedMedia = media.filter(m => selectedMediaIds.has(m.id))
+    const urls = selectedMedia.map(m => getMediaUrl(m.url)).join('\n')
+    navigator.clipboard.writeText(urls)
+    // You might want to show a toast notification here
+  }
+
   const handleDeleteMedia = async (id: number) => {
     if (!confirm(t('media.confirmDeleteMedia'))) return
 
     try {
       await apiClient.deleteMedia(id)
-      setMedia(prev => prev.filter(m => m.id !== id))
+      setMedia(prev => (prev || []).filter(m => m.id !== id))
     } catch (err) {
       setError(err instanceof Error ? err.message : t('media.failedToDeleteMedia'))
     }
@@ -185,7 +244,7 @@ export default function MediaPage({ params }: MediaPageProps) {
     })
   }
 
-  const filteredMedia = media
+  const filteredMedia = (media || [])
     .filter(item => {
       // Text search filter
       const matchesSearch = item.original_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -248,6 +307,18 @@ export default function MediaPage({ params }: MediaPageProps) {
       return sortOrder === 'desc' ? -comparison : comparison
     })
 
+  const selectAllVisible = () => {
+    const allVisibleIds = new Set(filteredMedia.map(m => m.id))
+    setSelectedMediaIds(allVisibleIds)
+  }
+
+  const clearSelection = () => {
+    setSelectedMediaIds(new Set())
+  }
+
+  const isAllSelected = filteredMedia.length > 0 && filteredMedia.every(m => selectedMediaIds.has(m.id))
+  const isPartiallySelected = selectedMediaIds.size > 0 && !isAllSelected
+
   const filteredOnlineVideos = onlineVideos.filter(video =>
     video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     video.url.toLowerCase().includes(searchTerm.toLowerCase())
@@ -277,6 +348,80 @@ export default function MediaPage({ params }: MediaPageProps) {
           <VideoAdd onVideoAdd={handleVideoAdd} />
         </TabsContent>
       </Tabs>
+
+      {/* Multi-select Toolbar */}
+      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+        <div className="flex items-center gap-4">
+          <Button
+            variant={isMultiSelectMode ? "default" : "outline"}
+            onClick={toggleMultiSelectMode}
+            size="sm"
+          >
+            {isMultiSelectMode ? (
+              <>
+                <CheckSquare className="h-4 w-4 mr-2" />
+                {t('media.exitSelectMode')}
+              </>
+            ) : (
+              <>
+                <Square className="h-4 w-4 mr-2" />
+                {t('media.selectMode')}
+              </>
+            )}
+          </Button>
+
+          {isMultiSelectMode && (
+            <>
+              <Button
+                variant="outline"
+                onClick={isAllSelected ? clearSelection : selectAllVisible}
+                size="sm"
+                className="gap-2"
+              >
+                {isPartiallySelected ? (
+                  <Minus className="h-4 w-4" />
+                ) : isAllSelected ? (
+                  <CheckSquare className="h-4 w-4" />
+                ) : (
+                  <Square className="h-4 w-4" />
+                )}
+                {isAllSelected ? t('media.deselectAll') : t('media.selectAll')}
+              </Button>
+
+              {selectedMediaIds.size > 0 && (
+                <span className="text-sm font-medium">
+                  {t('media.selectedCount', { count: selectedMediaIds.size })}
+                </span>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Bulk Actions */}
+        {isMultiSelectMode && selectedMediaIds.size > 0 && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleBulkCopyUrls}
+              size="sm"
+              className="gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              {t('media.copyUrls')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteLoading}
+              size="sm"
+              className="gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              {bulkDeleteLoading ? t('common.deleting') : t('media.delete')}
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Search and Filter */}
       <div className="space-y-4">
@@ -398,19 +543,27 @@ export default function MediaPage({ params }: MediaPageProps) {
               transition={{ duration: 0.3, delay: index * 0.05 }}
             >
               <Card 
-                className="group hover:shadow-lg transition-shadow cursor-pointer"
+                className={`group hover:shadow-lg transition-all cursor-pointer ${
+                  isMultiSelectMode && selectedMediaIds.has(item.id) 
+                    ? 'ring-2 ring-primary bg-primary/5' 
+                    : ''
+                }`}
                 onContextMenu={(e) => {
                   e.preventDefault()
-                  setContextMenuOpen(`media-${item.id}`)
+                  if (!isMultiSelectMode) {
+                    setContextMenuOpen(`media-${item.id}`)
+                  }
                 }}
-              >
-                <div 
-                  className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-t-lg overflow-hidden relative"
-                  onClick={() => {
+                onClick={() => {
+                  if (isMultiSelectMode) {
+                    toggleMediaSelection(item.id)
+                  } else {
                     setSelectedMedia(item)
                     setEditingAlt(item.alt)
-                  }}
-                >
+                  }
+                }}
+              >
+                <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-t-lg overflow-hidden relative">
                   {item.media_type === 'image' ? (
                     <img
                       src={getMediaUrl(item.url)}
@@ -432,18 +585,32 @@ export default function MediaPage({ params }: MediaPageProps) {
                       {item.media_type}
                     </Badge>
                   </div>
+                  
+                  {/* Multi-select checkbox */}
+                  {isMultiSelectMode && (
+                    <div className="absolute top-2 left-2">
+                      <div className="w-6 h-6 rounded-md bg-white border-2 border-gray-300 flex items-center justify-center shadow-sm">
+                        {selectedMediaIds.has(item.id) ? (
+                          <CheckSquare className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Square className="h-4 w-4 text-gray-400" />
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-medium truncate text-sm">
                       {item.original_name}
                     </h3>
-                    <DropdownMenu 
-                      open={contextMenuOpen === `media-${item.id}`}
-                      onOpenChange={(open) => {
-                        if (!open) setContextMenuOpen(null)
-                      }}
-                    >
+                    {!isMultiSelectMode && (
+                      <DropdownMenu 
+                        open={contextMenuOpen === `media-${item.id}`}
+                        onOpenChange={(open) => {
+                          if (!open) setContextMenuOpen(null)
+                        }}
+                      >
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
@@ -521,6 +688,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    )}
                   </div>
                   <div className="space-y-1 text-xs text-muted-foreground">
                     <p>{formatFileSize(item.file_size)}</p>
