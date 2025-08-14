@@ -10,6 +10,7 @@ import { AuthProvider } from '@/contexts/auth-context'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import { CustomCSSInjector } from '@/components/custom-css-injector'
+import { LayoutBackground } from '@/components/layout-background'
 import '../globals.css'
 import { getBaseUrl, getSiteUrl, getApiUrl } from '@/lib/config'
 import { apiClient } from '@/lib/api'
@@ -215,7 +216,8 @@ export default async function LocaleLayout({
             <AuthProvider>
               <SettingsProvider>
                 <CustomCSSInjector />
-                <div className="min-h-screen bg-background flex flex-col">
+                <LayoutBackground />
+                <div className="min-h-screen bg-transparent flex flex-col relative">
                   <Header />
                   <main className="flex-1">
                     {children}

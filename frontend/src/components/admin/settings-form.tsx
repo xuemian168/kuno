@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, SiteSettings, SiteSettingsTranslation } from "@/lib/api"
 import { useSettings } from "@/contexts/settings-context"
-import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle, AlertTriangle, ChevronDown, Activity, Sparkles, Copy, Type } from "lucide-react"
+import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle, AlertTriangle, ChevronDown, Activity, Sparkles, Copy, Type, Trash2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { translationService, TranslationConfig, SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation"
@@ -21,7 +21,7 @@ import { aiSummaryService, AISummaryConfig } from "@/services/ai-summary"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { SocialMediaManager } from "@/components/admin/social-media-manager"
-import { getMediaUrl } from "@/lib/config"
+import { getMediaUrl, getApiUrl } from "@/lib/config"
 import { generateFaviconUrl, generateMediaUrl } from "@/lib/favicon-utils"
 import { setSoundEnabled } from "@/lib/sound"
 import { NotificationDialog, useNotificationDialog } from "@/components/ui/notification-dialog"
@@ -53,7 +53,12 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     default_language: "zh",
     custom_css: "",
     theme_config: "",
-    active_theme: ""
+    active_theme: "",
+    // Background settings
+    background_type: "none",
+    background_color: "#ffffff",
+    background_image_url: "",
+    background_opacity: 0.8
   })
   const [translations, setTranslations] = useState<SiteSettingsTranslation[]>([])
   const [activeTab, setActiveTab] = useState('general')
@@ -90,6 +95,10 @@ export function SettingsForm({ locale }: SettingsFormProps) {
   })
   const [passwordChanging, setPasswordChanging] = useState(false)
   const [showChinaCompliance, setShowChinaCompliance] = useState(false)
+  
+  // Background upload state
+  const [backgroundUploading, setBackgroundUploading] = useState(false)
+  const [backgroundPreview, setBackgroundPreview] = useState<string | null>(null)
 
   // Password strength calculation
   const calculatePasswordStrength = (password: string) => {
@@ -205,7 +214,12 @@ export function SettingsForm({ locale }: SettingsFormProps) {
           default_language: settingsData.default_language || "zh",
           custom_css: settingsData.custom_css || "",
           theme_config: settingsData.theme_config || "",
-          active_theme: settingsData.active_theme || ""
+          active_theme: settingsData.active_theme || "",
+          // Background settings
+          background_type: settingsData.background_type || "none",
+          background_color: settingsData.background_color || "#ffffff",
+          background_image_url: settingsData.background_image_url || "",
+          background_opacity: settingsData.background_opacity ?? 0.8
         })
         setTranslations(settingsData.translations || [])
         
@@ -342,6 +356,11 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         default_language: formData.default_language,
         logo_url: settings?.logo_url || '',
         favicon_url: settings?.favicon_url || '',
+        // Background settings
+        background_type: formData.background_type,
+        background_color: formData.background_color,
+        background_image_url: formData.background_image_url,
+        background_opacity: formData.background_opacity,
         translations: allTranslations
       }
 
@@ -395,7 +414,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     }
   }
 
-  const handleChange = (field: string, value: string | boolean) => {
+  const handleChange = (field: string, value: string | boolean | number) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -421,7 +440,12 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         default_language: settings.default_language || "zh",
         custom_css: settings.custom_css || "",
         theme_config: settings.theme_config || "",
-        active_theme: settings.active_theme || ""
+        active_theme: settings.active_theme || "",
+        // Background settings
+        background_type: settings.background_type || "none",
+        background_color: settings.background_color || "#ffffff",
+        background_image_url: settings.background_image_url || "",
+        background_opacity: settings.background_opacity ?? 0.8
       })
     }
   }
@@ -496,6 +520,78 @@ export function SettingsForm({ locale }: SettingsFormProps) {
 
   const handlePasswordFormChange = (field: string, value: string) => {
     setPasswordForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Background image upload handler
+  const handleBackgroundUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      notification.showError(
+        locale === 'zh' ? '文件过大' : 'File Too Large',
+        locale === 'zh' ? '背景图片大小不能超过5MB。' : 'Background image must be less than 5MB.'
+      )
+      return
+    }
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!validTypes.includes(file.type)) {
+      notification.showError(
+        locale === 'zh' ? '文件格式不支持' : 'Unsupported File Format',
+        locale === 'zh' ? '请选择 JPG、PNG 或 WebP 格式的图片。' : 'Please select a JPG, PNG, or WebP image.'
+      )
+      return
+    }
+
+    setBackgroundUploading(true)
+    try {
+      const result = await apiClient.uploadBackgroundImage(file)
+      handleChange('background_image_url', result.url)
+      handleChange('background_type', 'image')
+      
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file)
+      setBackgroundPreview(previewUrl)
+      
+      notification.showSuccess(
+        locale === 'zh' ? '背景上传成功！' : 'Background Uploaded Successfully!',
+        result.message
+      )
+    } catch (error: any) {
+      console.error('Background upload failed:', error)
+      notification.showError(
+        locale === 'zh' ? '背景上传失败' : 'Background Upload Failed',
+        locale === 'zh' ? '背景图片上传失败，请重试。' : 'Failed to upload background image. Please try again.'
+      )
+    } finally {
+      setBackgroundUploading(false)
+      // Reset file input
+      event.target.value = ''
+    }
+  }
+
+  // Background image removal handler
+  const handleBackgroundRemove = async () => {
+    try {
+      await apiClient.removeBackgroundImage()
+      handleChange('background_image_url', '')
+      handleChange('background_type', 'none')
+      setBackgroundPreview(null)
+      
+      notification.showSuccess(
+        locale === 'zh' ? '背景移除成功！' : 'Background Removed Successfully!',
+        locale === 'zh' ? '背景图片已成功移除。' : 'Background image has been removed successfully.'
+      )
+    } catch (error: any) {
+      console.error('Background removal failed:', error)
+      notification.showError(
+        locale === 'zh' ? '背景移除失败' : 'Background Removal Failed',
+        locale === 'zh' ? '背景图片移除失败，请重试。' : 'Failed to remove background image. Please try again.'
+      )
+    }
   }
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1941,6 +2037,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
             </Card>
           </TabsContent>
 
+
           <TabsContent value="appearance" className="space-y-6">
             <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
               <CardHeader className="bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/50 dark:to-indigo-900/50 border-b border-purple-200 dark:border-purple-700 pt-6 pb-4 px-4 rounded-t-lg flex flex-col justify-center min-h-[80px]">
@@ -1949,7 +2046,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                   {t('settings.appearance')}
                 </CardTitle>
                 <CardDescription className="text-purple-700 dark:text-purple-300">
-                  {t('settings.appearanceDesc')}
+                  {locale === 'zh' ? '自定义网站外观、样式和背景设置' : 'Customize website appearance, styles and background settings'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6 p-6">
@@ -2044,6 +2141,184 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     <Eye className="h-4 w-4" />
                     {t('settings.previewCSS')}
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Background Settings Card */}
+            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
+              <CardHeader className="bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-blue-900/50 dark:to-cyan-900/50 border-b border-blue-200 dark:border-blue-700 pt-6 pb-4 px-4 rounded-t-lg flex flex-col justify-center min-h-[80px]">
+                <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
+                  <Image className="h-5 w-5" />
+                  {locale === 'zh' ? '背景设置' : 'Background Settings'}
+                </CardTitle>
+                <CardDescription className="text-blue-700 dark:text-blue-300">
+                  {locale === 'zh' ? '配置网站背景，仅在访客界面显示，管理员页面不受影响' : 'Configure site background. Only visible to visitors, admin pages are not affected.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 p-6">
+                {/* Background Type Selection */}
+                <div className="space-y-3">
+                  <Label className="text-base font-medium text-gray-700 dark:text-gray-300">
+                    {locale === 'zh' ? '背景类型' : 'Background Type'}
+                  </Label>
+                  <Select
+                    value={formData.background_type}
+                    onValueChange={(value) => handleChange('background_type', value)}
+                  >
+                    <SelectTrigger className="h-11 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 rounded-lg transition-colors">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{locale === 'zh' ? '无背景' : 'No Background'}</SelectItem>
+                      <SelectItem value="color">{locale === 'zh' ? '纯色背景' : 'Solid Color'}</SelectItem>
+                      <SelectItem value="image">{locale === 'zh' ? '图片背景' : 'Image Background'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {locale === 'zh' ? '选择背景显示方式' : 'Choose how the background should be displayed'}
+                  </p>
+                </div>
+
+                {/* Background Color - Only show when type is color */}
+                {formData.background_type === 'color' && (
+                  <div className="space-y-3">
+                    <Label className="text-base font-medium text-gray-700 dark:text-gray-300">
+                      {locale === 'zh' ? '背景颜色' : 'Background Color'}
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={formData.background_color}
+                        onChange={(e) => handleChange('background_color', e.target.value)}
+                        className="w-16 h-11 border-2 border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer"
+                      />
+                      <Input
+                        type="text"
+                        value={formData.background_color}
+                        onChange={(e) => handleChange('background_color', e.target.value)}
+                        placeholder="#ffffff"
+                        className="h-11 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 rounded-lg transition-colors"
+                      />
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {locale === 'zh' ? '选择背景颜色或输入十六进制色值' : 'Choose background color or enter hex color value'}
+                    </p>
+                  </div>
+                )}
+
+                {/* Background Image - Only show when type is image */}
+                {formData.background_type === 'image' && (
+                  <div className="space-y-4">
+                    <Label className="text-base font-medium text-gray-700 dark:text-gray-300">
+                      {locale === 'zh' ? '背景图片' : 'Background Image'}
+                    </Label>
+                    
+                    {/* Current background image preview */}
+                    {(formData.background_image_url || backgroundPreview) && (
+                      <div className="space-y-3">
+                        <div className="relative w-full h-32 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden border">
+                          <img
+                            src={backgroundPreview || (formData.background_image_url.startsWith('http') 
+                              ? formData.background_image_url 
+                              : `${getApiUrl()}${formData.background_image_url}`)}
+                            alt="Background preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={handleBackgroundRemove}
+                          className="w-fit"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          {locale === 'zh' ? '移除背景图片' : 'Remove Background Image'}
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Upload new background image */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="relative overflow-hidden h-11 px-6 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 transition-colors"
+                          disabled={backgroundUploading}
+                        >
+                          {backgroundUploading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              {locale === 'zh' ? '上传中...' : 'Uploading...'}
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4 mr-2" />
+                              {locale === 'zh' ? '选择图片' : 'Choose Image'}
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png,image/webp"
+                            onChange={handleBackgroundUpload}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            disabled={backgroundUploading}
+                          />
+                        </Button>
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {locale === 'zh' ? '支持 JPG、PNG、WebP 格式，最大 5MB' : 'Supports JPG, PNG, WebP formats, max 5MB'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Background Opacity - Show for both color and image */}
+                {formData.background_type !== 'none' && (
+                  <div className="space-y-3">
+                    <Label className="text-base font-medium text-gray-700 dark:text-gray-300">
+                      {locale === 'zh' ? '背景透明度' : 'Background Opacity'}
+                    </Label>
+                    <div className="space-y-2">
+                      <input
+                        type="range"
+                        min="0.1"
+                        max="1"
+                        step="0.1"
+                        value={formData.background_opacity}
+                        onChange={(e) => handleChange('background_opacity', parseFloat(e.target.value))}
+                        className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                      <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
+                        <span>{locale === 'zh' ? '透明' : 'Transparent'}</span>
+                        <span className="font-medium">{Math.round(formData.background_opacity * 100)}%</span>
+                        <span>{locale === 'zh' ? '不透明' : 'Opaque'}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {locale === 'zh' ? '调整背景的透明度以确保内容清晰可读' : 'Adjust background opacity to ensure content readability'}
+                    </p>
+                  </div>
+                )}
+
+                {/* Preview and Tips */}
+                <div className="space-y-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-blue-900 dark:text-blue-100">
+                        {locale === 'zh' ? '预览和说明' : 'Preview and Notes'}
+                      </h4>
+                      <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                        <li>• {locale === 'zh' ? '背景只在访客页面显示，管理员界面不受影响' : 'Background only shows on visitor pages, admin interface unaffected'}</li>
+                        <li>• {locale === 'zh' ? '文章内容区域会自动添加半透明背景确保可读性' : 'Article content areas automatically get semi-transparent backgrounds for readability'}</li>
+                        <li>• {locale === 'zh' ? '建议透明度设置在 60%-80% 之间以获得最佳效果' : 'Recommended opacity between 60%-80% for best results'}</li>
+                        <li>• {locale === 'zh' ? '保存设置后可在首页预览效果' : 'Preview effects on homepage after saving settings'}</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

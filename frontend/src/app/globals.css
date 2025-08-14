@@ -179,4 +179,18 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
   }
+
+  /* Background content readability styles */
+  .content-backdrop {
+    @apply bg-background/90 backdrop-blur-sm;
+  }
+  
+  .article-content-backdrop {
+    @apply bg-card/95 backdrop-blur-sm border border-border/50 rounded-lg;
+  }
+  
+  /* Ensure good readability over custom backgrounds */
+  .bg-readable {
+    @apply bg-background/95 backdrop-blur-sm;
+  }
 }

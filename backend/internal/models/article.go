@@ -54,7 +54,12 @@ type SiteSettings struct {
 	CustomCSS   string                    `gorm:"type:text" json:"custom_css"`
 	ThemeConfig string                    `gorm:"type:text" json:"theme_config"`
 	ActiveTheme string                    `gorm:"size:100" json:"active_theme"`
-	SetupCompleted bool                   `gorm:"default:false" json:"setup_completed"`
+	// Background Settings
+	BackgroundType     string  `gorm:"default:'none';size:20" json:"background_type"` // "none", "color", "image"
+	BackgroundColor    string  `gorm:"size:20" json:"background_color"`              // hex color value
+	BackgroundImageURL string  `gorm:"size:255" json:"background_image_url"`         // background image URL
+	BackgroundOpacity  float64 `gorm:"default:0.8" json:"background_opacity"`        // 0.0 to 1.0
+	SetupCompleted     bool    `gorm:"default:false" json:"setup_completed"`
 	Translations []SiteSettingsTranslation `gorm:"foreignKey:SettingsID" json:"translations,omitempty"`
 	CreatedAt   time.Time                 `json:"created_at"`
 	UpdatedAt   time.Time                 `json:"updated_at"`

@@ -9,9 +9,11 @@ import rehypeSlug from 'rehype-slug'
 import { useEffect } from 'react'
 import YouTubeEmbed from '@/components/youtube-embed'
 import BiliBiliEmbed from '@/components/bilibili-embed'
+import { CodeBlock } from '@/components/code-block'
 
-// Import highlight.js styles - use a theme that works well with dark/light mode
+// Import highlight.js styles - use themes that work well with dark/light mode
 import 'highlight.js/styles/atom-one-light.css'
+import 'highlight.js/styles/atom-one-dark.css'
 
 interface MarkdownRendererProps {
   content: string
@@ -96,15 +98,34 @@ export function MarkdownRenderer({ content, className = "", includeStructuredDat
           // Custom component for code blocks
           code({ className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '')
-            return match ? (
-              <code className={className} {...props}>
+            const language = match ? match[1] : undefined
+            
+            // Check if this is a block-level code by looking at className
+            const isBlockCode = className && className.includes('language-')
+            
+            if (!isBlockCode) {
+              // Inline code
+              return (
+                <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
+                  {children}
+                </code>
+              )
+            }
+            
+            // Block code - use enhanced CodeBlock component
+            return (
+              <CodeBlock 
+                className={className} 
+                language={language}
+                showLineNumbers={false}
+              >
                 {children}
-              </code>
-            ) : (
-              <code className="bg-muted px-1 py-0.5 rounded text-sm" {...props}>
-                {children}
-              </code>
+              </CodeBlock>
             )
+          },
+          // Override pre to avoid double wrapping
+          pre({ children }) {
+            return <>{children}</>
           },
           // Custom component for headings with better spacing and IDs
           h1: ({ children, id }) => (

@@ -72,6 +72,11 @@ export interface SiteSettings {
   theme_config?: string
   active_theme?: string
   default_language?: string  // Site default language
+  // Background settings
+  background_type?: string  // "none" | "color" | "image"
+  background_color?: string
+  background_image_url?: string
+  background_opacity?: number
   setup_completed?: boolean
   translations?: SiteSettingsTranslation[]
   created_at: string
@@ -449,6 +454,55 @@ class ApiClient {
         }
       }
       throw new Error(`Upload failed: ${response.status} ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  // Upload background image file
+  async uploadBackgroundImage(file: File): Promise<{ url: string; message: string }> {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch(`${this.getBaseUrl()}/settings/upload-background`, {
+      method: 'POST',
+      headers: {
+        'Authorization': this.token ? `Bearer ${this.token}` : '',
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        this.clearToken()
+        if (typeof window !== 'undefined') {
+          window.location.href = '/admin/login'
+        }
+      }
+      throw new Error(`Upload failed: ${response.status} ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  // Remove background image
+  async removeBackgroundImage(): Promise<{ message: string }> {
+    const response = await fetch(`${this.getBaseUrl()}/settings/background`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': this.token ? `Bearer ${this.token}` : '',
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        this.clearToken()
+        if (typeof window !== 'undefined') {
+          window.location.href = '/admin/login'
+        }
+      }
+      throw new Error(`Remove failed: ${response.status} ${response.statusText}`)
     }
 
     return response.json()

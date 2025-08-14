@@ -4,15 +4,42 @@
   color: inherit;
 }
 
-/* Code blocks */
+/* Enhanced code blocks - ensure no conflicts with custom CodeBlock component */
 .prose pre {
-  @apply bg-muted border rounded-lg p-4 overflow-x-auto;
+  @apply bg-transparent border-0 p-0 m-0;
+  /* Reset any default pre styles that might interfere */
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 .prose pre code {
   @apply bg-transparent p-0 text-sm;
   border: none;
   border-radius: 0;
+  line-height: 1.6;
+  /* Reset any default code styles that might interfere */
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* Custom scrollbar for code blocks */
+.prose pre code::-webkit-scrollbar {
+  height: 8px;
+}
+
+.prose pre code::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.prose pre code::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+.prose pre code::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
 }
 
 /* Inline code */
@@ -79,13 +106,36 @@
 }
 
 /* Lists */
-.prose ul,
+.prose ul {
+  @apply pl-6 space-y-1;
+  list-style-type: disc;
+}
+
 .prose ol {
   @apply pl-6 space-y-1;
+  list-style-type: decimal;
 }
 
 .prose li {
   @apply leading-relaxed;
+  display: list-item;
+}
+
+/* Nested lists */
+.prose ol ol {
+  list-style-type: lower-alpha;
+}
+
+.prose ol ol ol {
+  list-style-type: lower-roman;
+}
+
+.prose ul ul {
+  list-style-type: circle;
+}
+
+.prose ul ul ul {
+  list-style-type: square;
 }
 
 /* Paragraphs */
@@ -103,8 +153,45 @@
   @apply border-border my-8;
 }
 
+/* Light mode syntax highlighting */
+.hljs {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
 /* Dark mode adjustments for syntax highlighting */
 .dark .hljs {
   background: hsl(var(--muted)) !important;
   color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Override specific highlight.js colors for better theme integration */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-section,
+.hljs-link {
+  color: hsl(var(--primary)) !important;
+}
+
+.hljs-string,
+.hljs-attribute {
+  color: hsl(var(--chart-2)) !important;
+}
+
+.hljs-number,
+.hljs-regexp,
+.hljs-literal {
+  color: hsl(var(--chart-1)) !important;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: hsl(var(--muted-foreground)) !important;
+  font-style: italic;
+}
+
+.hljs-function,
+.hljs-title {
+  color: hsl(var(--chart-3)) !important;
 }
