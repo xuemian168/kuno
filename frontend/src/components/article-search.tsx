@@ -401,12 +401,11 @@ export function ArticleSearch({ trigger, placeholder, compact = false }: Article
       <Search className="h-4 w-4" />
     </Button>
   ) : (
-    // Full desktop version
-    <Button variant="outline" size="sm" className="relative">
-      <Search className="h-4 w-4 mr-2" />
-      {currentLocale === 'zh' ? '搜索文章' : 'Search Articles'}
-      <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 ml-2">
-        <span className="text-xs">⌘</span>K
+    // Compact desktop version - icon with minimal keyboard shortcut
+    <Button variant="ghost" size="sm" className="gap-2 px-2" title={currentLocale === 'zh' ? '搜索文章' : 'Search Articles'}>
+      <Search className="h-4 w-4" />
+      <kbd className="pointer-events-none inline-flex h-4 select-none items-center gap-0.5 rounded border bg-muted px-1 font-mono text-[9px] font-medium text-muted-foreground opacity-70">
+        <span className="text-[9px]">⌘</span>K
       </kbd>
     </Button>
   )
