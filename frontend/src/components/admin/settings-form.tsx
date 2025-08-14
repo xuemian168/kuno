@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -49,7 +50,10 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     show_view_count: true,
     show_site_title: true,
     enable_sound_effects: true,
-    default_language: "zh"
+    default_language: "zh",
+    custom_css: "",
+    theme_config: "",
+    active_theme: ""
   })
   const [translations, setTranslations] = useState<SiteSettingsTranslation[]>([])
   const [activeTab, setActiveTab] = useState('general')
@@ -198,7 +202,10 @@ export function SettingsForm({ locale }: SettingsFormProps) {
           show_view_count: settingsData.show_view_count ?? true,
           show_site_title: settingsData.show_site_title ?? true,
           enable_sound_effects: settingsData.enable_sound_effects ?? true,
-          default_language: settingsData.default_language || "zh"
+          default_language: settingsData.default_language || "zh",
+          custom_css: settingsData.custom_css || "",
+          theme_config: settingsData.theme_config || "",
+          active_theme: settingsData.active_theme || ""
         })
         setTranslations(settingsData.translations || [])
         
@@ -411,7 +418,10 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         show_view_count: settings.show_view_count ?? true,
         show_site_title: settings.show_site_title ?? true,
         enable_sound_effects: settings.enable_sound_effects ?? true,
-        default_language: settings.default_language || "zh"
+        default_language: settings.default_language || "zh",
+        custom_css: settings.custom_css || "",
+        theme_config: settings.theme_config || "",
+        active_theme: settings.active_theme || ""
       })
     }
   }
@@ -638,6 +648,13 @@ export function SettingsForm({ locale }: SettingsFormProps) {
               >
                 <Share2 className="h-4 w-4" />
                 {t('settings.socialMedia')}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="appearance" 
+                className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0"
+              >
+                <Type className="h-4 w-4" />
+                {t('settings.appearance')}
               </TabsTrigger>
               <TabsTrigger 
                 value="system" 
@@ -1920,6 +1937,114 @@ export function SettingsForm({ locale }: SettingsFormProps) {
             <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
               <CardContent className="p-6">
                 <SocialMediaManager />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="appearance" className="space-y-6">
+            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
+              <CardHeader className="bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/50 dark:to-indigo-900/50 border-b border-purple-200 dark:border-purple-700 pt-6 pb-4 px-4 rounded-t-lg flex flex-col justify-center min-h-[80px]">
+                <CardTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100">
+                  <Type className="h-5 w-5" />
+                  {t('settings.appearance')}
+                </CardTitle>
+                <CardDescription className="text-purple-700 dark:text-purple-300">
+                  {t('settings.appearanceDesc')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 p-6">
+                {/* 自定义CSS编辑器 */}
+                <div className="space-y-3">
+                  <Label htmlFor="custom_css" className="text-base font-medium text-gray-700 dark:text-gray-300">
+                    {t('settings.customCSS')}
+                  </Label>
+                  <Textarea
+                    id="custom_css"
+                    value={formData.custom_css}
+                    onChange={(e) => handleChange('custom_css', e.target.value)}
+                    placeholder={t('settings.customCSSPlaceholder')}
+                    className="h-64 font-mono text-sm border-2 border-gray-200 dark:border-gray-700 focus:border-purple-500 dark:focus:border-purple-400 rounded-lg transition-colors"
+                  />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('settings.customCSSDesc')}
+                  </p>
+                  
+                  {/* CSS示例和帮助 */}
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {t('settings.cssExamples')}
+                    </h4>
+                    <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                      <div>
+                        <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
+                          {`/* ${t('settings.cssExamplePrimaryColor')} */`}
+                        </code>
+                        <br />
+                        <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded mt-1 inline-block">
+                          :root {'{ --primary: #your-color; }'}
+                        </code>
+                      </div>
+                      <div>
+                        <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
+                          {`/* ${t('settings.cssExampleCustomFonts')} */`}
+                        </code>
+                        <br />
+                        <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded mt-1 inline-block">
+                          body {'{ font-family: "Your Font", sans-serif; }'}
+                        </code>
+                      </div>
+                      <div>
+                        <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
+                          {`/* ${t('settings.cssExampleArticleStyling')} */`}
+                        </code>
+                        <br />
+                        <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded mt-1 inline-block">
+                          .article-content {'{ line-height: 1.8; }'}
+                        </code>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 主题预留区域 */}
+                <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <Label className="text-base font-medium text-gray-700 dark:text-gray-300">
+                    {t('settings.themeManagement')}
+                  </Label>
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 text-center">
+                    <div className="text-gray-500 dark:text-gray-400 mb-2">
+                      <Sparkles className="h-8 w-8 mx-auto mb-2" />
+                      <p className="text-sm">
+                        {t('settings.themeComingSoon')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 重置和预览按钮 */}
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleChange('custom_css', '')}
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    {t('settings.resetCSS')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      // 这里可以添加预览功能
+                      console.log('Preview CSS:', formData.custom_css)
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    {t('settings.previewCSS')}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

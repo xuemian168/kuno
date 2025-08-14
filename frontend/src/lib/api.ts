@@ -68,6 +68,9 @@ export interface SiteSettings {
   enable_sound_effects?: boolean
   logo_url?: string
   favicon_url?: string
+  custom_css?: string
+  theme_config?: string
+  active_theme?: string
   default_language?: string  // Site default language
   setup_completed?: boolean
   translations?: SiteSettingsTranslation[]

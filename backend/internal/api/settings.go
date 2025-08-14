@@ -89,6 +89,9 @@ func UpdateSettings(c *gin.Context) {
 		DefaultLanguage    string                           `json:"default_language"`
 		LogoURL            string                           `json:"logo_url"`
 		FaviconURL         string                           `json:"favicon_url"`
+		CustomCSS          string                           `json:"custom_css"`
+		ThemeConfig        string                           `json:"theme_config"`
+		ActiveTheme        string                           `json:"active_theme"`
 		Translations       []models.SiteSettingsTranslation `json:"translations"`
 	}
 
@@ -117,6 +120,9 @@ func UpdateSettings(c *gin.Context) {
 	}
 	settings.LogoURL = input.LogoURL
 	settings.FaviconURL = input.FaviconURL
+	settings.CustomCSS = input.CustomCSS
+	settings.ThemeConfig = input.ThemeConfig
+	settings.ActiveTheme = input.ActiveTheme
 
 	if err := database.DB.Save(&settings).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

@@ -51,6 +51,9 @@ type SiteSettings struct {
 	DefaultLanguage string                `gorm:"default:'zh';size:10" json:"default_language"`
 	LogoURL     string                    `gorm:"size:255" json:"logo_url"`
 	FaviconURL  string                    `gorm:"size:255" json:"favicon_url"`
+	CustomCSS   string                    `gorm:"type:text" json:"custom_css"`
+	ThemeConfig string                    `gorm:"type:text" json:"theme_config"`
+	ActiveTheme string                    `gorm:"size:100" json:"active_theme"`
 	SetupCompleted bool                   `gorm:"default:false" json:"setup_completed"`
 	Translations []SiteSettingsTranslation `gorm:"foreignKey:SettingsID" json:"translations,omitempty"`
 	CreatedAt   time.Time                 `json:"created_at"`
