@@ -63,7 +63,7 @@ sudo mkdir -p /opt/kuno
 cd /opt/kuno
 
 # 2. Download and execute deployment script
-curl -sSL "https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh?$(date +%s)" -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
+curl -sSL "https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh?$(date +%s)" -o deploy.sh && chmod +x deploy.sh && sudo ./deploy.sh
 ```
 
 The deployment script will guide you through a simplified configuration process:

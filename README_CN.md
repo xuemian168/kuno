@@ -61,7 +61,7 @@ sudo mkdir -p /opt/kuno
 cd /opt/kuno
 
 # 2. 下载并执行部署脚本
-curl -sSL "https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh?$(date +%s)" -o deploy.sh && chmod +x deploy.sh && ./deploy.sh
+curl -sSL "https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh?$(date +%s)" -o deploy.sh && chmod +x deploy.sh && sudo ./deploy.sh
 ```
 
 部署脚本会引导您完成简化的配置：
