@@ -68,6 +68,16 @@ func InitDatabase() {
 				existingSettings.FooterText = "© 2025 KUNO"
 				updated = true
 			}
+			// For existing installations, mark setup as completed if there are users
+			if !existingSettings.SetupCompleted {
+				var userCount int64
+				DB.Model(&models.User{}).Count(&userCount)
+				if userCount > 0 {
+					existingSettings.SetupCompleted = true
+					updated = true
+					log.Println("Marked setup as completed for existing installation")
+				}
+			}
 			if updated {
 				DB.Save(&existingSettings)
 				log.Println("Site settings updated with missing defaults")

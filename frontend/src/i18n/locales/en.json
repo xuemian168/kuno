@@ -39,6 +39,87 @@
     "noArticlesFound": "No articles found.",
     "noCategoriesFound": "No categories found."
   },
+  "setup": {
+    "title": "Setup KUNO",
+    "subtitle": "Let's set up your blog in a few simple steps",
+    "stepProgress": "Step {current} of {total}",
+    "next": "Next",
+    "back": "Back",
+    "finish": "Complete Setup",
+    "completing": "Completing setup...",
+    "step1": {
+      "title": "Welcome & Language",
+      "subtitle": "Choose your blog's default language",
+      "selectLanguage": "Default Language",
+      "languageDescription": "This will be the primary language for your blog. You can add more languages later.",
+      "languages": {
+        "zh": "中文 (Chinese)",
+        "en": "English",
+        "ja": "日本語 (Japanese)"
+      }
+    },
+    "step2": {
+      "title": "Site Configuration",
+      "subtitle": "Set up your blog's basic information",
+      "siteTitle": "Site Title",
+      "siteTitlePlaceholder": "My Awesome Blog",
+      "siteTitleDescription": "This is the name of your blog that will appear in the header and browser title",
+      "siteSubtitle": "Site Subtitle",
+      "siteSubtitlePlaceholder": "Sharing thoughts and ideas",
+      "siteSubtitleDescription": "A brief description of your blog (optional)"
+    },
+    "step3": {
+      "title": "Admin Account",
+      "subtitle": "Create your administrator account",
+      "adminUsername": "Admin Username",
+      "adminUsernamePlaceholder": "admin",
+      "adminUsernameDescription": "Username for accessing the admin panel",
+      "adminPassword": "Admin Password",
+      "adminPasswordPlaceholder": "Enter a secure password",
+      "adminPasswordDescription": "Choose a strong password to secure your blog",
+      "confirmPassword": "Confirm Password",
+      "confirmPasswordPlaceholder": "Confirm your password",
+      "passwordStrength": {
+        "weak": "Weak",
+        "fair": "Fair", 
+        "good": "Good",
+        "strong": "Strong"
+      },
+      "passwordMismatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 6 characters"
+    },
+    "step4": {
+      "title": "Setup Complete!",
+      "subtitle": "Your blog is ready to use",
+      "successMessage": "Congratulations! KUNO has been successfully configured.",
+      "nextSteps": "What's next?",
+      "loginButton": "Go to Admin Panel",
+      "features": [
+        "Create and manage articles",
+        "Organize content with categories", 
+        "Upload and manage media files",
+        "Customize your blog settings",
+        "View analytics and insights"
+      ]
+    },
+    "validation": {
+      "titleRequired": "Site title is required",
+      "titleTooLong": "Site title must be less than 255 characters",
+      "usernameRequired": "Username is required", 
+      "usernameTooShort": "Username must be at least 3 characters",
+      "usernameTooLong": "Username must be less than 50 characters",
+      "passwordRequired": "Password is required",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "passwordMismatch": "Passwords do not match",
+      "languageRequired": "Please select a default language"
+    },
+    "errors": {
+      "setupFailed": "Setup failed. Please try again.",
+      "networkError": "Network error. Please check your connection.",
+      "serverError": "Server error. Please try again later.",
+      "alreadyCompleted": "Setup has already been completed."
+    }
+  },
   "article": {
     "views": "Views",
     "title": "Title",

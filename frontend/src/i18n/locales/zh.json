@@ -39,6 +39,87 @@
     "noArticlesFound": "未找到文章。",
     "noCategoriesFound": "未找到分类。"
   },
+  "setup": {
+    "title": "设置 KUNO",
+    "subtitle": "让我们通过几个简单步骤设置您的博客",
+    "stepProgress": "第 {current} 步，共 {total} 步",
+    "next": "下一步",
+    "back": "上一步",
+    "finish": "完成设置",
+    "completing": "正在完成设置...",
+    "step1": {
+      "title": "欢迎与语言设置",
+      "subtitle": "选择您博客的默认语言",
+      "selectLanguage": "默认语言",
+      "languageDescription": "这将是您博客的主要语言。您稍后可以添加更多语言。",
+      "languages": {
+        "zh": "中文 (Chinese)",
+        "en": "English",
+        "ja": "日本語 (Japanese)"
+      }
+    },
+    "step2": {
+      "title": "站点配置",
+      "subtitle": "设置您博客的基本信息",
+      "siteTitle": "站点标题",
+      "siteTitlePlaceholder": "我的精彩博客",
+      "siteTitleDescription": "这是您博客的名称，将显示在页头和浏览器标题中",
+      "siteSubtitle": "站点副标题",
+      "siteSubtitlePlaceholder": "分享思想和观点",
+      "siteSubtitleDescription": "博客的简短描述（可选）"
+    },
+    "step3": {
+      "title": "管理员账户",
+      "subtitle": "创建您的管理员账户",
+      "adminUsername": "管理员用户名",
+      "adminUsernamePlaceholder": "admin",
+      "adminUsernameDescription": "用于访问管理面板的用户名",
+      "adminPassword": "管理员密码",
+      "adminPasswordPlaceholder": "输入安全密码",
+      "adminPasswordDescription": "选择一个强密码来保护您的博客",
+      "confirmPassword": "确认密码",
+      "confirmPasswordPlaceholder": "确认您的密码",
+      "passwordStrength": {
+        "weak": "弱",
+        "fair": "一般", 
+        "good": "良好",
+        "strong": "强"
+      },
+      "passwordMismatch": "密码不匹配",
+      "passwordTooShort": "密码至少需要6个字符"
+    },
+    "step4": {
+      "title": "设置完成！",
+      "subtitle": "您的博客已准备就绪",
+      "successMessage": "恭喜！KUNO 已成功配置。",
+      "nextSteps": "接下来做什么？",
+      "loginButton": "前往管理面板",
+      "features": [
+        "创建和管理文章",
+        "使用分类组织内容", 
+        "上传和管理媒体文件",
+        "自定义您的博客设置",
+        "查看分析和洞察"
+      ]
+    },
+    "validation": {
+      "titleRequired": "站点标题是必需的",
+      "titleTooLong": "站点标题必须少于255个字符",
+      "usernameRequired": "用户名是必需的", 
+      "usernameTooShort": "用户名至少需要3个字符",
+      "usernameTooLong": "用户名必须少于50个字符",
+      "passwordRequired": "密码是必需的",
+      "passwordTooShort": "密码至少需要6个字符",
+      "passwordMismatch": "密码不匹配",
+      "languageRequired": "请选择默认语言"
+    },
+    "errors": {
+      "setupFailed": "设置失败。请重试。",
+      "networkError": "网络错误。请检查您的连接。",
+      "serverError": "服务器错误。请稍后重试。",
+      "alreadyCompleted": "设置已经完成。"
+    }
+  },
   "article": {
     "views": "浏览量",
     "title": "标题",

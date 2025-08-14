@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Lock, User, Shield, AlertTriangle, HelpCircle, Terminal, Copy } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { apiClient, SiteSettings } from '@/lib/api'
+import { KunoLogo } from '@/components/kuno-logo'
 import Image from 'next/image'
 
 interface LoginPageProps {
@@ -100,7 +101,7 @@ export default function LoginPage({ params }: LoginPageProps) {
         <Card className="shadow-xl">
           <CardHeader className="space-y-1">
             {/* Logo Section */}
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-center mb-6">
               {settings?.logo_url ? (
                 <Image
                   src={settings.logo_url}
@@ -111,9 +112,7 @@ export default function LoginPage({ params }: LoginPageProps) {
                   priority
                 />
               ) : (
-                <div className="text-4xl font-bold text-primary">
-                  KUNO
-                </div>
+                <KunoLogo size="lg" className="animate-fade-in" />
               )}
             </div>
             

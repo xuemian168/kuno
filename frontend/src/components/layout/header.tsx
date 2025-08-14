@@ -14,6 +14,7 @@ import { Link } from '@/i18n/routing'
 import { cn } from "@/lib/utils"
 import { getMediaUrl } from "@/lib/config"
 import { generateMediaUrl } from "@/lib/favicon-utils"
+import { KunoLogo } from "@/components/kuno-logo"
 
 export default function Header() {
   const t = useTranslations()
@@ -69,18 +70,10 @@ export default function Header() {
               />
             ) : null}
             {!settings?.logo_url && (
-              <div className="text-lg font-bold text-primary">
-                KUNO
-              </div>
+              <KunoLogo size="sm" />
             )}
-            <div 
-              className="text-lg font-bold text-primary hidden"
-              style={{ display: 'none' }}
-            >
-              KUNO
-            </div>
             {(settings?.show_site_title ?? true) && (
-              <span className="hidden font-bold sm:inline-block">
+              <span className="hidden font-bold sm:inline-block text-[#6e6e6e]">
                 {settings?.site_title || t('site.title')}
               </span>
             )}
@@ -194,14 +187,8 @@ export default function Header() {
                   KUNO
                 </div>
               )}
-              <div 
-                className="text-base font-bold text-primary hidden"
-                style={{ display: 'none' }}
-              >
-                KUNO
-              </div>
               {(settings?.show_site_title ?? true) && (
-                <span className="font-bold text-sm sm:text-base truncate">
+                <span className="font-bold text-sm sm:text-base truncate text-[#6e6e6e]">
                   {settings?.site_title || t('site.title')}
                 </span>
               )}

@@ -69,6 +69,7 @@ export interface SiteSettings {
   logo_url?: string
   favicon_url?: string
   default_language?: string  // Site default language
+  setup_completed?: boolean
   translations?: SiteSettingsTranslation[]
   created_at: string
   updated_at: string
@@ -95,6 +96,24 @@ export interface LoginResponse {
 export interface RecoveryStatusResponse {
   is_recovery_mode: boolean
   message?: string
+}
+
+export interface SetupStatusResponse {
+  setup_completed: boolean
+}
+
+export interface SetupRequest {
+  site_title: string
+  site_subtitle: string
+  default_language: string
+  admin_username: string
+  admin_password: string
+}
+
+export interface SetupResponse {
+  success: boolean
+  message: string
+  token?: string
 }
 
 export interface SocialMedia {
@@ -468,6 +487,20 @@ class ApiClient {
   async getRecoveryStatus(): Promise<RecoveryStatusResponse> {
     return this.request('/recovery-status', {
       method: 'GET',
+    })
+  }
+
+  // Setup
+  async getSetupStatus(): Promise<SetupStatusResponse> {
+    return this.request('/setup/status', {
+      method: 'GET',
+    })
+  }
+
+  async initializeSetup(data: SetupRequest): Promise<SetupResponse> {
+    return this.request('/setup/initialize', {
+      method: 'POST',
+      body: JSON.stringify(data),
     })
   }
 

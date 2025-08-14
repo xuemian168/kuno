@@ -1,6 +1,8 @@
 package api
 
 import (
+	"fmt"
+	"log"
 	"net/http"
 	"blog-backend/internal/auth"
 	"github.com/gin-gonic/gin"
@@ -9,6 +11,25 @@ import (
 
 func SetupRoutes() *gin.Engine {
 	r := gin.Default()
+
+	// Enhanced request logging middleware
+	r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+		return fmt.Sprintf("🌐 [%s] %s %s %d %s %s %s\n",
+			param.TimeStamp.Format("15:04:05"),
+			param.Method,
+			param.Path,
+			param.StatusCode,
+			param.Latency,
+			param.ClientIP,
+			param.ErrorMessage,
+		)
+	}))
+
+	// Recovery middleware with enhanced logging
+	r.Use(gin.CustomRecovery(func(c *gin.Context, recovered interface{}) {
+		log.Printf("❌ PANIC RECOVERED: %v", recovered)
+		c.AbortWithStatus(http.StatusInternalServerError)
+	}))
 
 	// Increase maximum multipart memory for large file uploads
 	r.MaxMultipartMemory = 100 << 20 // 100 MB
@@ -31,6 +52,13 @@ func SetupRoutes() *gin.Engine {
 		// Public routes
 		api.POST("/login", Login)
 		api.GET("/recovery-status", GetRecoveryStatus)
+		
+		// Setup routes - public access for initial setup
+		setup := api.Group("/setup")
+		{
+			setup.GET("/status", GetSetupStatus)
+			setup.POST("/initialize", InitializeSetup)
+		}
 		
 		// Public read-only routes
 		articles := api.Group("/articles")

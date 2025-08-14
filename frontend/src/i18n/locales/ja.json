@@ -39,6 +39,87 @@
     "noArticlesFound": "記事が見つかりません。",
     "noCategoriesFound": "カテゴリが見つかりません。"
   },
+  "setup": {
+    "title": "KUNO セットアップ",
+    "subtitle": "いくつかの簡単なステップでブログを設定しましょう",
+    "stepProgress": "ステップ {current} / {total}",
+    "next": "次へ",
+    "back": "戻る",
+    "finish": "セットアップ完了",
+    "completing": "セットアップを完了中...",
+    "step1": {
+      "title": "ようこそ & 言語設定",
+      "subtitle": "ブログのデフォルト言語を選択してください",
+      "selectLanguage": "デフォルト言語",
+      "languageDescription": "これがブログの主要言語になります。後で他の言語を追加できます。",
+      "languages": {
+        "zh": "中文 (Chinese)",
+        "en": "English",
+        "ja": "日本語 (Japanese)"
+      }
+    },
+    "step2": {
+      "title": "サイト設定",
+      "subtitle": "ブログの基本情報を設定してください",
+      "siteTitle": "サイトタイトル",
+      "siteTitlePlaceholder": "私の素晴らしいブログ",
+      "siteTitleDescription": "これはヘッダーとブラウザタイトルに表示されるブログの名前です",
+      "siteSubtitle": "サイトサブタイトル",
+      "siteSubtitlePlaceholder": "思考とアイデアの共有",
+      "siteSubtitleDescription": "ブログの簡単な説明（オプション）"
+    },
+    "step3": {
+      "title": "管理者アカウント",
+      "subtitle": "管理者アカウントを作成してください",
+      "adminUsername": "管理者ユーザー名",
+      "adminUsernamePlaceholder": "admin",
+      "adminUsernameDescription": "管理パネルにアクセスするためのユーザー名",
+      "adminPassword": "管理者パスワード",
+      "adminPasswordPlaceholder": "安全なパスワードを入力",
+      "adminPasswordDescription": "ブログを保護するために強力なパスワードを選択してください",
+      "confirmPassword": "パスワード確認",
+      "confirmPasswordPlaceholder": "パスワードを確認",
+      "passwordStrength": {
+        "weak": "弱い",
+        "fair": "普通", 
+        "good": "良い",
+        "strong": "強い"
+      },
+      "passwordMismatch": "パスワードが一致しません",
+      "passwordTooShort": "パスワードは6文字以上である必要があります"
+    },
+    "step4": {
+      "title": "セットアップ完了！",
+      "subtitle": "ブログの準備が整いました",
+      "successMessage": "おめでとうございます！KUNOが正常に設定されました。",
+      "nextSteps": "次は何をしますか？",
+      "loginButton": "管理パネルへ",
+      "features": [
+        "記事の作成と管理",
+        "カテゴリでコンテンツを整理", 
+        "メディアファイルのアップロードと管理",
+        "ブログ設定のカスタマイズ",
+        "アナリティクスと洞察の表示"
+      ]
+    },
+    "validation": {
+      "titleRequired": "サイトタイトルは必須です",
+      "titleTooLong": "サイトタイトルは255文字未満である必要があります",
+      "usernameRequired": "ユーザー名は必須です", 
+      "usernameTooShort": "ユーザー名は3文字以上である必要があります",
+      "usernameTooLong": "ユーザー名は50文字未満である必要があります",
+      "passwordRequired": "パスワードは必須です",
+      "passwordTooShort": "パスワードは6文字以上である必要があります",
+      "passwordMismatch": "パスワードが一致しません",
+      "languageRequired": "デフォルト言語を選択してください"
+    },
+    "errors": {
+      "setupFailed": "セットアップに失敗しました。もう一度お試しください。",
+      "networkError": "ネットワークエラー。接続を確認してください。",
+      "serverError": "サーバーエラー。後でもう一度お試しください。",
+      "alreadyCompleted": "セットアップは既に完了しています。"
+    }
+  },
   "article": {
     "views": "閲覧数",
     "title": "タイトル",
