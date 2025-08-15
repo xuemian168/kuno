@@ -18,6 +18,132 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Input validation functions
+validate_docker_image() {
+    local image="$1"
+    
+    # Remove leading/trailing whitespace
+    image=$(echo "$image" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    
+    # Check if empty
+    if [ -z "$image" ]; then
+        echo -e "${RED}❌ Error: Docker image cannot be empty${NC}"
+        return 1
+    fi
+    
+    # Must start with ictrun/kuno:
+    if [[ ! "$image" =~ ^ictrun/kuno: ]]; then
+        echo -e "${RED}❌ Error: Docker image must start with 'ictrun/kuno:'${NC}"
+        echo -e "${YELLOW}📋 Example: ictrun/kuno:latest or ictrun/kuno:v1.0.0${NC}"
+        return 1
+    fi
+    
+    # Check for dangerous characters that could lead to command injection
+    if [[ "$image" =~ [\;\&\|\`\$\(\)] ]]; then
+        echo -e "${RED}❌ Error: Docker image contains invalid characters${NC}"
+        return 1
+    fi
+    
+    # Length limit (Docker image names should be reasonable)
+    if [ ${#image} -gt 255 ]; then
+        echo -e "${RED}❌ Error: Docker image name too long (max 255 characters)${NC}"
+        return 1
+    fi
+    
+    # Validate tag format (after the colon)
+    local tag="${image#*:}"
+    if [[ ! "$tag" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+        echo -e "${RED}❌ Error: Invalid Docker tag format. Use only letters, numbers, dots, underscores, and hyphens${NC}"
+        return 1
+    fi
+    
+    return 0
+}
+
+validate_port() {
+    local port="$1"
+    
+    # Remove leading/trailing whitespace
+    port=$(echo "$port" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    
+    # Check if empty (will use default)
+    if [ -z "$port" ]; then
+        return 0
+    fi
+    
+    # Check if numeric
+    if ! [[ "$port" =~ ^[0-9]+$ ]]; then
+        echo -e "${RED}❌ Error: Port must be a number${NC}"
+        return 1
+    fi
+    
+    # Check valid port range
+    if [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+        echo -e "${RED}❌ Error: Port must be between 1 and 65535${NC}"
+        return 1
+    fi
+    
+    # Check if port is available (only for non-privileged ports)
+    if [ "$port" -lt 1024 ]; then
+        echo -e "${YELLOW}⚠️  Warning: Using privileged port $port (requires root access)${NC}"
+    fi
+    
+    return 0
+}
+
+validate_container_name() {
+    local name="$1"
+    
+    # Remove leading/trailing whitespace
+    name=$(echo "$name" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    
+    # Check if empty (will use default)
+    if [ -z "$name" ]; then
+        return 0
+    fi
+    
+    # Length check (Docker container names: 1-63 characters)
+    if [ ${#name} -lt 1 ] || [ ${#name} -gt 63 ]; then
+        echo -e "${RED}❌ Error: Container name must be 1-63 characters long${NC}"
+        return 1
+    fi
+    
+    # Docker naming conventions: letters, numbers, underscores, periods, hyphens
+    # Must start with alphanumeric
+    if [[ ! "$name" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]]; then
+        echo -e "${RED}❌ Error: Container name must start with letter/number and contain only letters, numbers, underscores, periods, and hyphens${NC}"
+        return 1
+    fi
+    
+    # Cannot end with period or hyphen
+    if [[ "$name" =~ [.-]$ ]]; then
+        echo -e "${RED}❌ Error: Container name cannot end with period or hyphen${NC}"
+        return 1
+    fi
+    
+    return 0
+}
+
+validate_strategy() {
+    local strategy="$1"
+    
+    # Remove leading/trailing whitespace
+    strategy=$(echo "$strategy" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    
+    # Check if empty (will use default)
+    if [ -z "$strategy" ]; then
+        return 0
+    fi
+    
+    # Only allow "1" or "2"
+    if [ "$strategy" != "1" ] && [ "$strategy" != "2" ]; then
+        echo -e "${RED}❌ Error: Deployment strategy must be 1 (Standard) or 2 (Blue-Green)${NC}"
+        return 1
+    fi
+    
+    return 0
+}
+
 echo -e "${BLUE}"
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║                    KUNO Deployment                           ║"
@@ -41,20 +167,47 @@ fi
 echo -e "${YELLOW}🔧 Configuration Setup${NC}"
 echo ""
 
-read -p "Docker image (default: ${DEFAULT_IMAGE}): " IMAGE
-if [ "$IMAGE" = "" ]; then
-    IMAGE="$DEFAULT_IMAGE"
-fi
+while true; do
+    read -p "Docker image (default: ${DEFAULT_IMAGE}): " IMAGE
+    if [ "$IMAGE" = "" ]; then
+        IMAGE="$DEFAULT_IMAGE"
+        break
+    fi
+    
+    if validate_docker_image "$IMAGE"; then
+        break
+    fi
+    echo -e "${YELLOW}Please try again...${NC}"
+    echo ""
+done
 
-read -p "Port (default: ${DEFAULT_PORT}): " PORT
-if [ "$PORT" = "" ]; then
-    PORT="$DEFAULT_PORT"
-fi
+while true; do
+    read -p "Port (default: ${DEFAULT_PORT}): " PORT
+    if [ "$PORT" = "" ]; then
+        PORT="$DEFAULT_PORT"
+        break
+    fi
+    
+    if validate_port "$PORT"; then
+        break
+    fi
+    echo -e "${YELLOW}Please try again...${NC}"
+    echo ""
+done
 
-read -p "Container name (default: ${DEFAULT_CONTAINER_NAME}): " CONTAINER_NAME
-if [ "$CONTAINER_NAME" = "" ]; then
-    CONTAINER_NAME="$DEFAULT_CONTAINER_NAME"
-fi
+while true; do
+    read -p "Container name (default: ${DEFAULT_CONTAINER_NAME}): " CONTAINER_NAME
+    if [ "$CONTAINER_NAME" = "" ]; then
+        CONTAINER_NAME="$DEFAULT_CONTAINER_NAME"
+        break
+    fi
+    
+    if validate_container_name "$CONTAINER_NAME"; then
+        break
+    fi
+    echo -e "${YELLOW}Please try again...${NC}"
+    echo ""
+done
 
 # Deployment strategy choice
 echo ""
@@ -62,8 +215,21 @@ echo -e "${BLUE}🚀 Deployment Strategy:${NC}"
 echo "1. Standard Deployment (simple, ~30s downtime)"
 echo "2. Blue-Green Deployment (zero-downtime, recommended)"
 echo ""
-read -p "Choose deployment strategy (1-2, default: 2): " STRATEGY
-if [ "$STRATEGY" = "" ] || [ "$STRATEGY" = "2" ]; then
+while true; do
+    read -p "Choose deployment strategy (1-2, default: 2): " STRATEGY
+    if [ "$STRATEGY" = "" ]; then
+        STRATEGY="2"
+        break
+    fi
+    
+    if validate_strategy "$STRATEGY"; then
+        break
+    fi
+    echo -e "${YELLOW}Please try again...${NC}"
+    echo ""
+done
+
+if [ "$STRATEGY" = "2" ]; then
     DEPLOY_MODE="blue-green"
 else
     DEPLOY_MODE="standard"
