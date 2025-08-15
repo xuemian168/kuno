@@ -24,11 +24,6 @@ export interface TranslationUsageStats {
   }
 }
 
-interface ProtectedContent {
-  placeholder: string
-  originalContent: string
-}
-
 interface CachedContent {
   id: string
   originalContent: string
@@ -455,11 +450,15 @@ export class TranslationService {
       throw new Error(`Translation provider '${this.activeProvider.name}' is not configured`)
     }
 
-    // Use memory cache system for protected content
-    const processedText = await this.cacheAndRemoveProtectedContent(text)
+    // Check if this is an AI provider (has translateWithUsage method)
+    const isAIProvider = !!this.activeProvider.translateWithUsage
     
-    // Skip translation if text is empty after removing protected content
-    if (processedText.trim() === '') {
+    // AI providers: translate full content including code blocks
+    // Traditional providers: use protection logic for code blocks
+    const processedText = isAIProvider ? text : await this.cacheAndRemoveProtectedContent(text)
+    
+    // Skip translation if text is empty after removing protected content (traditional providers only)
+    if (!isAIProvider && processedText.trim() === '') {
       return text
     }
 
@@ -492,8 +491,8 @@ export class TranslationService {
           })
         }
         
-        // Restore cached content
-        const result = this.restoreCachedContent(translatedText, text)
+        // Restore cached content (only for traditional providers)
+        const result = isAIProvider ? translatedText : this.restoreCachedContent(translatedText, text)
         success = true
         
         // Track usage with detailed metrics
