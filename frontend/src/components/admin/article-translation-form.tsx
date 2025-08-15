@@ -29,9 +29,11 @@ import {
   Sparkles,
   Loader2,
   Wand2,
-  Info
+  Info,
+  RefreshCw
 } from "lucide-react"
 import { translationService, initializeTranslationService } from "@/services/translation"
+import { getErrorMessage } from "@/services/translation/error-messages"
 
 
 interface ArticleTranslationFormProps {
@@ -59,6 +61,7 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
   const [targetLanguage, setTargetLanguage] = useState(locale === 'zh' ? 'en' : 'zh')
   const [isTranslating, setIsTranslating] = useState(false)
   const [translationError, setTranslationError] = useState<string | null>(null)
+  const [isErrorRetryable, setIsErrorRetryable] = useState(false)
   const [hasTranslationProvider, setHasTranslationProvider] = useState(false)
   const [availableLanguages, setAvailableLanguages] = useState(adminInterfaceLanguages)
   
@@ -253,6 +256,7 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
 
     setIsTranslating(true)
     setTranslationError(null)
+    setIsErrorRetryable(false)
 
     try {
       const sourceTranslation = sourceLanguage === locale 
@@ -300,11 +304,14 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
       }
     } catch (error) {
       console.error('Translation error:', error)
-      setTranslationError(
-        error instanceof Error 
-          ? error.message 
-          : 'Translation failed. Please check your API configuration.'
-      )
+      
+      // Use enhanced error handling to get user-friendly Chinese messages
+      const errorMessage = error instanceof Error ? error.message : 'Translation failed'
+      const providerName = translationService.getActiveProvider()?.name
+      const errorMapping = getErrorMessage(errorMessage, undefined, providerName)
+      
+      setTranslationError(errorMapping.message + (errorMapping.suggestion ? `\n${errorMapping.suggestion}` : ''))
+      setIsErrorRetryable(errorMapping.retryable || false)
     } finally {
       setIsTranslating(false)
     }
@@ -441,7 +448,28 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
             {translationError && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{translationError}</AlertDescription>
+                <AlertDescription>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 pr-4">
+                      <div className="whitespace-pre-line">{translationError}</div>
+                    </div>
+                    {isErrorRetryable && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setTranslationError(null)
+                          setIsErrorRetryable(false)
+                        }}
+                        className="ml-2 bg-white hover:bg-gray-50"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        重试
+                      </Button>
+                    )}
+                  </div>
+                </AlertDescription>
               </Alert>
             )}
 

@@ -40,7 +40,7 @@ export function SimilarityNetwork({ className = '' }: SimilarityNetworkProps) {
   }, [threshold[0], maxNodes])
 
   useEffect(() => {
-    if (graph && graph.nodes.length > 0) {
+    if (graph && graph.nodes && graph.nodes.length > 0) {
       renderNetwork()
     }
     return () => {
@@ -89,20 +89,20 @@ export function SimilarityNetwork({ className = '' }: SimilarityNetworkProps) {
     const container = svg.append('g')
 
     // Create force simulation
-    const d3Nodes: D3GraphNode[] = graph.nodes.map(node => ({ ...node }))
+    const d3Nodes: D3GraphNode[] = (graph.nodes || []).map(node => ({ ...node }))
     const simulation = d3.forceSimulation<D3GraphNode>(d3Nodes)
-      .force('link', d3.forceLink<D3GraphNode, GraphEdge>(graph.edges)
+      .force('link', d3.forceLink<D3GraphNode, GraphEdge>(graph.edges || [])
         .id((d: any) => d.id)
         .distance(d => 100 / (d.similarity + 0.1)) // Stronger similarity = shorter distance
         .strength(d => d.similarity))
       .force('charge', d3.forceManyBody().strength(-300))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius((d: any) => Math.sqrt(d.size) + 5))
+      .force('collision', d3.forceCollide().radius((d: any) => Math.sqrt(d.size || 1) + 5))
 
     simulationRef.current = simulation
 
     // Color scale for languages
-    const languages = Array.from(new Set(graph.nodes.map(n => n.language)))
+    const languages = Array.from(new Set((graph.nodes || []).map(n => n.language).filter(Boolean)))
     const colorScale = d3.scaleOrdinal(d3.schemeCategory10)
       .domain(languages)
 
@@ -352,10 +352,10 @@ export function SimilarityNetwork({ className = '' }: SimilarityNetworkProps) {
           {graph && (
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <Badge variant="outline">
-                {graph.nodes.length} {currentLocale === 'zh' ? '节点' : 'nodes'}
+                {graph?.nodes?.length || 0} {currentLocale === 'zh' ? '节点' : 'nodes'}
               </Badge>
               <Badge variant="outline">
-                {graph.edges.length} {currentLocale === 'zh' ? '连接' : 'edges'}
+                {graph?.edges?.length || 0} {currentLocale === 'zh' ? '连接' : 'edges'}
               </Badge>
             </div>
           )}

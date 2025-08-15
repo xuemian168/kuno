@@ -1,5 +1,6 @@
 import { BaseTranslationProvider } from './base'
 import { TranslationResult } from '../types'
+import { formatErrorMessage } from '../error-messages'
 
 export class GeminiProvider extends BaseTranslationProvider {
   name = 'Gemini'
@@ -66,10 +67,22 @@ export class GeminiProvider extends BaseTranslationProvider {
 
       if (!response.ok) {
         const error = await response.json()
-        throw this.createError(
-          error.error?.message || 'Translation failed',
-          error.error?.code || 'TRANSLATION_ERROR'
-        )
+        // Enhanced error parsing for different Gemini error formats
+        let errorMessage = 'Translation failed'
+        let errorCode = 'TRANSLATION_ERROR'
+        
+        if (error.error) {
+          errorMessage = error.error.message || errorMessage
+          errorCode = error.error.status || error.error.code || String(response.status)
+        } else if (error.message) {
+          errorMessage = error.message
+          errorCode = String(response.status)
+        }
+        
+        // Get user-friendly Chinese error message
+        const friendlyMessage = formatErrorMessage(errorMessage, errorCode, this.name)
+        
+        throw this.createError(friendlyMessage, errorCode)
       }
 
       const data = await response.json()
@@ -147,10 +160,22 @@ export class GeminiProvider extends BaseTranslationProvider {
 
       if (!response.ok) {
         const error = await response.json()
-        throw this.createError(
-          error.error?.message || 'Translation failed',
-          error.error?.code || 'TRANSLATION_ERROR'
-        )
+        // Enhanced error parsing for different Gemini error formats
+        let errorMessage = 'Translation failed'
+        let errorCode = 'TRANSLATION_ERROR'
+        
+        if (error.error) {
+          errorMessage = error.error.message || errorMessage
+          errorCode = error.error.status || error.error.code || String(response.status)
+        } else if (error.message) {
+          errorMessage = error.message
+          errorCode = String(response.status)
+        }
+        
+        // Get user-friendly Chinese error message
+        const friendlyMessage = formatErrorMessage(errorMessage, errorCode, this.name)
+        
+        throw this.createError(friendlyMessage, errorCode)
       }
 
       const data = await response.json()
@@ -266,10 +291,22 @@ export class GeminiProvider extends BaseTranslationProvider {
 
       if (!response.ok) {
         const error = await response.json()
-        throw this.createError(
-          error.error?.message || 'Translation failed',
-          error.error?.code || 'TRANSLATION_ERROR'
-        )
+        // Enhanced error parsing for different Gemini error formats
+        let errorMessage = 'Translation failed'
+        let errorCode = 'TRANSLATION_ERROR'
+        
+        if (error.error) {
+          errorMessage = error.error.message || errorMessage
+          errorCode = error.error.status || error.error.code || String(response.status)
+        } else if (error.message) {
+          errorMessage = error.message
+          errorCode = String(response.status)
+        }
+        
+        // Get user-friendly Chinese error message
+        const friendlyMessage = formatErrorMessage(errorMessage, errorCode, this.name)
+        
+        throw this.createError(friendlyMessage, errorCode)
       }
 
       const data = await response.json()

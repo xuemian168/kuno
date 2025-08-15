@@ -28,15 +28,15 @@ export function EmbeddingVisualizer({ className = '' }: EmbeddingVisualizerProps
   const [selectedVector, setSelectedVector] = useState<VectorData | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const filteredVectors = vectors.filter(vector => {
+  const filteredVectors = (vectors || []).filter(vector => {
     const matchesLanguage = filterLanguage === 'all' || vector.language === filterLanguage
     const matchesContentType = filterContentType === 'all' || vector.content_type === filterContentType
-    const matchesSearch = !searchTerm || vector.title.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = !searchTerm || (vector.title && vector.title.toLowerCase().includes(searchTerm.toLowerCase()))
     return matchesLanguage && matchesContentType && matchesSearch
   })
 
-  const uniqueLanguages = Array.from(new Set(vectors.map(v => v.language)))
-  const uniqueContentTypes = Array.from(new Set(vectors.map(v => v.content_type)))
+  const uniqueLanguages = Array.from(new Set((vectors || []).map(v => v.language).filter(Boolean)))
+  const uniqueContentTypes = Array.from(new Set((vectors || []).map(v => v.content_type).filter(Boolean)))
 
   useEffect(() => {
     fetchVectors()

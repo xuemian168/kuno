@@ -1,5 +1,6 @@
 import { BaseTranslationProvider } from './base'
 import { TranslationResult } from '../types'
+import { formatErrorMessage } from '../error-messages'
 
 export class OpenAIProvider extends BaseTranslationProvider {
   name = 'OpenAI'
@@ -48,8 +49,22 @@ export class OpenAIProvider extends BaseTranslationProvider {
 
       if (!response.ok) {
         const error = await response.json()
-        throw this.createError(
-          error.error?.message || 'Translation failed',
+        // Enhanced error parsing for different OpenAI error formats
+        let errorMessage = 'Translation failed'
+        let errorCode = 'TRANSLATION_ERROR'
+        
+        if (error.error) {
+          errorMessage = error.error.message || errorMessage
+          errorCode = error.error.code || error.error.type || String(response.status)
+        } else if (error.message) {
+          errorMessage = error.message
+          errorCode = String(response.status)
+        }
+        
+        // Get user-friendly Chinese error message
+        const friendlyMessage = formatErrorMessage(errorMessage, errorCode, this.name)
+        
+        throw this.createError(friendlyMessage,
           error.error?.code || 'TRANSLATION_ERROR'
         )
       }
@@ -60,8 +75,9 @@ export class OpenAIProvider extends BaseTranslationProvider {
       if (error instanceof Error && 'code' in error) {
         throw error
       }
-      throw this.createError(
-        `OpenAI error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const friendlyMessage = formatErrorMessage(errorMessage, 'PROVIDER_ERROR', this.name)
+      throw this.createError(friendlyMessage,
         'PROVIDER_ERROR'
       )
     }
@@ -105,8 +121,22 @@ export class OpenAIProvider extends BaseTranslationProvider {
 
       if (!response.ok) {
         const error = await response.json()
-        throw this.createError(
-          error.error?.message || 'Translation failed',
+        // Enhanced error parsing for different OpenAI error formats
+        let errorMessage = 'Translation failed'
+        let errorCode = 'TRANSLATION_ERROR'
+        
+        if (error.error) {
+          errorMessage = error.error.message || errorMessage
+          errorCode = error.error.code || error.error.type || String(response.status)
+        } else if (error.message) {
+          errorMessage = error.message
+          errorCode = String(response.status)
+        }
+        
+        // Get user-friendly Chinese error message
+        const friendlyMessage = formatErrorMessage(errorMessage, errorCode, this.name)
+        
+        throw this.createError(friendlyMessage,
           error.error?.code || 'TRANSLATION_ERROR'
         )
       }
@@ -147,8 +177,9 @@ export class OpenAIProvider extends BaseTranslationProvider {
       if (error instanceof Error && 'code' in error) {
         throw error
       }
-      throw this.createError(
-        `OpenAI error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const friendlyMessage = formatErrorMessage(errorMessage, 'PROVIDER_ERROR', this.name)
+      throw this.createError(friendlyMessage,
         'PROVIDER_ERROR'
       )
     }
@@ -196,8 +227,22 @@ export class OpenAIProvider extends BaseTranslationProvider {
 
       if (!response.ok) {
         const error = await response.json()
-        throw this.createError(
-          error.error?.message || 'Translation failed',
+        // Enhanced error parsing for different OpenAI error formats
+        let errorMessage = 'Translation failed'
+        let errorCode = 'TRANSLATION_ERROR'
+        
+        if (error.error) {
+          errorMessage = error.error.message || errorMessage
+          errorCode = error.error.code || error.error.type || String(response.status)
+        } else if (error.message) {
+          errorMessage = error.message
+          errorCode = String(response.status)
+        }
+        
+        // Get user-friendly Chinese error message
+        const friendlyMessage = formatErrorMessage(errorMessage, errorCode, this.name)
+        
+        throw this.createError(friendlyMessage,
           error.error?.code || 'TRANSLATION_ERROR'
         )
       }
@@ -221,8 +266,9 @@ export class OpenAIProvider extends BaseTranslationProvider {
       if (error instanceof Error && 'code' in error) {
         throw error
       }
-      throw this.createError(
-        `OpenAI error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const friendlyMessage = formatErrorMessage(errorMessage, 'PROVIDER_ERROR', this.name)
+      throw this.createError(friendlyMessage,
         'PROVIDER_ERROR'
       )
     }

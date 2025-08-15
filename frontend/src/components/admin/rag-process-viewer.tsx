@@ -183,7 +183,7 @@ export function RAGProcessViewer({ className = '' }: RAGProcessViewerProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {processData.steps.map((step, index) => (
+                {(processData?.steps || []).map((step, index) => (
                   <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${getStepColor(step.step)}`}>
                       {getStepIcon(step.step)}
@@ -227,7 +227,7 @@ export function RAGProcessViewer({ className = '' }: RAGProcessViewerProps) {
                       </div>
                     </div>
 
-                    {index < processData.steps.length - 1 && (
+                    {index < (processData?.steps?.length || 0) - 1 && (
                       <ArrowRight className="h-5 w-5 text-muted-foreground" />
                     )}
                   </div>
@@ -249,7 +249,7 @@ export function RAGProcessViewer({ className = '' }: RAGProcessViewerProps) {
                   <label className="text-sm font-medium text-muted-foreground">
                     {currentLocale === 'zh' ? '向量维度' : 'Vector Dimensions'}
                   </label>
-                  <p className="text-lg font-semibold">{processData.query_vector.length}</p>
+                  <p className="text-lg font-semibold">{processData?.query_vector?.length || 0}</p>
                 </div>
                 
                 <div>
@@ -266,7 +266,7 @@ export function RAGProcessViewer({ className = '' }: RAGProcessViewerProps) {
                     {currentLocale === 'zh' ? '非零元素' : 'Non-zero Elements'}
                   </label>
                   <p className="text-lg font-semibold">
-                    {processData.query_vector.filter(val => Math.abs(val) > 0.001).length}
+                    {(processData?.query_vector || []).filter(val => Math.abs(val) > 0.001).length}
                   </p>
                 </div>
               </div>
@@ -279,13 +279,13 @@ export function RAGProcessViewer({ className = '' }: RAGProcessViewerProps) {
               <CardTitle>
                 {currentLocale === 'zh' ? '检索到的文档' : 'Retrieved Documents'}
                 <Badge variant="outline" className="ml-2">
-                  {processData.retrieved_docs.length} {currentLocale === 'zh' ? '篇' : 'articles'}
+                  {processData?.retrieved_docs?.length || 0} {currentLocale === 'zh' ? '篇' : 'articles'}
                 </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {processData.retrieved_docs.map((doc, index) => {
+                {(processData?.retrieved_docs || []).map((doc, index) => {
                   const similarity = processData.similarity_map[doc.article_id]
                   return (
                     <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
@@ -356,7 +356,7 @@ export function RAGProcessViewer({ className = '' }: RAGProcessViewerProps) {
                   </label>
                   <p className="text-lg font-semibold">
                     {(Object.values(processData.similarity_map).reduce((sum, sim) => sum + sim, 0) / 
-                      Object.values(processData.similarity_map).length * 100).toFixed(1)}%
+                      Object.values(processData?.similarity_map || {}).length * 100).toFixed(1)}%
                   </p>
                 </div>
 
@@ -374,7 +374,7 @@ export function RAGProcessViewer({ className = '' }: RAGProcessViewerProps) {
                     {currentLocale === 'zh' ? '检索效率' : 'Retrieval Efficiency'}
                   </label>
                   <p className="text-lg font-semibold">
-                    {(processData.retrieved_docs.length / 
+                    {((processData?.retrieved_docs?.length || 0) / 
                       (processData.steps.find(s => s.step === 'similarity_search')?.duration_ms || 1) * 1000).toFixed(1)} docs/s
                   </p>
                 </div>
