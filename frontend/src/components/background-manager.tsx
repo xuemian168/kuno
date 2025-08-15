@@ -73,7 +73,7 @@ export function BackgroundManager({ isAdminRoute = false }: BackgroundManagerPro
 
   return (
     <div 
-      className="fixed inset-0 pointer-events-none z-[-1]"
+      className="fixed inset-0 pointer-events-none z-[-1] bg-fixed"
       style={backgroundStyle}
       aria-hidden="true"
     />

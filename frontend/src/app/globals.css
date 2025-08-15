@@ -193,4 +193,19 @@
   .bg-readable {
     @apply bg-background/95 backdrop-blur-sm;
   }
+
+  /* Force fixed background on all devices including mobile */
+  .bg-fixed {
+    background-attachment: fixed !important;
+  }
+
+  /* iOS/Safari specific fix for fixed backgrounds */
+  @supports (-webkit-overflow-scrolling: touch) {
+    .bg-fixed {
+      background-attachment: fixed !important;
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+      will-change: transform;
+    }
+  }
 }
