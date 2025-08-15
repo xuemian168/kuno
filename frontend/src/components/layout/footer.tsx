@@ -65,10 +65,10 @@ export default function Footer() {
 
   return (
     <footer className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+      <div className="container mx-auto px-4 py-3">
+        <div className="flex flex-col md:flex-row items-center justify-between space-y-2 md:space-y-0">
           {/* Social Media Links - Left Side */}
-          <div className="flex items-center space-x-4 md:flex-1">
+          <div className="flex items-center space-x-3 md:flex-1">
             {socialMedia.map((item) => (
               <a
                 key={item.id}
@@ -78,7 +78,7 @@ export default function Footer() {
                 className="group relative"
                 title={item.platform}
               >
-                <div className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors">
+                <div className="p-1.5 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors">
                   {getSocialIcon(item.icon_name)}
                 </div>
                 <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-foreground text-background text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
@@ -89,7 +89,7 @@ export default function Footer() {
           </div>
 
           {/* Copyright and Credits - Center */}
-          <div className="flex flex-col items-center space-y-2 text-center md:flex-1">
+          <div className="flex flex-col items-center space-y-1 text-center md:flex-1">
             <div className="text-sm text-muted-foreground">
               {settings?.footer_text || '© 2025 xuemian168'}
             </div>
