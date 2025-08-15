@@ -12,9 +12,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Lock, User, Shield, AlertTriangle, HelpCircle, Terminal, Copy } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
-import { apiClient, SiteSettings } from '@/lib/api'
+import { useSettings } from '@/contexts/settings-context'
+import { apiClient } from '@/lib/api'
+import { generateMediaUrl } from '@/lib/favicon-utils'
 import { KunoLogo } from '@/components/kuno-logo'
-import Image from 'next/image'
 
 interface LoginPageProps {
   params: Promise<{ locale: string }>
@@ -30,37 +31,24 @@ export default function LoginPage({ params }: LoginPageProps) {
   const [recoveryMessage, setRecoveryMessage] = useState('')
   const [checkingRecovery, setCheckingRecovery] = useState(true)
   const [copySuccess, setCopySuccess] = useState<string | null>(null)
-  const [settings, setSettings] = useState<SiteSettings | null>(null)
   const { login } = useAuth()
+  const { settings } = useSettings()
   const router = useRouter()
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadRecoveryStatus = async () => {
       try {
-        // Load both recovery status and site settings
-        const [recoveryStatus, siteSettings] = await Promise.all([
-          apiClient.getRecoveryStatus(),
-          apiClient.getSettings()
-        ])
-        
+        const recoveryStatus = await apiClient.getRecoveryStatus()
         setIsRecoveryMode(recoveryStatus.is_recovery_mode)
         setRecoveryMessage(recoveryStatus.message || '')
-        setSettings(siteSettings)
       } catch (error) {
-        console.error('Failed to load data:', error)
-        // Still try to load settings even if recovery status fails
-        try {
-          const siteSettings = await apiClient.getSettings()
-          setSettings(siteSettings)
-        } catch (settingsError) {
-          console.error('Failed to load settings:', settingsError)
-        }
+        console.error('Failed to load recovery status:', error)
       } finally {
         setCheckingRecovery(false)
       }
     }
 
-    loadData()
+    loadRecoveryStatus()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -103,16 +91,21 @@ export default function LoginPage({ params }: LoginPageProps) {
             {/* Logo Section */}
             <div className="flex justify-center mb-6">
               {settings?.logo_url ? (
-                <Image
-                  src={settings.logo_url}
-                  alt={settings.site_title || 'Site Logo'}
-                  width={80}
-                  height={80}
-                  className="max-h-20 w-auto object-contain"
-                  priority
+                <img 
+                  src={generateMediaUrl(settings.logo_url)} 
+                  alt="Logo" 
+                  className="h-8 w-auto object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement
+                    if (fallback) {
+                      fallback.style.display = 'inline-block'
+                    }
+                  }}
                 />
-              ) : (
-                <KunoLogo size="lg" className="animate-fade-in" />
+              ) : null}
+              {!settings?.logo_url && (
+                <KunoLogo size="sm" />
               )}
             </div>
             
