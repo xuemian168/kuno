@@ -3,7 +3,10 @@ package api
 import (
 	"blog-backend/internal/database"
 	"blog-backend/internal/models"
+	"blog-backend/internal/security"
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,6 +15,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
 
 // Helper function to get the site's default language
 func getDefaultLanguage() string {
@@ -41,6 +45,19 @@ func GetSettings(c *gin.Context) {
 	}
 	if lang != "" && lang != defaultLang {
 		applySettingsTranslation(&settings, lang)
+	}
+
+	// Handle AI configuration security
+	if settings.AIConfig != "" {
+		aiConfigService := security.GetGlobalAIConfigService()
+		clientConfig, err := aiConfigService.ToClientConfigJSON(settings.AIConfig)
+		if err != nil {
+			log.Printf("Failed to convert AI config to client format: %v", err)
+			// Clear AI config on error to prevent exposure
+			settings.AIConfig = ""
+		} else {
+			settings.AIConfig = clientConfig
+		}
 	}
 
 	c.JSON(http.StatusOK, settings)
@@ -97,6 +114,7 @@ func UpdateSettings(c *gin.Context) {
 		BackgroundColor    string   `json:"background_color"`
 		BackgroundImageURL string   `json:"background_image_url"`
 		BackgroundOpacity  *float64 `json:"background_opacity"`
+		AIConfig           string                           `json:"ai_config"`
 		Translations       []models.SiteSettingsTranslation `json:"translations"`
 	}
 
@@ -138,6 +156,54 @@ func UpdateSettings(c *gin.Context) {
 	if input.BackgroundOpacity != nil {
 		settings.BackgroundOpacity = *input.BackgroundOpacity
 	}
+	
+	// Update AI configuration with encryption
+	if input.AIConfig != "" {
+		aiConfigService := security.GetGlobalAIConfigService()
+		
+		// Parse the input AI config
+		var inputAIConfig security.InputAIConfig
+		if err := json.Unmarshal([]byte(input.AIConfig), &inputAIConfig); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid AI configuration format: " + err.Error()})
+			return
+		}
+		
+		// Get existing secure config for merging
+		var existingSecureConfig *security.SecureAIConfig
+		if settings.AIConfig != "" {
+			var existing security.SecureAIConfig
+			if err := json.Unmarshal([]byte(settings.AIConfig), &existing); err == nil {
+				existingSecureConfig = &existing
+			}
+		}
+		
+		// Merge with existing to preserve unchanged keys
+		var secureConfig *security.SecureAIConfig
+		var err error
+		
+		if existingSecureConfig != nil {
+			secureConfig, err = aiConfigService.MergeWithExisting(&inputAIConfig, existingSecureConfig)
+		} else {
+			secureConfig, err = aiConfigService.EncryptAIConfig(&inputAIConfig)
+		}
+		
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process AI configuration: " + err.Error()})
+			return
+		}
+		
+		// Convert secure config to JSON for storage
+		secureJSON, err := json.Marshal(secureConfig)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to serialize AI configuration: " + err.Error()})
+			return
+		}
+		
+		settings.AIConfig = string(secureJSON)
+	} else {
+		// Allow empty to clear configuration
+		settings.AIConfig = ""
+	}
 
 	if err := database.DB.Save(&settings).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -157,6 +223,28 @@ func UpdateSettings(c *gin.Context) {
 
 	// Reload with translations
 	database.DB.Preload("Translations").First(&settings)
+	
+	// Always reload embedding service when settings are updated
+	// This ensures AI configuration changes are applied immediately
+	if err := GetGlobalEmbeddingService().ReloadConfig(); err != nil {
+		log.Printf("Failed to reload embedding service configuration: %v", err)
+	} else {
+		log.Printf("Successfully reloaded embedding service configuration")
+	}
+	
+	// Convert AI config to client-safe format before returning
+	if settings.AIConfig != "" {
+		aiConfigService := security.GetGlobalAIConfigService()
+		clientConfig, err := aiConfigService.ToClientConfigJSON(settings.AIConfig)
+		if err != nil {
+			log.Printf("Failed to convert AI config to client format for response: %v", err)
+			// Clear AI config on error to prevent exposure
+			settings.AIConfig = ""
+		} else {
+			settings.AIConfig = clientConfig
+		}
+	}
+	
 	c.JSON(http.StatusOK, settings)
 }
 

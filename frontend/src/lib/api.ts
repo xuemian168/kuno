@@ -78,6 +78,7 @@ export interface SiteSettings {
   background_image_url?: string
   background_opacity?: number
   setup_completed?: boolean
+  ai_config?: string // JSON string of AI configuration
   translations?: SiteSettingsTranslation[]
   created_at: string
   updated_at: string
@@ -89,6 +90,131 @@ export interface User {
   is_admin: boolean
   created_at: string
   updated_at: string
+}
+
+export interface EmbeddingSearchResult {
+  article_id: number
+  title: string
+  summary: string
+  category_name: string
+  language: string
+  similarity: number
+  view_count: number
+  created_at: string
+}
+
+export interface SemanticSearchRequest {
+  query: string
+  language?: string
+  limit?: number
+  threshold?: number
+}
+
+export interface SemanticSearchResponse {
+  results: EmbeddingSearchResult[]
+  count: number
+  query: string
+  message?: string
+}
+
+export interface EmbeddingStats {
+  total_embeddings: number
+  by_language: Array<{
+    language: string
+    count: number
+  }>
+  by_content_type: Array<{
+    content_type: string
+    count: number
+  }>
+  latest_update?: string
+}
+
+// Visualization data types
+export interface VectorData {
+  id: number
+  article_id: number
+  title: string
+  language: string
+  content_type: string
+  x: number
+  y: number
+  created_at: string
+}
+
+export interface GraphNode {
+  id: number
+  article_id: number
+  title: string
+  language: string
+  size: number
+}
+
+export interface GraphEdge {
+  source: number
+  target: number
+  similarity: number
+  weight: number
+}
+
+export interface SimilarityGraph {
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+}
+
+export interface QualityMetrics {
+  total_vectors: number
+  average_norm: number
+  vector_distribution: Record<string, number>
+  similarity_stats: Record<string, number>
+  outliers: VectorData[]
+  cluster_stats: Record<string, any>
+}
+
+export interface RAGProcessStep {
+  step: string
+  description: string
+  duration_ms: number
+  data: any
+}
+
+export interface RAGProcessVisualization {
+  query_vector: number[]
+  steps: RAGProcessStep[]
+  retrieved_docs: VectorData[]
+  similarity_map: Record<number, number>
+}
+
+export interface ProviderStatus {
+  [key: string]: {
+    configured: boolean
+    model: string
+    dimensions: number
+  }
+}
+
+export interface EmbeddingTrend {
+  date: string
+  count: number
+  provider: string
+}
+
+export interface AIProviderConfig {
+  provider: string // "openai", "gemini", "volcano"
+  api_key: string
+  model: string
+  enabled: boolean
+  is_configured?: boolean // Whether a real key is configured (from backend)
+  settings?: Record<string, string> // Additional provider-specific settings
+}
+
+export interface AIConfig {
+  default_provider: string
+  providers: Record<string, AIProviderConfig>
+  embedding_config: {
+    default_provider: string
+    enabled: boolean
+  }
 }
 
 export interface LoginRequest {
@@ -880,6 +1006,150 @@ class ApiClient {
     })
 
     return this.request(`/articles/search?${params.toString()}`)
+  }
+
+  // Semantic search endpoints
+  async semanticSearch(request: SemanticSearchRequest): Promise<SemanticSearchResponse> {
+    return this.request('/search/semantic', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    })
+  }
+
+  async hybridSearch(request: SemanticSearchRequest): Promise<SemanticSearchResponse> {
+    return this.request('/search/hybrid', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    })
+  }
+
+  async getSimilarArticles(articleId: number, options?: {
+    language?: string
+    limit?: number
+  }): Promise<SemanticSearchResponse> {
+    const params = new URLSearchParams()
+    if (options?.language) {
+      params.append('language', options.language)
+    }
+    if (options?.limit) {
+      params.append('limit', options.limit.toString())
+    }
+    const queryString = params.toString() ? `?${params.toString()}` : ''
+    return this.request(`/search/similar/${articleId}${queryString}`)
+  }
+
+  // Embedding management endpoints (admin only)
+  async getEmbeddingStats(): Promise<{ stats: EmbeddingStats }> {
+    return this.request('/embeddings/stats')
+  }
+
+  async processArticleEmbeddings(articleId: number): Promise<{ message: string; article_id: number }> {
+    return this.request(`/embeddings/process/${articleId}`, {
+      method: 'POST',
+    })
+  }
+
+  async batchProcessEmbeddings(): Promise<{ message: string }> {
+    return this.request('/embeddings/batch-process', {
+      method: 'POST',
+    })
+  }
+
+  async rebuildEmbeddings(): Promise<{ message: string }> {
+    return this.request('/embeddings/rebuild', {
+      method: 'POST',
+    })
+  }
+
+  async deleteArticleEmbeddings(articleId: number): Promise<{
+    message: string
+    article_id: number
+    deleted_count: number
+  }> {
+    return this.request(`/embeddings/article/${articleId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async getProviderStatus(): Promise<{
+    providers: ProviderStatus
+    available: string[]
+  }> {
+    return this.request('/embeddings/providers')
+  }
+
+  async setDefaultProvider(provider: string): Promise<{
+    message: string
+    provider: string
+  }> {
+    return this.request('/embeddings/providers/default', {
+      method: 'POST',
+      body: JSON.stringify({ provider }),
+    })
+  }
+
+  async getEmbeddingTrends(days?: number): Promise<{
+    trends: EmbeddingTrend[]
+    days: number
+  }> {
+    const params = days ? `?days=${days}` : ''
+    return this.request(`/embeddings/trends${params}`)
+  }
+
+  // Visualization endpoints
+  async getEmbeddingVectors(options?: {
+    method?: string
+    limit?: number
+  }): Promise<{
+    vectors: VectorData[]
+    method: string
+    dimensions: number
+    count: number
+  }> {
+    const params = new URLSearchParams()
+    if (options?.method) params.append('method', options.method)
+    if (options?.limit) params.append('limit', options.limit.toString())
+    
+    const queryString = params.toString()
+    return this.request(`/embeddings/vectors${queryString ? `?${queryString}` : ''}`)
+  }
+
+  async getSimilarityGraph(options?: {
+    threshold?: number
+    maxNodes?: number
+  }): Promise<{
+    graph: SimilarityGraph
+    threshold: number
+    max_nodes: number
+  }> {
+    const params = new URLSearchParams()
+    if (options?.threshold !== undefined) params.append('threshold', options.threshold.toString())
+    if (options?.maxNodes) params.append('max_nodes', options.maxNodes.toString())
+    
+    const queryString = params.toString()
+    return this.request(`/embeddings/similarity-graph${queryString ? `?${queryString}` : ''}`)
+  }
+
+  async getQualityMetrics(): Promise<{
+    metrics: QualityMetrics
+  }> {
+    return this.request('/embeddings/quality-metrics')
+  }
+
+  async getRAGProcessVisualization(query: string, options?: {
+    language?: string
+    limit?: number
+  }): Promise<{
+    process: RAGProcessVisualization
+    query: string
+    language: string
+  }> {
+    const params = new URLSearchParams()
+    params.append('query', query)
+    if (options?.language) params.append('language', options.language)
+    if (options?.limit) params.append('limit', options.limit.toString())
+    
+    return this.request(`/embeddings/rag-process?${params.toString()}`)
   }
 
   // LLMs.txt endpoints

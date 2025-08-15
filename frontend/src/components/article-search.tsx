@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { apiClient, Article } from '@/lib/api'
+import { apiClient, Article, SemanticSearchResponse, EmbeddingSearchResult } from '@/lib/api'
 import Link from 'next/link'
 import { useClientLocale } from '@/hooks/useClientLocale'
 
@@ -26,9 +26,10 @@ interface ArticleSearchProps {
   trigger?: React.ReactNode
   placeholder?: string
   compact?: boolean // For mobile/compact view
+  enableSemanticSearch?: boolean // Enable semantic search toggle
 }
 
-export function ArticleSearch({ trigger, placeholder, compact = false }: ArticleSearchProps) {
+export function ArticleSearch({ trigger, placeholder, compact = false, enableSemanticSearch = false }: ArticleSearchProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult | null>(null)
@@ -37,6 +38,10 @@ export function ArticleSearch({ trigger, placeholder, compact = false }: Article
   const [showHelp, setShowHelp] = useState(false)
   const [syntaxError, setSyntaxError] = useState<string | null>(null)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  
+  // Semantic search states
+  const [useSemanticSearch, setUseSemanticSearch] = useState(false)
+  const [semanticResults, setSemanticResults] = useState<SemanticSearchResponse | null>(null)
   const [filters, setFilters] = useState({
     category: '',
     dateFrom: '',
@@ -71,11 +76,12 @@ export function ArticleSearch({ trigger, placeholder, compact = false }: Article
   const searchArticles = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       setResults(null)
+      setSemanticResults(null)
       return
     }
 
-    // Don't search if there's a syntax error
-    if (syntaxError) {
+    // Don't search if there's a syntax error and not using semantic search
+    if (syntaxError && !useSemanticSearch) {
       return
     }
 
@@ -83,12 +89,26 @@ export function ArticleSearch({ trigger, placeholder, compact = false }: Article
     setError(null)
 
     try {
-      const result = await apiClient.searchArticles(searchQuery, {
-        page: 1,
-        limit: 10,
-        lang: currentLocale
-      })
-      setResults(result)
+      if (useSemanticSearch && enableSemanticSearch) {
+        // Use semantic search
+        const semanticResult = await apiClient.semanticSearch({
+          query: searchQuery,
+          language: currentLocale,
+          limit: 10,
+          threshold: 0.7
+        })
+        setSemanticResults(semanticResult)
+        setResults(null)
+      } else {
+        // Use traditional keyword search
+        const result = await apiClient.searchArticles(searchQuery, {
+          page: 1,
+          limit: 10,
+          lang: currentLocale
+        })
+        setResults(result)
+        setSemanticResults(null)
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Search failed'
       // Check if it's a syntax error from the backend
@@ -98,25 +118,28 @@ export function ArticleSearch({ trigger, placeholder, compact = false }: Article
         setError(errorMessage)
       }
       setResults(null)
+      setSemanticResults(null)
     } finally {
       setLoading(false)
     }
   }
 
-  // Trigger search when debounced query changes
+  // Trigger search when debounced query changes or search mode changes
   useEffect(() => {
     if (debouncedQuery) {
       searchArticles(debouncedQuery)
     } else {
       setResults(null)
+      setSemanticResults(null)
     }
-  }, [debouncedQuery, currentLocale])
+  }, [debouncedQuery, currentLocale, useSemanticSearch])
 
   // Clear search when dialog closes
   useEffect(() => {
     if (!open) {
       setQuery('')
       setResults(null)
+      setSemanticResults(null)
       setError(null)
       setSyntaxError(null)
       setShowHelp(false)
@@ -435,6 +458,17 @@ export function ArticleSearch({ trigger, placeholder, compact = false }: Article
                 autoFocus
               />
               <div className="absolute right-1 top-1 flex gap-1">
+                {enableSemanticSearch && (
+                  <Button
+                    variant={useSemanticSearch ? "default" : "ghost"}
+                    size="sm"
+                    className="h-8 px-2 text-xs"
+                    onClick={() => setUseSemanticSearch(!useSemanticSearch)}
+                    title={currentLocale === 'zh' ? '语义搜索' : 'Semantic search'}
+                  >
+                    AI
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -664,14 +698,92 @@ export function ArticleSearch({ trigger, placeholder, compact = false }: Article
           )}
 
           {/* No Results */}
-          {!loading && !error && debouncedQuery && results?.articles.length === 0 && (
+          {!loading && !error && debouncedQuery && 
+           ((useSemanticSearch && semanticResults?.results.length === 0) ||
+            (!useSemanticSearch && results?.articles.length === 0)) && (
             <div className="text-center py-8 text-muted-foreground">
               {currentLocale === 'zh' ? '未找到相关文章' : 'No articles found'}
             </div>
           )}
 
-          {/* Search Results */}
-          {results && results.articles.length > 0 && (
+          {/* Semantic Search Results */}
+          {useSemanticSearch && semanticResults && semanticResults.results.length > 0 && (
+            <div className="flex-1 overflow-auto space-y-3">
+              <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
+                <span>
+                  {currentLocale === 'zh' 
+                    ? `找到 ${semanticResults.count} 篇相关文章 (语义搜索)`
+                    : `Found ${semanticResults.count} similar articles (semantic search)`
+                  }
+                </span>
+                <Badge variant="secondary" className="text-xs">
+                  AI
+                </Badge>
+              </div>
+              
+              {semanticResults.results.map((result) => (
+                <Card key={result.article_id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <Link 
+                      href={`/${currentLocale}/article/${result.article_id}`}
+                      className="block group"
+                      onClick={() => setOpen(false)}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 
+                            className="font-medium text-foreground group-hover:text-primary line-clamp-2"
+                            dangerouslySetInnerHTML={{
+                              __html: highlightSearchTerms(result.title, getHighlightQuery())
+                            }}
+                          />
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge variant="outline" className="text-xs">
+                              {result.category_name}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {Math.round(result.similarity * 100)}%
+                            </Badge>
+                          </div>
+                        </div>
+                        
+                        {result.summary && (
+                          <p 
+                            className="text-sm text-muted-foreground line-clamp-2"
+                            dangerouslySetInnerHTML={{
+                              __html: highlightSearchTerms(
+                                truncateContent(extractTextFromMarkdown(result.summary), 120),
+                                getHighlightQuery()
+                              )
+                            }}
+                          />
+                        )}
+                        
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{formatDate(result.created_at)}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="flex items-center gap-1">
+                              <BarChart3 className="h-3 w-3" />
+                              {result.view_count} {currentLocale === 'zh' ? '次阅读' : 'views'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {semanticResults.message && (
+                <div className="text-center text-sm text-muted-foreground mt-4">
+                  {semanticResults.message}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Traditional Search Results */}
+          {!useSemanticSearch && results && results.articles.length > 0 && (
             <div className="flex-1 overflow-auto space-y-3">
               <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
                 <span>

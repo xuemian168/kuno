@@ -60,6 +60,8 @@ type SiteSettings struct {
 	BackgroundImageURL string  `gorm:"size:255" json:"background_image_url"`         // background image URL
 	BackgroundOpacity  float64 `gorm:"default:0.8" json:"background_opacity"`        // 0.0 to 1.0
 	SetupCompleted     bool    `gorm:"default:false" json:"setup_completed"`
+	// AI API Configuration
+	AIConfig           string                    `gorm:"type:text" json:"ai_config"`
 	Translations []SiteSettingsTranslation `gorm:"foreignKey:SettingsID" json:"translations,omitempty"`
 	CreatedAt   time.Time                 `json:"created_at"`
 	UpdatedAt   time.Time                 `json:"updated_at"`
@@ -73,6 +75,25 @@ type SiteSettingsTranslation struct {
 	SiteSubtitle string  `gorm:"not null" json:"site_subtitle"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+// AIProviderConfig represents AI API configuration for different providers
+type AIProviderConfig struct {
+	Provider string            `json:"provider"` // "openai", "gemini", "volcano"
+	APIKey   string            `json:"api_key"`
+	Model    string            `json:"model"`
+	Enabled  bool             `json:"enabled"`
+	Settings map[string]string `json:"settings,omitempty"` // Additional provider-specific settings
+}
+
+// AIConfig represents global AI configuration
+type AIConfig struct {
+	DefaultProvider string                      `json:"default_provider"`
+	Providers      map[string]AIProviderConfig `json:"providers"`
+	EmbeddingConfig struct {
+		DefaultProvider string `json:"default_provider"`
+		Enabled        bool   `json:"enabled"`
+	} `json:"embedding_config"`
 }
 
 type User struct {
@@ -217,4 +238,53 @@ type AIUsageStats struct {
 	TotalCost       float64 `json:"total_cost"`
 	Currency        string  `json:"currency"`
 	AvgResponseTime float64 `json:"avg_response_time"`
+}
+
+// ArticleEmbedding stores vector embeddings for articles to enable semantic search
+type ArticleEmbedding struct {
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	ArticleID    uint      `gorm:"not null;index" json:"article_id"`
+	ContentType  string    `gorm:"not null;size:20;index" json:"content_type"` // "title", "content", "summary", "combined"
+	Language     string    `gorm:"not null;size:10;index" json:"language"`     // language code
+	Provider     string    `gorm:"not null;size:50" json:"provider"`           // "openai", "gemini", etc.
+	Model        string    `gorm:"size:100" json:"model"`                      // specific model used for embedding
+	
+	// Vector data - storing as JSON string for simplicity and SQLite compatibility
+	Embedding    string    `gorm:"type:text;not null" json:"embedding"`        // JSON array of floats
+	Dimensions   int       `gorm:"not null" json:"dimensions"`                 // vector dimensions (e.g., 1536 for OpenAI)
+	
+	// Metadata for tracking and versioning
+	ContentHash  string    `gorm:"size:64;index" json:"content_hash"`          // SHA256 hash of content
+	TokenCount   int       `gorm:"default:0" json:"token_count"`               // tokens used for embedding
+	
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	
+	// Foreign key relationship
+	Article      Article   `gorm:"foreignKey:ArticleID" json:"article,omitempty"`
+}
+
+// EmbeddingSearchResult represents a search result with similarity score
+type EmbeddingSearchResult struct {
+	ArticleID    uint    `json:"article_id"`
+	Title        string  `json:"title"`
+	Summary      string  `json:"summary"`
+	CategoryName string  `json:"category_name"`
+	Language     string  `json:"language"`
+	Similarity   float64 `json:"similarity"`
+	ViewCount    uint    `json:"view_count"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// SearchIndex tracks search performance and caching
+type SearchIndex struct {
+	ID              uint      `gorm:"primaryKey" json:"id"`
+	IndexType       string    `gorm:"not null;size:50;index" json:"index_type"` // "embedding", "keyword", "hybrid"
+	Language        string    `gorm:"size:10;index" json:"language"`
+	TotalDocuments  int       `gorm:"default:0" json:"total_documents"`
+	LastUpdated     time.Time `json:"last_updated"`
+	LastRebuild     time.Time `json:"last_rebuild"`
+	AverageQueryTime float64  `gorm:"default:0" json:"average_query_time"` // milliseconds
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }

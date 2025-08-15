@@ -68,6 +68,15 @@ func SetupRoutes() *gin.Engine {
 			articles.GET("/:id", GetArticle)
 		}
 
+		// Semantic search endpoints - public access
+		embeddingController := NewEmbeddingController()
+		search := api.Group("/search")
+		{
+			search.POST("/semantic", embeddingController.SemanticSearch)
+			search.POST("/hybrid", embeddingController.HybridSearch)
+			search.GET("/similar/:id", embeddingController.GetSimilarArticles)
+		}
+
 		categories := api.Group("/categories")
 		{
 			categories.GET("", GetCategories)
@@ -207,6 +216,24 @@ func SetupRoutes() *gin.Engine {
 						c.JSON(http.StatusOK, stats)
 					})
 					adminLLMs.GET("/usage-stats", GetLLMsTxtUsageStats)
+				}
+
+				// Embedding management
+				adminEmbeddings := admin.Group("/embeddings")
+				{
+					adminEmbeddings.GET("/stats", embeddingController.GetEmbeddingStats)
+					adminEmbeddings.GET("/providers", embeddingController.GetProviderStatus)
+					adminEmbeddings.POST("/providers/default", embeddingController.SetDefaultProvider)
+					adminEmbeddings.GET("/trends", embeddingController.GetEmbeddingTrends)
+					adminEmbeddings.POST("/process/:id", embeddingController.ProcessArticleEmbeddings)
+					adminEmbeddings.POST("/batch-process", embeddingController.BatchProcessEmbeddings)
+					adminEmbeddings.POST("/rebuild", embeddingController.RebuildEmbeddings)
+					adminEmbeddings.DELETE("/article/:id", embeddingController.DeleteArticleEmbeddings)
+					// Visualization endpoints
+					adminEmbeddings.GET("/vectors", embeddingController.GetEmbeddingVectors)
+					adminEmbeddings.GET("/similarity-graph", embeddingController.GetSimilarityGraph)
+					adminEmbeddings.GET("/quality-metrics", embeddingController.GetQualityMetrics)
+					adminEmbeddings.GET("/rag-process", embeddingController.GetRAGProcessVisualization)
 				}
 			}
 		}

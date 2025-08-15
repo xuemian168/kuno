@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { apiClient, SiteSettings, SiteSettingsTranslation } from "@/lib/api"
+import { apiClient, SiteSettings, SiteSettingsTranslation, AIConfig, AIProviderConfig } from "@/lib/api"
 import { useSettings } from "@/contexts/settings-context"
 import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle, AlertTriangle, ChevronDown, Activity, Sparkles, Copy, Type, Trash2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -86,6 +86,16 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     summaryLength: 'medium'
   })
   const [hasAISummaryProvider, setHasAISummaryProvider] = useState(false)
+  
+  // Global AI API Configuration
+  const [aiConfig, setAIConfig] = useState<AIConfig>({
+    default_provider: 'openai',
+    providers: {},
+    embedding_config: {
+      default_provider: 'openai',
+      enabled: false
+    }
+  })
   
   // Password change state
   const [passwordForm, setPasswordForm] = useState({
@@ -223,6 +233,16 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         })
         setTranslations(settingsData.translations || [])
         
+        // Load AI configuration
+        if (settingsData.ai_config) {
+          try {
+            const parsedAIConfig = JSON.parse(settingsData.ai_config)
+            setAIConfig(parsedAIConfig)
+          } catch (error) {
+            console.error('Failed to parse AI config:', error)
+          }
+        }
+        
         // Sync sound settings to localStorage
         setSoundEnabled(settingsData.enable_sound_effects ?? true)
       } catch (error) {
@@ -248,6 +268,9 @@ export function SettingsForm({ locale }: SettingsFormProps) {
           setAISummaryConfig(parsed.aiSummary)
           aiSummaryService.configureFromSettings(parsed.aiSummary)
           setHasAISummaryProvider(aiSummaryService.isConfigured())
+        }
+        if (parsed.aiConfig) {
+          setAIConfig(parsed.aiConfig)
         }
       } catch (error) {
         console.error('Failed to load translation settings:', error)
@@ -361,6 +384,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         background_color: formData.background_color,
         background_image_url: formData.background_image_url,
         background_opacity: formData.background_opacity,
+        ai_config: JSON.stringify(aiConfig),
         translations: allTranslations
       }
 
@@ -379,7 +403,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
       const allSettings = {
         ...updatedSettings,
         translation: configWithLanguages,
-        aiSummary: aiSummaryConfig
+        aiSummary: aiSummaryConfig,
+        aiConfig: aiConfig
       }
       localStorage.setItem('blog_settings', JSON.stringify(allSettings))
 
@@ -739,11 +764,11 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                 {t('settings.security')}
               </TabsTrigger>
               <TabsTrigger 
-                value="social" 
+                value="ai" 
                 className="gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0"
               >
-                <Share2 className="h-4 w-4" />
-                {t('settings.socialMedia')}
+                <Sparkles className="h-4 w-4" />
+                {locale === 'zh' ? 'AI配置' : 'AI Configuration'}
               </TabsTrigger>
               <TabsTrigger 
                 value="appearance" 
@@ -2029,13 +2054,30 @@ export function SettingsForm({ locale }: SettingsFormProps) {
             </Card>
           </TabsContent>
 
-          <TabsContent value="social" className="space-y-6">
+          <TabsContent value="ai" className="space-y-6">
             <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
-              <CardContent className="p-6">
-                <SocialMediaManager />
+              <CardHeader className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 border-b border-purple-200 dark:border-purple-700 pt-6 pb-4 px-4 rounded-t-lg flex flex-col justify-center min-h-[80px]">
+                <CardTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100">
+                  <Sparkles className="h-5 w-5" />
+                  {locale === 'zh' ? '全局AI API配置' : 'Global AI API Configuration'}
+                </CardTitle>
+                <CardDescription className="text-purple-700 dark:text-purple-300">
+                  {locale === 'zh' 
+                    ? '配置AI服务提供商的API密钥，用于翻译、摘要和语义搜索等功能' 
+                    : 'Configure AI service provider API keys for translation, summary, and semantic search features'
+                  }
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <AIConfigurationPanel 
+                  aiConfig={aiConfig}
+                  setAIConfig={setAIConfig}
+                  locale={locale}
+                />
               </CardContent>
             </Card>
           </TabsContent>
+
 
 
           <TabsContent value="appearance" className="space-y-6">
@@ -2322,6 +2364,22 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                 </div>
               </CardContent>
             </Card>
+            
+            {/* Social Media Settings Card */}
+            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
+              <CardHeader className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/50 dark:to-emerald-900/50 border-b border-green-200 dark:border-green-700 pt-6 pb-4 px-4 rounded-t-lg flex flex-col justify-center min-h-[80px]">
+                <CardTitle className="flex items-center gap-2 text-green-900 dark:text-green-100">
+                  <Share2 className="h-5 w-5" />
+                  {t('settings.socialMedia')}
+                </CardTitle>
+                <CardDescription className="text-green-700 dark:text-green-300">
+                  {locale === 'zh' ? '管理社交媒体链接和设置' : 'Manage social media links and settings'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <SocialMediaManager />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="system" className="space-y-6">
@@ -2345,6 +2403,401 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         onOpenChange={setShowAboutDialog}
         locale={locale}
       />
+    </div>
+  )
+}
+
+// AI Configuration Panel Component
+interface AIConfigurationPanelProps {
+  aiConfig: AIConfig
+  setAIConfig: (config: AIConfig) => void
+  locale: string
+}
+
+function AIConfigurationPanel({ aiConfig, setAIConfig, locale }: AIConfigurationPanelProps) {
+  const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({})
+  
+  // Track original masked values to detect when user wants to change them
+  const [originalMaskedKeys, setOriginalMaskedKeys] = useState<Record<string, string>>({})
+  
+  // Track key validation states
+  const [keyValidationStates, setKeyValidationStates] = useState<Record<string, 'valid' | 'invalid' | 'validating' | null>>({})
+  
+  // Track keys that have been modified
+  const [modifiedKeys, setModifiedKeys] = useState<Record<string, boolean>>({})
+  
+  // Initialize original masked keys when component loads
+  useEffect(() => {
+    const maskedKeys: Record<string, string> = {}
+    Object.entries(aiConfig.providers).forEach(([name, config]) => {
+      if (isKeyMasked(config.api_key)) {
+        maskedKeys[name] = config.api_key
+      }
+    })
+    setOriginalMaskedKeys(maskedKeys)
+  }, [aiConfig.providers])
+  
+  const toggleApiKeyVisibility = (provider: string) => {
+    setShowApiKeys(prev => ({
+      ...prev,
+      [provider]: !prev[provider]
+    }))
+  }
+  
+  // Check if a key is masked (contains asterisks or other mask patterns)
+  const isKeyMasked = (key: string): boolean => {
+    if (!key) return false
+    return key.includes('*') || key.includes('---') || key === 'configured' || key === '已配置'
+  }
+  
+  // Check if a key has been changed from its original masked value
+  const isKeyChanged = (providerName: string, currentKey: string): boolean => {
+    const originalMasked = originalMaskedKeys[providerName]
+    if (!originalMasked) return currentKey !== ''
+    return currentKey !== originalMasked
+  }
+  
+  // Basic API key validation
+  const validateApiKey = (provider: string, key: string): 'valid' | 'invalid' | null => {
+    if (!key || isKeyMasked(key)) return null
+    
+    switch (provider) {
+      case 'openai':
+        return key.startsWith('sk-') && key.length > 20 ? 'valid' : 'invalid'
+      case 'gemini':
+        return key.startsWith('AIza') && key.length > 20 ? 'valid' : 'invalid'
+      case 'volcano':
+        return key.length > 20 ? 'valid' : 'invalid' // Volcano keys don't have standard prefix
+      default:
+        return key.length > 10 ? 'valid' : 'invalid'
+    }
+  }
+
+  const updateProvider = (providerName: string, updates: Partial<AIProviderConfig>) => {
+    const existingProvider = aiConfig.providers[providerName] || {
+      provider: providerName,
+      api_key: '',
+      model: getDefaultModel(providerName),
+      enabled: false
+    }
+    
+    const updatedProvider = {
+      ...existingProvider,
+      ...updates
+    }
+    
+    // Update validation state and modification tracking if API key changed
+    if (updates.api_key !== undefined) {
+      const validationState = validateApiKey(providerName, updates.api_key || '')
+      setKeyValidationStates(prev => ({
+        ...prev,
+        [providerName]: validationState
+      }))
+      
+      setModifiedKeys(prev => ({
+        ...prev,
+        [providerName]: isKeyChanged(providerName, updates.api_key || '')
+      }))
+    }
+    
+    const updatedConfig = {
+      ...aiConfig,
+      providers: {
+        ...aiConfig.providers,
+        [providerName]: updatedProvider
+      }
+    }
+    setAIConfig(updatedConfig)
+  }
+
+  const getDefaultModel = (provider: string): string => {
+    switch (provider) {
+      case 'openai': return 'gpt-3.5-turbo'
+      case 'gemini': return 'gemini-1.5-flash'
+      case 'volcano': return 'doubao-seed-1-6-250615'
+      default: return ''
+    }
+  }
+
+  const providers = [
+    {
+      id: 'openai',
+      name: 'OpenAI',
+      description: locale === 'zh' ? '支持GPT模型进行翻译、摘要和对话' : 'Support GPT models for translation, summary and conversation',
+      models: [
+        { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
+        { value: 'gpt-4', label: 'GPT-4' },
+        { value: 'gpt-4o', label: 'GPT-4o' },
+        { value: 'gpt-4o-mini', label: 'GPT-4o Mini' }
+      ]
+    },
+    {
+      id: 'gemini',
+      name: 'Google Gemini',
+      description: locale === 'zh' ? '谷歌的多模态AI模型，支持文本生成和向量化。注意：向量嵌入会自动使用text-embedding-004模型。' : 'Google\'s multimodal AI model for text generation and embeddings. Note: Embeddings automatically use text-embedding-004 model.',
+      models: [
+        { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
+        { value: 'gemini-1.5-flash-8b', label: 'Gemini 1.5 Flash-8B' },
+        { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' }
+      ]
+    },
+    {
+      id: 'volcano',
+      name: 'Volcano Engine (豆包)',
+      description: locale === 'zh' ? '字节跳动的豆包AI模型' : 'ByteDance\'s Doubao AI model',
+      models: [
+        { value: 'doubao-seed-1-6-250615', label: 'Doubao-1.6 (Pro-32k)' },
+        { value: 'doubao-seed-1-6-flash-250615', label: 'Doubao-1.6-Flash (Lite)' },
+        { value: 'doubao-1-5-lite-32k-250115', label: 'Doubao-1.5-lite-32k' }
+      ]
+    }
+  ]
+
+  return (
+    <div className="space-y-8">
+      {/* Global Settings */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium">
+            {locale === 'zh' ? '全局设置' : 'Global Settings'}
+          </h3>
+          <div className="text-sm text-muted-foreground">
+            {locale === 'zh' ? '配置状态：' : 'Configuration Status: '}
+            {Object.keys(aiConfig.providers).length > 0 ? (
+              <span className="text-green-600">
+                {locale === 'zh' 
+                  ? `已配置 ${Object.values(aiConfig.providers).filter(p => p.enabled).length} 个提供商` 
+                  : `${Object.values(aiConfig.providers).filter(p => p.enabled).length} providers configured`
+                }
+              </span>
+            ) : (
+              <span className="text-orange-600">
+                {locale === 'zh' ? '未配置任何提供商' : 'No providers configured'}
+              </span>
+            )}
+          </div>
+        </div>
+        
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label>{locale === 'zh' ? '默认AI提供商' : 'Default AI Provider'}</Label>
+            <Select
+              value={aiConfig.default_provider}
+              onValueChange={(value) => setAIConfig({ ...aiConfig, default_provider: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="openai">OpenAI</SelectItem>
+                <SelectItem value="gemini">Google Gemini</SelectItem>
+                <SelectItem value="volcano">Volcano Engine (豆包)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>{locale === 'zh' ? 'RAG向量化设置' : 'RAG Embedding Settings'}</Label>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="embedding-enabled"
+                  checked={aiConfig.embedding_config.enabled}
+                  onChange={(e) => setAIConfig({
+                    ...aiConfig,
+                    embedding_config: {
+                      ...aiConfig.embedding_config,
+                      enabled: e.target.checked
+                    }
+                  })}
+                  className="h-4 w-4"
+                />
+                <label htmlFor="embedding-enabled" className="text-sm font-medium">
+                  {locale === 'zh' ? '启用RAG语义搜索' : 'Enable RAG Semantic Search'}
+                </label>
+              </div>
+              
+              <Select
+                value={aiConfig.embedding_config.default_provider}
+                onValueChange={(value) => setAIConfig({
+                  ...aiConfig,
+                  embedding_config: {
+                    ...aiConfig.embedding_config,
+                    default_provider: value
+                  }
+                })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={locale === 'zh' ? '选择向量化提供商' : 'Select embedding provider'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="openai">OpenAI (text-embedding-ada-002)</SelectItem>
+                  <SelectItem value="gemini">Gemini (text-embedding-004)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Provider Configurations */}
+      <div className="space-y-6">
+        <h3 className="text-lg font-medium">
+          {locale === 'zh' ? 'AI提供商配置' : 'AI Provider Configurations'}
+        </h3>
+        
+        {providers.map((provider) => {
+          const config = aiConfig.providers[provider.id] || {
+            provider: provider.id,
+            api_key: '',
+            model: getDefaultModel(provider.id),
+            enabled: false
+          }
+          
+          return (
+            <Card key={provider.id} className={`border transition-all ${config.enabled ? 'border-green-300 bg-green-50/30 dark:border-green-700 dark:bg-green-950/20' : ''}`}>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`${provider.id}-enabled`}
+                        checked={config.enabled}
+                        onChange={(e) => updateProvider(provider.id, { enabled: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      <CardTitle className="text-base">{provider.name}</CardTitle>
+                    </div>
+                    {config.enabled && (config.is_configured || (!isKeyMasked(config.api_key) && config.api_key)) && (
+                      <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        {locale === 'zh' ? '已配置' : 'Configured'}
+                      </Badge>
+                    )}
+                    {config.enabled && isKeyMasked(config.api_key) && isKeyChanged(provider.id, config.api_key) && (
+                      <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-300 dark:bg-yellow-950/20 dark:text-yellow-200 dark:border-yellow-700">
+                        {locale === 'zh' ? '待保存' : 'Pending Save'}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <CardDescription>{provider.description}</CardDescription>
+              </CardHeader>
+              
+              {config.enabled && (
+                <CardContent className="pt-0 space-y-4">
+                  <div className="grid gap-2">
+                    <Label className="flex items-center gap-2">
+                      {locale === 'zh' ? 'API密钥' : 'API Key'}
+                      {isKeyMasked(config.api_key) && (
+                        <Badge variant="secondary" className="text-xs">
+                          <Shield className="h-3 w-3 mr-1" />
+                          {locale === 'zh' ? '已加密' : 'Encrypted'}
+                        </Badge>
+                      )}
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type={showApiKeys[provider.id] ? 'text' : 'password'}
+                        value={config.api_key}
+                        onChange={(e) => updateProvider(provider.id, { api_key: e.target.value })}
+                        placeholder={
+                          isKeyMasked(config.api_key) 
+                            ? (locale === 'zh' ? '输入新密钥以替换现有密钥' : 'Enter new key to replace existing key')
+                            : `Enter your ${provider.name} API key`
+                        }
+                        className={`pr-20 ${
+                          keyValidationStates[provider.id] === 'invalid' 
+                            ? 'border-red-500 focus:border-red-500' 
+                            : keyValidationStates[provider.id] === 'valid' 
+                              ? 'border-green-500 focus:border-green-500' 
+                              : ''
+                        }`}
+                      />
+                      <div className="absolute right-0 top-0 h-full flex items-center px-3">
+                        {keyValidationStates[provider.id] === 'valid' && (
+                          <Check className="h-4 w-4 text-green-500 mr-1" />
+                        )}
+                        {keyValidationStates[provider.id] === 'invalid' && (
+                          <AlertTriangle className="h-4 w-4 text-red-500 mr-1" />
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="p-1 hover:bg-transparent"
+                          onClick={() => toggleApiKeyVisibility(provider.id)}
+                        >
+                          {showApiKeys[provider.id] ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    {isKeyMasked(config.api_key) && !modifiedKeys[provider.id] && (
+                      <p className="text-sm text-muted-foreground">
+                        {locale === 'zh' 
+                          ? '密钥已加密存储。要更新密钥，请输入新的API密钥。' 
+                          : 'Key is stored encrypted. To update the key, enter a new API key.'
+                        }
+                      </p>
+                    )}
+                    {keyValidationStates[provider.id] === 'invalid' && (
+                      <p className="text-sm text-red-600">
+                        {locale === 'zh' 
+                          ? `无效的${provider.name} API密钥格式` 
+                          : `Invalid ${provider.name} API key format`
+                        }
+                      </p>
+                    )}
+                    {keyValidationStates[provider.id] === 'valid' && modifiedKeys[provider.id] && (
+                      <p className="text-sm text-green-600">
+                        {locale === 'zh' 
+                          ? 'API密钥格式正确，记得保存设置' 
+                          : 'API key format is valid, remember to save settings'
+                        }
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>{locale === 'zh' ? '模型' : 'Model'}</Label>
+                    <Select
+                      value={config.model}
+                      onValueChange={(value) => updateProvider(provider.id, { model: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {provider.models.map((model) => (
+                          <SelectItem key={model.value} value={model.value}>
+                            {model.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          )
+        })}
+      </div>
+
+      {/* Configuration Status */}
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          {locale === 'zh' 
+            ? 'AI配置会随其他设置一起保存。点击页面顶部的"保存设置"按钮来保存所有更改。配置将应用于全站的翻译、摘要生成和RAG语义搜索功能。' 
+            : 'AI configuration will be saved together with other settings. Click the "Save Settings" button at the top of the page to save all changes. Configuration will be applied to site-wide translation, summary generation, and RAG semantic search features.'
+          }
+        </AlertDescription>
+      </Alert>
     </div>
   )
 }
