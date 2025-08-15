@@ -21,7 +21,8 @@ import {
   Zap as ScatterIcon,
   Network,
   Search,
-  TrendingUp
+  TrendingUp,
+  BookOpen
 } from 'lucide-react'
 import { apiClient, EmbeddingStats } from '@/lib/api'
 import { useClientLocale } from '@/hooks/useClientLocale'
@@ -29,6 +30,7 @@ import { EmbeddingVisualizer } from './embedding-visualizer'
 import { SimilarityNetwork } from './similarity-network'
 import { RAGProcessViewer } from './rag-process-viewer'
 import { EmbeddingQualityDashboard } from './embedding-quality-dashboard'
+import { RAGIntroduction } from './rag-introduction'
 
 interface EmbeddingManagerProps {
   className?: string
@@ -163,8 +165,12 @@ export function EmbeddingManager({ className = '' }: EmbeddingManagerProps) {
       )}
 
       {/* Tabs for different views */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+      <Tabs defaultValue="introduction" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="introduction" className="gap-2">
+            <BookOpen className="h-4 w-4" />
+            {currentLocale === 'zh' ? 'RAG介绍' : 'RAG Introduction'}
+          </TabsTrigger>
           <TabsTrigger value="overview" className="gap-2">
             <Database className="h-4 w-4" />
             {currentLocale === 'zh' ? '概览' : 'Overview'}
@@ -380,6 +386,10 @@ export function EmbeddingManager({ className = '' }: EmbeddingManagerProps) {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="introduction">
+          <RAGIntroduction />
         </TabsContent>
 
         <TabsContent value="visualizer">

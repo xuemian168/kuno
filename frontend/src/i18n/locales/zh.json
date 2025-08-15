@@ -501,6 +501,7 @@
   "analytics": {
     "title": "数据分析",
     "description": "查看您博客的性能洞察",
+    "subtitle": "网站分析和SEO优化综合管理平台",
     "totalViews": "总浏览量",
     "allTimeViews": "全部浏览量",
     "thisMonth": "本月",
@@ -519,6 +520,14 @@
     "mostViewedArticle": "最热门文章",
     "topPerformingContent": "您表现最佳的内容",
     "noArticlesFound": "未找到文章",
+    "websiteStats": "网站访问统计",
+    "contentAnalysis": "内容表现分析",
+    "tabs": {
+      "websiteAnalytics": "网站分析",
+      "seoHealth": "SEO健康",
+      "keywordManagement": "关键词管理",
+      "autoChecks": "自动检查"
+    },
     "geographicDistribution": "地理分布",
     "visitorsByLocation": "按地理位置统计的访客分布",
     "topCountries": "热门国家或地区",
@@ -655,7 +664,149 @@
     "seoScore": "SEO 评分",
     "excellent": "优秀",
     "good": "良好",
-    "needsImprovement": "需要改进"
+    "needsImprovement": "需要改进",
+    "dashboard": {
+      "title": "SEO Dashboard",
+      "subtitle": "监控和优化您的网站SEO表现",
+      "refreshData": "刷新数据",
+      "runHealthCheck": "运行健康检查",
+      "exportReport": "导出报告",
+      "loading": "加载中...",
+      "tabs": {
+        "overview": "总览",
+        "articles": "文章分析",
+        "keywords": "关键词表现",
+        "insights": "AI洞察"
+      },
+      "metrics": {
+        "totalArticles": "总文章数",
+        "optimized": "已优化",
+        "averageScore": "平均SEO得分",
+        "organicTraffic": "有机流量",
+        "trackedKeywords": "跟踪关键词",
+        "activeKeywords": "活跃关键词监控"
+      },
+      "distribution": {
+        "title": "SEO状态分布",
+        "optimized": "已优化",
+        "needsAttention": "需要关注",
+        "poor": "表现较差"
+      },
+      "quickActions": {
+        "title": "快速操作",
+        "optimizeLowScore": "批量优化低分文章",
+        "analyzeCompetitors": "分析竞争对手关键词",
+        "generateReport": "生成SEO报告",
+        "checkSitemap": "检查站点地图"
+      },
+      "searchArticlesOrKeywords": "搜索文章标题或关键词...",
+      "allStatus": "全部",
+      "views": "浏览",
+      "clicks": "点击",
+      "averagePosition": "排名",
+      "optimize": "优化"
+    },
+    "overview": {
+      "loadError": "无法加载SEO分析数据，请稍后重试",
+      "trafficContribution": "SEO为您的网站贡献了 <strong>{percentage}%</strong> 的流量（{organic} / {total} 访问量）",
+      "overallScore": "SEO整体得分",
+      "rankingKeywords": "排名关键词",
+      "totalTracked": "总跟踪: {count} 个关键词",
+      "organicTraffic": "有机流量",
+      "monthlyVisits": "本月访问量",
+      "pendingIssues": "待解决问题",
+      "lastCheck": "最后检查",
+      "optimizeNow": "立即优化",
+      "topPerformingPages": "SEO表现最佳页面",
+      "keywordsCount": "{count} 关键词",
+      "recentImprovements": "最近SEO改进",
+      "systemIntegrated": "SEO系统已集成完成",
+      "systemImpact": "提供了完整的SEO分析和优化功能"
+    },
+    "keywords": {
+      "title": "关键词管理",
+      "subtitle": "跟踪和优化您的关键词表现",
+      "addKeyword": "添加关键词",
+      "overview": "总览",
+      "keywordList": "关键词列表",
+      "keywordGroups": "关键词组",
+      "opportunities": "机会发现",
+      "trackedKeywords": "跟踪关键词",
+      "activeTracking": "活跃监控中",
+      "rankingKeywords": "排名关键词",
+      "top10Rankings": "前10名排名",
+      "totalClicks": "总点击量",
+      "averageCtr": "平均CTR",
+      "clickThroughRate": "搜索点击率",
+      "keywordStatusDistribution": "关键词状态分布",
+      "ranking": "排名中",
+      "tracking": "跟踪中",
+      "opportunity": "机会",
+      "bulkAddKeywords": "批量添加关键词",
+      "exportKeywordReport": "导出关键词报告",
+      "analyzeCompetitors": "分析竞争对手",
+      "createKeywordGroup": "创建关键词组",
+      "searchKeywords": "搜索关键词...",
+      "allDifficulties": "全部难度",
+      "easy": "简单",
+      "medium": "中等",
+      "hard": "困难",
+      "allStatuses": "全部状态",
+      "declined": "下降",
+      "keyword": "关键词",
+      "status": "状态",
+      "currentRank": "当前排名",
+      "searchVolume": "搜索量",
+      "difficulty": "难度",
+      "ctr": "CTR",
+      "trend": "趋势",
+      "actions": "操作",
+      "targetRank": "目标",
+      "addNewKeyword": "添加新关键词",
+      "addKeywordDescription": "添加要跟踪的关键词，系统将自动获取相关数据",
+      "targetPosition": "目标排名",
+      "firstPlace": "第1名",
+      "top3": "前3名",
+      "top5": "前5名",
+      "top10": "前10名",
+      "notes": "备注",
+      "notesPlaceholder": "关键词相关备注...",
+      "keywordPlaceholder": "输入关键词...",
+      "cancel": "取消",
+      "bulkAdd": "批量添加关键词",
+      "bulkAddDescription": "每行输入一个关键词，或使用AI生成建议",
+      "aiGenerateSuggestions": "AI生成建议",
+      "clear": "清空",
+      "keywordCount": "关键词数量",
+      "createdOn": "创建于",
+      "view": "查看",
+      "competitorOpportunities": "竞争对手关键词机会",
+      "competitorOpportunitiesDescription": "基于竞争对手分析和搜索趋势，发现的关键词机会",
+      "competitorRank": "竞争对手排名",
+      "ourRank": "我们的排名",
+      "notRanked": "未排名",
+      "opportunityScore": "机会分",
+      "addToTracking": "添加跟踪",
+      "createContent": "创建内容"
+    },
+    "health": {
+      "title": "SEO健康",
+      "overallScore": "整体得分",
+      "titleScore": "标题得分",
+      "descriptionScore": "描述得分",
+      "contentScore": "内容得分",
+      "keywordScore": "关键词得分",
+      "technicalScore": "技术得分",
+      "readabilityScore": "可读性得分",
+      "issuesFound": "发现问题",
+      "suggestions": "改进建议"
+    },
+    "automation": {
+      "title": "自动检查",
+      "healthMonitoring": "健康监控",
+      "automationRules": "自动化规则",
+      "notifications": "通知"
+    }
   },
   "system": {
     "systemInformation": "系统信息与更新",
@@ -789,6 +940,100 @@
     "statistics_period": "统计周期"
   },
   "embedding": {
+    "industryApplications": {
+      "title": "RAG 行业应用场景",
+      "subtitle": "检索增强生成技术在各行业的实际应用",
+      "websiteAI": {
+        "title": "网站智能化",
+        "description": "为网站整体加入AI功能，实现智能内容推荐、用户个性化体验和自动化内容管理。",
+        "features": [
+          "基于用户行为和偏好的个性化文章推荐",
+          "智能内容分类和标签自动生成",
+          "访客意图识别和内容匹配",
+          "动态内容优化和A/B测试"
+        ]
+      },
+      "smartSearch": {
+        "title": "AI模糊搜索",
+        "description": "超越关键词匹配的语义搜索，理解用户真实意图，提供更准确的搜索结果。",
+        "features": [
+          "自然语言查询理解和语义匹配",
+          "多语言搜索和跨语言内容发现",
+          "同义词和相关概念自动扩展",
+          "搜索结果智能排序和相关性评分"
+        ]
+      },
+      "aiQA": {
+        "title": "基于内容的AI问答",
+        "description": "利用网站现有内容构建智能问答系统，为用户提供准确、及时的答案。",
+        "features": [
+          "基于网站文章内容的实时问答",
+          "多轮对话和上下文理解",
+          "答案来源追踪和可信度评估",
+          "用户问题分析和内容缺口识别"
+        ]
+      },
+      "contentManagement": {
+        "title": "内容管理优化",
+        "description": "自动化内容处理、分析和优化，提高内容质量和管理效率。",
+        "features": [
+          "内容重复性检测和去重建议",
+          "SEO优化建议和关键词分析",
+          "内容质量评估和改进建议",
+          "自动化内容标签和分类管理"
+        ]
+      },
+      "userExperience": {
+        "title": "用户体验增强",
+        "description": "通过AI技术提升用户在网站上的整体体验和参与度。",
+        "features": [
+          "智能导航和内容发现",
+          "个性化阅读推荐和相关文章",
+          "用户兴趣分析和行为预测",
+          "自适应界面和内容呈现"
+        ]
+      }
+    },
+    "workingPrinciples": {
+      "title": "RAG 工作原理",
+      "subtitle": "检索增强生成（Retrieval-Augmented Generation）技术详解",
+      "overview": "RAG是一种结合了检索和生成的AI技术，通过从知识库中检索相关信息来增强大语言模型的生成能力，确保输出内容的准确性和时效性。",
+      "step1": {
+        "title": "1. 内容向量化",
+        "description": "将网站文章和文档转换为高维向量表示，捕获文本的语义信息。",
+        "details": "使用先进的嵌入模型将文本转换为数值向量，每个向量都包含了文档的语义特征，支持后续的相似度计算。"
+      },
+      "step2": {
+        "title": "2. 查询理解",
+        "description": "将用户的自然语言查询转换为向量，理解用户的真实意图。",
+        "details": "通过相同的嵌入模型处理用户查询，生成查询向量，为后续的相似度匹配做准备。"
+      },
+      "step3": {
+        "title": "3. 相似度检索",
+        "description": "在向量数据库中快速找到与查询最相似的内容片段。",
+        "details": "使用向量相似度算法（如余弦相似度）在大规模向量数据库中高效检索最相关的文档，通常在毫秒级别完成。"
+      },
+      "step4": {
+        "title": "4. 上下文增强",
+        "description": "将检索到的相关内容作为上下文，增强AI模型的生成能力。",
+        "details": "将检索到的文档作为额外的上下文信息提供给大语言模型，使其能够基于最新、最相关的信息生成回答。"
+      },
+      "step5": {
+        "title": "5. 智能生成",
+        "description": "基于检索到的内容和用户查询，生成准确、相关的回答。",
+        "details": "大语言模型结合查询意图和检索到的上下文，生成既准确又符合用户需求的回答，同时保持信息的可追溯性。"
+      },
+      "advantages": {
+        "title": "RAG 技术优势",
+        "items": [
+          "实时性：基于最新内容生成答案，无需重新训练模型",
+          "准确性：减少AI幻觉，提供基于事实的可靠回答",
+          "可解释性：答案来源可追踪，增强用户信任",
+          "成本效益：无需大规模模型训练，降低部署成本",
+          "领域适应：快速适应特定领域和新知识"
+        ]
+      }
+    },
     "visualization": {
       "title": "向量可视化",
       "vectorSpace": "向量空间",

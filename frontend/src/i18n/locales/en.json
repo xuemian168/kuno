@@ -500,6 +500,7 @@
   "analytics": {
     "title": "Analytics",
     "description": "View insights about your blog's performance",
+    "subtitle": "Comprehensive analytics and SEO optimization management platform",
     "totalViews": "Total Views",
     "allTimeViews": "All time views",
     "thisMonth": "This Month",
@@ -518,6 +519,14 @@
     "mostViewedArticle": "Most Viewed Article",
     "topPerformingContent": "Your top performing content",
     "noArticlesFound": "No articles found",
+    "websiteStats": "Website Statistics",
+    "contentAnalysis": "Content Performance Analysis",
+    "tabs": {
+      "websiteAnalytics": "Website Analytics",
+      "seoHealth": "SEO Health",
+      "keywordManagement": "Keyword Management",
+      "autoChecks": "Auto Checks"
+    },
     "geographicDistribution": "Geographic Distribution",
     "visitorsByLocation": "Visitor distribution by geographic location",
     "topCountries": "Top Locations",
@@ -654,7 +663,149 @@
     "seoScore": "SEO Score",
     "excellent": "Excellent",
     "good": "Good",
-    "needsImprovement": "Needs Improvement"
+    "needsImprovement": "Needs Improvement",
+    "dashboard": {
+      "title": "SEO Dashboard",
+      "subtitle": "Monitor and optimize your website's SEO performance",
+      "refreshData": "Refresh Data",
+      "runHealthCheck": "Run Health Check",
+      "exportReport": "Export Report",
+      "loading": "Loading...",
+      "tabs": {
+        "overview": "Overview",
+        "articles": "Articles Analysis",
+        "keywords": "Keyword Performance",
+        "insights": "AI Insights"
+      },
+      "metrics": {
+        "totalArticles": "Total Articles",
+        "optimized": "Optimized",
+        "averageScore": "Average SEO Score",
+        "organicTraffic": "Organic Traffic",
+        "trackedKeywords": "Tracked Keywords",
+        "activeKeywords": "Active keyword monitoring"
+      },
+      "distribution": {
+        "title": "SEO Status Distribution",
+        "optimized": "Optimized",
+        "needsAttention": "Needs Attention",
+        "poor": "Poor Performance"
+      },
+      "quickActions": {
+        "title": "Quick Actions",
+        "optimizeLowScore": "Bulk Optimize Low-Score Articles",
+        "analyzeCompetitors": "Analyze Competitor Keywords",
+        "generateReport": "Generate SEO Report",
+        "checkSitemap": "Check Sitemap"
+      },
+      "searchArticlesOrKeywords": "Search article titles or keywords...",
+      "allStatus": "All",
+      "views": "views",
+      "clicks": "clicks",
+      "averagePosition": "Rank",
+      "optimize": "Optimize"
+    },
+    "overview": {
+      "loadError": "Failed to load SEO analytics data, please try again later",
+      "trafficContribution": "SEO contributes <strong>{percentage}%</strong> of your website traffic ({organic} / {total} visits)",
+      "overallScore": "Overall SEO Score",
+      "rankingKeywords": "Ranking Keywords",
+      "totalTracked": "Total tracked: {count} keywords",
+      "organicTraffic": "Organic Traffic",
+      "monthlyVisits": "Monthly visits",
+      "pendingIssues": "Pending Issues",
+      "lastCheck": "Last check",
+      "optimizeNow": "Optimize Now",
+      "topPerformingPages": "Top Performing SEO Pages",
+      "keywordsCount": "{count} keywords",
+      "recentImprovements": "Recent SEO Improvements",
+      "systemIntegrated": "SEO system integration completed",
+      "systemImpact": "Provides comprehensive SEO analysis and optimization features"
+    },
+    "keywords": {
+      "title": "Keyword Management",
+      "subtitle": "Track and optimize your keyword performance",
+      "addKeyword": "Add Keyword",
+      "overview": "Overview",
+      "keywordList": "Keyword List",
+      "keywordGroups": "Keyword Groups",
+      "opportunities": "Opportunities",
+      "trackedKeywords": "Tracked Keywords",
+      "activeTracking": "Active monitoring",
+      "rankingKeywords": "Ranking Keywords",
+      "top10Rankings": "Top 10 rankings",
+      "totalClicks": "Total Clicks",
+      "averageCtr": "Average CTR",
+      "clickThroughRate": "Click-through rate",
+      "keywordStatusDistribution": "Keyword Status Distribution",
+      "ranking": "Ranking",
+      "tracking": "Tracking",
+      "opportunity": "Opportunity",
+      "bulkAddKeywords": "Bulk Add Keywords",
+      "exportKeywordReport": "Export Keyword Report",
+      "analyzeCompetitors": "Analyze Competitors",
+      "createKeywordGroup": "Create Keyword Group",
+      "searchKeywords": "Search keywords...",
+      "allDifficulties": "All Difficulties",
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
+      "allStatuses": "All Statuses",
+      "declined": "Declined",
+      "keyword": "Keyword",
+      "status": "Status",
+      "currentRank": "Current Rank",
+      "searchVolume": "Search Volume",
+      "difficulty": "Difficulty",
+      "ctr": "CTR",
+      "trend": "Trend",
+      "actions": "Actions",
+      "targetRank": "Target",
+      "addNewKeyword": "Add New Keyword",
+      "addKeywordDescription": "Add keywords to track, system will automatically fetch related data",
+      "targetPosition": "Target Position",
+      "firstPlace": "1st Place",
+      "top3": "Top 3",
+      "top5": "Top 5",
+      "top10": "Top 10",
+      "notes": "Notes",
+      "notesPlaceholder": "Keyword related notes...",
+      "keywordPlaceholder": "Enter keyword...",
+      "cancel": "Cancel",
+      "bulkAdd": "Bulk Add Keywords",
+      "bulkAddDescription": "Enter one keyword per line, or use AI to generate suggestions",
+      "aiGenerateSuggestions": "AI Generate Suggestions",
+      "clear": "Clear",
+      "keywordCount": "Keyword Count",
+      "createdOn": "Created on",
+      "view": "View",
+      "competitorOpportunities": "Competitor Keyword Opportunities",
+      "competitorOpportunitiesDescription": "Keyword opportunities discovered based on competitor analysis and search trends",
+      "competitorRank": "Competitor Rank",
+      "ourRank": "Our Rank",
+      "notRanked": "Not Ranked",
+      "opportunityScore": "Opportunity Score",
+      "addToTracking": "Add to Tracking",
+      "createContent": "Create Content"
+    },
+    "health": {
+      "title": "SEO Health",
+      "overallScore": "Overall Score",
+      "titleScore": "Title Score",
+      "descriptionScore": "Description Score",
+      "contentScore": "Content Score",
+      "keywordScore": "Keyword Score",
+      "technicalScore": "Technical Score",
+      "readabilityScore": "Readability Score",
+      "issuesFound": "Issues Found",
+      "suggestions": "Suggestions"
+    },
+    "automation": {
+      "title": "Auto Check",
+      "healthMonitoring": "Health Monitoring",
+      "automationRules": "Automation Rules",
+      "notifications": "Notifications"
+    }
   },
   "system": {
     "systemInformation": "System Information & Updates",
@@ -788,6 +939,100 @@
     "statistics_period": "Statistics Period"
   },
   "embedding": {
+    "industryApplications": {
+      "title": "RAG Industry Applications",
+      "subtitle": "Real-world applications of Retrieval-Augmented Generation technology across industries",
+      "websiteAI": {
+        "title": "Website Intelligence",
+        "description": "Transform entire websites with AI capabilities, enabling intelligent content recommendations, personalized user experiences, and automated content management.",
+        "features": [
+          "Personalized article recommendations based on user behavior and preferences",
+          "Automated content categorization and intelligent tag generation",
+          "Visitor intent recognition and content matching",
+          "Dynamic content optimization and A/B testing"
+        ]
+      },
+      "smartSearch": {
+        "title": "AI-Powered Semantic Search",
+        "description": "Go beyond keyword matching with semantic search that understands user intent and provides more accurate results.",
+        "features": [
+          "Natural language query understanding and semantic matching",
+          "Multi-language search and cross-language content discovery",
+          "Automatic synonym and related concept expansion",
+          "Intelligent result ranking with relevance scoring"
+        ]
+      },
+      "aiQA": {
+        "title": "Content-Based AI Q&A",
+        "description": "Build intelligent question-answering systems using existing website content to provide accurate, timely responses.",
+        "features": [
+          "Real-time Q&A based on website article content",
+          "Multi-turn conversations with context understanding",
+          "Answer source tracking and credibility assessment",
+          "User question analysis and content gap identification"
+        ]
+      },
+      "contentManagement": {
+        "title": "Content Management Optimization",
+        "description": "Automate content processing, analysis, and optimization to improve content quality and management efficiency.",
+        "features": [
+          "Content duplication detection and deduplication suggestions",
+          "SEO optimization recommendations and keyword analysis",
+          "Content quality assessment and improvement suggestions",
+          "Automated content tagging and category management"
+        ]
+      },
+      "userExperience": {
+        "title": "User Experience Enhancement",
+        "description": "Leverage AI technology to improve overall user experience and engagement on websites.",
+        "features": [
+          "Smart navigation and content discovery",
+          "Personalized reading recommendations and related articles",
+          "User interest analysis and behavior prediction",
+          "Adaptive interface and content presentation"
+        ]
+      }
+    },
+    "workingPrinciples": {
+      "title": "RAG Working Principles",
+      "subtitle": "Detailed explanation of Retrieval-Augmented Generation technology",
+      "overview": "RAG is an AI technique that combines retrieval and generation, enhancing large language model capabilities by retrieving relevant information from knowledge bases to ensure accurate and timely output.",
+      "step1": {
+        "title": "1. Content Vectorization",
+        "description": "Convert website articles and documents into high-dimensional vector representations that capture semantic information.",
+        "details": "Advanced embedding models transform text into numerical vectors, where each vector contains the semantic features of the document, enabling subsequent similarity calculations."
+      },
+      "step2": {
+        "title": "2. Query Understanding",
+        "description": "Transform user natural language queries into vectors to understand their true intent.",
+        "details": "Process user queries through the same embedding model to generate query vectors, preparing for subsequent similarity matching."
+      },
+      "step3": {
+        "title": "3. Similarity Retrieval",
+        "description": "Quickly find the most similar content segments to the query in the vector database.",
+        "details": "Use vector similarity algorithms (like cosine similarity) to efficiently retrieve the most relevant documents from large-scale vector databases, typically completing in milliseconds."
+      },
+      "step4": {
+        "title": "4. Context Enhancement",
+        "description": "Use retrieved relevant content as context to enhance AI model generation capabilities.",
+        "details": "Provide retrieved documents as additional contextual information to large language models, enabling them to generate responses based on the latest and most relevant information."
+      },
+      "step5": {
+        "title": "5. Intelligent Generation",
+        "description": "Generate accurate, relevant responses based on retrieved content and user queries.",
+        "details": "Large language models combine query intent with retrieved context to generate responses that are both accurate and meet user needs while maintaining information traceability."
+      },
+      "advantages": {
+        "title": "RAG Technology Advantages",
+        "items": [
+          "Real-time: Generate answers based on latest content without retraining models",
+          "Accuracy: Reduce AI hallucination, provide fact-based reliable answers",
+          "Explainability: Traceable answer sources, enhancing user trust",
+          "Cost-effective: No need for large-scale model training, reducing deployment costs",
+          "Domain adaptation: Quickly adapt to specific domains and new knowledge"
+        ]
+      }
+    },
     "visualization": {
       "title": "Vector Visualization",
       "vectorSpace": "Vector Space",
