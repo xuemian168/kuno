@@ -135,6 +135,8 @@ func SetupRoutes() *gin.Engine {
 					adminSettings.PUT("", UpdateSettings)
 					adminSettings.POST("/upload-logo", UploadLogo)
 					adminSettings.POST("/upload-favicon", UploadFavicon)
+					adminSettings.POST("/upload-background", UploadBackgroundImage)
+					adminSettings.DELETE("/background", RemoveBackgroundImage)
 				}
 
 				// Media management

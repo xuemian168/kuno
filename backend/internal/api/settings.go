@@ -89,6 +89,14 @@ func UpdateSettings(c *gin.Context) {
 		DefaultLanguage    string                           `json:"default_language"`
 		LogoURL            string                           `json:"logo_url"`
 		FaviconURL         string                           `json:"favicon_url"`
+		CustomCSS          string                           `json:"custom_css"`
+		ThemeConfig        string                           `json:"theme_config"`
+		ActiveTheme        string                           `json:"active_theme"`
+		// Background Settings
+		BackgroundType     string   `json:"background_type"`
+		BackgroundColor    string   `json:"background_color"`
+		BackgroundImageURL string   `json:"background_image_url"`
+		BackgroundOpacity  *float64 `json:"background_opacity"`
 		Translations       []models.SiteSettingsTranslation `json:"translations"`
 	}
 
@@ -117,6 +125,19 @@ func UpdateSettings(c *gin.Context) {
 	}
 	settings.LogoURL = input.LogoURL
 	settings.FaviconURL = input.FaviconURL
+	settings.CustomCSS = input.CustomCSS
+	settings.ThemeConfig = input.ThemeConfig
+	settings.ActiveTheme = input.ActiveTheme
+	
+	// Update background settings
+	if input.BackgroundType != "" {
+		settings.BackgroundType = input.BackgroundType
+	}
+	settings.BackgroundColor = input.BackgroundColor
+	settings.BackgroundImageURL = input.BackgroundImageURL
+	if input.BackgroundOpacity != nil {
+		settings.BackgroundOpacity = *input.BackgroundOpacity
+	}
 
 	if err := database.DB.Save(&settings).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -149,6 +170,47 @@ func UploadFavicon(c *gin.Context) {
 	uploadBrandingFile(c, "favicon")
 }
 
+// UploadBackgroundImage handles background image file upload
+func UploadBackgroundImage(c *gin.Context) {
+	uploadBrandingFile(c, "background")
+}
+
+// RemoveBackgroundImage removes the current background image
+func RemoveBackgroundImage(c *gin.Context) {
+	var settings models.SiteSettings
+	if err := database.DB.First(&settings).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find settings"})
+		return
+	}
+
+	// Remove the file if exists
+	if settings.BackgroundImageURL != "" {
+		var fileName string
+		if strings.HasPrefix(settings.BackgroundImageURL, "/api/uploads/backgrounds/") {
+			fileName = strings.TrimPrefix(settings.BackgroundImageURL, "/api/uploads/backgrounds/")
+		} else {
+			fileName = strings.TrimPrefix(settings.BackgroundImageURL, "/uploads/backgrounds/")
+		}
+		
+		if fileName != "" {
+			uploadDir := filepath.Join(UploadDir, "backgrounds")
+			filePath := filepath.Join(uploadDir, fileName)
+			os.Remove(filePath)
+		}
+	}
+
+	// Clear the background image URL and set type to none
+	settings.BackgroundImageURL = ""
+	settings.BackgroundType = "none"
+
+	if err := database.DB.Save(&settings).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Background image removed successfully"})
+}
+
 func uploadBrandingFile(c *gin.Context, fileType string) {
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -160,8 +222,10 @@ func uploadBrandingFile(c *gin.Context, fileType string) {
 	allowedTypes := make(map[string][]string)
 	if fileType == "logo" {
 		allowedTypes["image"] = []string{".png", ".jpg", ".jpeg", ".svg", ".webp"}
-	} else { // favicon
+	} else if fileType == "favicon" {
 		allowedTypes["icon"] = []string{".ico", ".png", ".svg"}
+	} else if fileType == "background" {
+		allowedTypes["image"] = []string{".png", ".jpg", ".jpeg", ".webp"}
 	}
 
 	ext := strings.ToLower(filepath.Ext(file.Filename))
@@ -183,7 +247,7 @@ func uploadBrandingFile(c *gin.Context, fileType string) {
 		return
 	}
 
-	// Validate file size (5MB max for logo, 1MB for favicon)
+	// Validate file size (5MB max for logo and background, 1MB for favicon)
 	maxSize := int64(5 << 20) // 5MB
 	if fileType == "favicon" {
 		maxSize = int64(1 << 20) // 1MB
@@ -194,7 +258,13 @@ func uploadBrandingFile(c *gin.Context, fileType string) {
 	}
 
 	// Create uploads directory if it doesn't exist
-	uploadDir := filepath.Join(UploadDir, "branding")
+	var uploadSubDir string
+	if fileType == "background" {
+		uploadSubDir = "backgrounds"
+	} else {
+		uploadSubDir = "branding"
+	}
+	uploadDir := filepath.Join(UploadDir, uploadSubDir)
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
 		return
@@ -212,7 +282,7 @@ func uploadBrandingFile(c *gin.Context, fileType string) {
 	}
 
 	// Generate URL - use relative path for now, can be made configurable later
-	fileURL := fmt.Sprintf("/uploads/branding/%s", filename)
+	fileURL := fmt.Sprintf("/uploads/%s/%s", uploadSubDir, filename)
 
 	// Update settings
 	var settings models.SiteSettings
@@ -243,6 +313,16 @@ func uploadBrandingFile(c *gin.Context, fileType string) {
 			}
 		}
 		settings.FaviconURL = fileURL
+	} else if fileType == "background" {
+		if settings.BackgroundImageURL != "" {
+			// Handle both old and new URL patterns
+			if strings.HasPrefix(settings.BackgroundImageURL, "/api/uploads/backgrounds/") {
+				oldFile = strings.TrimPrefix(settings.BackgroundImageURL, "/api/uploads/backgrounds/")
+			} else {
+				oldFile = strings.TrimPrefix(settings.BackgroundImageURL, "/uploads/backgrounds/")
+			}
+		}
+		settings.BackgroundImageURL = fileURL
 	}
 
 	if err := database.DB.Save(&settings).Error; err != nil {
