@@ -35,6 +35,17 @@ const WeChatIcon = ({ className }: { className?: string }) => (
   />
 )
 
+// Weibo Icon Component
+const WeiboIcon = ({ className }: { className?: string }) => (
+  <Image
+    src="/browsers/weibo.svg"
+    alt="Weibo"
+    width={16}
+    height={16}
+    className={className}
+  />
+)
+
 export default function ShareBar({ url, title, description, className = '' }: ShareBarProps) {
   const t = useTranslations()
   const { analysisResult, isDynamicThemeActive } = useDynamicTheme()
@@ -62,7 +73,7 @@ export default function ShareBar({ url, title, description, className = '' }: Sh
     },
     {
       name: t('share.weibo'),
-      icon: Share2,
+      icon: WeiboIcon,
       url: `https://service.weibo.com/share/share.php?url=${encodedUrl}&title=${encodedTitle}`,
       color: 'text-orange-500 hover:text-orange-600 dark:text-orange-400 dark:hover:text-orange-300',
       bgColor: 'hover:bg-orange-50 dark:hover:bg-orange-950'

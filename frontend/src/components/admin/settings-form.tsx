@@ -97,6 +97,9 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     }
   })
   
+  // Track original masked keys to detect changes
+  const [originalMaskedKeys, setOriginalMaskedKeys] = useState<Record<string, string>>({})
+  
   // Password change state
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -290,6 +293,18 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     }
   }, [])
 
+  // Track original masked keys when AI config changes
+  useEffect(() => {
+    const maskedKeys: Record<string, string> = {}
+    Object.entries(aiConfig.providers).forEach(([name, config]) => {
+      // Check if key is masked (contains * or other mask patterns)
+      if (config.api_key && (config.api_key.includes('*') || config.api_key.includes('---') || config.api_key === 'configured' || config.api_key === '已配置')) {
+        maskedKeys[name] = config.api_key
+      }
+    })
+    setOriginalMaskedKeys(maskedKeys)
+  }, [aiConfig.providers])
+
   // Update available languages when enabled languages change
   useEffect(() => {
     const languages = enabledLanguages.map(code => ({
@@ -357,6 +372,49 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     return Math.round((completed / 2) * 100)
   }
 
+  // Filter AI config to only include changed keys (remove unchanged masked keys)
+  const getFilteredAIConfig = (config: AIConfig): AIConfig => {
+    const filteredProviders: Record<string, AIProviderConfig> = {}
+    
+    console.log('[AI Key Filter] Starting filter process...')
+    console.log('[AI Key Filter] Original masked keys:', originalMaskedKeys)
+    console.log('[AI Key Filter] Current config providers:', Object.keys(config.providers))
+    
+    Object.entries(config.providers).forEach(([name, providerConfig]) => {
+      const originalMasked = originalMaskedKeys[name]
+      const currentKey = providerConfig.api_key
+      
+      console.log(`[AI Key Filter] Processing provider "${name}":`)
+      console.log(`  - Original masked: "${originalMasked}"`)
+      console.log(`  - Current key: "${currentKey}"`)
+      console.log(`  - Keys match: ${originalMasked && currentKey === originalMasked}`)
+      
+      // If this key was originally masked and hasn't changed, don't include it
+      if (originalMasked && currentKey === originalMasked) {
+        // Skip this provider entirely if only the masked key is unchanged
+        // But include other fields if they're different
+        const { api_key, ...otherFields } = providerConfig
+        filteredProviders[name] = {
+          ...otherFields,
+          api_key: '' // Send empty string to indicate "don't change this key"
+        }
+        console.log(`  → Filtering out unchanged masked key, sending empty string`)
+      } else {
+        // Key has changed or is new, include it
+        filteredProviders[name] = providerConfig
+        console.log(`  → Including ${currentKey ? 'changed/new' : 'empty'} key`)
+      }
+    })
+    
+    const result = {
+      ...config,
+      providers: filteredProviders
+    }
+    
+    console.log('[AI Key Filter] Filtered result:', JSON.stringify(result, null, 2))
+    return result
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
@@ -384,7 +442,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         background_color: formData.background_color,
         background_image_url: formData.background_image_url,
         background_opacity: formData.background_opacity,
-        ai_config: JSON.stringify(aiConfig),
+        ai_config: JSON.stringify(getFilteredAIConfig(aiConfig)),
         translations: allTranslations
       }
 
@@ -2073,6 +2131,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                   aiConfig={aiConfig}
                   setAIConfig={setAIConfig}
                   locale={locale}
+                  originalMaskedKeys={originalMaskedKeys}
                 />
               </CardContent>
             </Card>
@@ -2412,30 +2471,17 @@ interface AIConfigurationPanelProps {
   aiConfig: AIConfig
   setAIConfig: (config: AIConfig) => void
   locale: string
+  originalMaskedKeys: Record<string, string>
 }
 
-function AIConfigurationPanel({ aiConfig, setAIConfig, locale }: AIConfigurationPanelProps) {
+function AIConfigurationPanel({ aiConfig, setAIConfig, locale, originalMaskedKeys }: AIConfigurationPanelProps) {
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({})
-  
-  // Track original masked values to detect when user wants to change them
-  const [originalMaskedKeys, setOriginalMaskedKeys] = useState<Record<string, string>>({})
   
   // Track key validation states
   const [keyValidationStates, setKeyValidationStates] = useState<Record<string, 'valid' | 'invalid' | 'validating' | null>>({})
   
   // Track keys that have been modified
   const [modifiedKeys, setModifiedKeys] = useState<Record<string, boolean>>({})
-  
-  // Initialize original masked keys when component loads
-  useEffect(() => {
-    const maskedKeys: Record<string, string> = {}
-    Object.entries(aiConfig.providers).forEach(([name, config]) => {
-      if (isKeyMasked(config.api_key)) {
-        maskedKeys[name] = config.api_key
-      }
-    })
-    setOriginalMaskedKeys(maskedKeys)
-  }, [aiConfig.providers])
   
   const toggleApiKeyVisibility = (provider: string) => {
     setShowApiKeys(prev => ({

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 )
 
 // SecureAIConfig represents AI configuration with secure key handling
@@ -186,9 +187,29 @@ func (acs *AIConfigService) ToClientConfig(secure *SecureAIConfig) *ClientAIConf
 	return client
 }
 
+// Helper function to get provider names for logging
+func getProviderNames(providers interface{}) []string {
+	var names []string
+	switch p := providers.(type) {
+	case map[string]InputProviderConfig:
+		for name := range p {
+			names = append(names, name)
+		}
+	case map[string]SecureProviderConfig:
+		for name := range p {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
 // MergeWithExisting merges input config with existing secure config
 // This handles the case where client sends placeholders for unchanged keys
 func (acs *AIConfigService) MergeWithExisting(input *InputAIConfig, existing *SecureAIConfig) (*SecureAIConfig, error) {
+	log.Printf("[AI Config Merge] Starting merge process...")
+	log.Printf("[AI Config Merge] Input providers: %v", getProviderNames(input.Providers))
+	log.Printf("[AI Config Merge] Existing providers: %v", getProviderNames(existing.Providers))
+	
 	merged := &SecureAIConfig{
 		DefaultProvider: input.DefaultProvider,
 		Providers:       make(map[string]SecureProviderConfig),
@@ -202,16 +223,31 @@ func (acs *AIConfigService) MergeWithExisting(input *InputAIConfig, existing *Se
 		var encryptedKey string
 		var err error
 
+		log.Printf("[AI Config Merge] Processing provider '%s':", name)
+		log.Printf("  - Input key: '%s'", inputProvider.APIKey)
+		log.Printf("  - Is placeholder: %v", acs.isPlaceholder(inputProvider.APIKey))
+		
+		existingProvider, exists := existing.Providers[name]
+		if exists {
+			log.Printf("  - Has existing encrypted key: %v", existingProvider.EncryptedAPIKey != "")
+		} else {
+			log.Printf("  - No existing provider found")
+		}
+
 		// Check if this is a new/updated key or should preserve existing
 		if inputProvider.APIKey != "" && !acs.isPlaceholder(inputProvider.APIKey) {
 			// New key provided - encrypt it
+			log.Printf("  → Encrypting new/changed key")
 			encryptedKey, err = acs.crypto.EncryptAPIKey(inputProvider.APIKey)
 			if err != nil {
 				return nil, fmt.Errorf("failed to encrypt API key for provider %s: %v", name, err)
 			}
-		} else if existingProvider, exists := existing.Providers[name]; exists {
+		} else if exists {
 			// Preserve existing encrypted key
+			log.Printf("  → Preserving existing encrypted key")
 			encryptedKey = existingProvider.EncryptedAPIKey
+		} else {
+			log.Printf("  → No key to preserve, leaving empty")
 		}
 		// If no existing key and input is placeholder/empty, encryptedKey remains empty
 
@@ -221,6 +257,8 @@ func (acs *AIConfigService) MergeWithExisting(input *InputAIConfig, existing *Se
 			Model:           inputProvider.Model,
 			Enabled:         inputProvider.Enabled,
 		}
+		
+		log.Printf("  ✓ Final encrypted key length: %d", len(encryptedKey))
 	}
 
 	return merged, nil
@@ -232,9 +270,25 @@ func (acs *AIConfigService) isPlaceholder(key string) bool {
 		return true
 	}
 	
-	// Check if it contains asterisks (masked key)
-	if len(key) > 0 && (key[0] == '*' || key[len(key)-1] == '*') {
+	// Check if it contains asterisks anywhere in the string (masked key)
+	if strings.Contains(key, "*") {
 		return true
+	}
+	
+	// Check for common masking patterns with prefixes
+	if strings.HasPrefix(key, "sk-") && strings.Contains(key, "*") {
+		return true // OpenAI masked key like "sk-****1234"
+	}
+	if strings.HasPrefix(key, "AIza") && strings.Contains(key, "*") {
+		return true // Gemini masked key like "AIza****abcd"
+	}
+	if strings.HasPrefix(key, "gsk_") && strings.Contains(key, "*") {
+		return true // Gemini alternative prefix
+	}
+	
+	// Check for keys that are obviously masked by length and content
+	if len(key) > 6 && strings.Count(key, "*") > 3 {
+		return true // Any key with multiple asterisks
 	}
 	
 	// Common placeholder patterns
@@ -245,6 +299,8 @@ func (acs *AIConfigService) isPlaceholder(key string) bool {
 		"PLACEHOLDER",
 		"已配置",
 		"configured",
+		"MASKED",
+		"HIDDEN",
 	}
 	
 	for _, placeholder := range placeholders {
