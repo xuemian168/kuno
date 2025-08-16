@@ -686,6 +686,23 @@
     "autoAdjustNote": "幅を100%に設定すると、埋め込まれた記事はコンテナの幅に自動的に調整されます。",
     "readOnOriginalSite": "元のサイトで読む →"
   },
+  "themeSettings": {
+    "title": "テーマ設定",
+    "baseTheme": "ベーステーマ",
+    "light": "ライト",
+    "dark": "ダーク",
+    "system": "システム",
+    "dynamicTheme": "ダイナミックテーマ",
+    "enableDynamicTheme": "ダイナミックテーマを有効にする",
+    "disableDynamicTheme": "ダイナミックテーマを無効にする",
+    "contrastAnalysis": "コントラスト分析",
+    "contrastRatio": "コントラスト比",
+    "textColor": "テキストカラー",
+    "background": "背景",
+    "analyzingBackground": "背景を分析中...",
+    "clearAnalysisCache": "分析キャッシュをクリア",
+    "lowContrastWarning": "低コントラストが検出されました。より良いアクセシビリティのために色の調整を検討してください。"
+  },
   "embedding": {
     "kunoRag": {
       "heroTitle": "KUNOのRAG技術革新",

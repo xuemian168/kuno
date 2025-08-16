@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
+import { useDynamicTheme } from '@/contexts/dynamic-theme-context'
 import QRCode from 'qrcode'
 import { 
   Twitter, 
@@ -36,6 +37,7 @@ const WeChatIcon = ({ className }: { className?: string }) => (
 
 export default function ShareBar({ url, title, description, className = '' }: ShareBarProps) {
   const t = useTranslations()
+  const { analysisResult, isDynamicThemeActive } = useDynamicTheme()
   const [copied, setCopied] = useState(false)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [qrLoading, setQrLoading] = useState(false)
@@ -129,9 +131,13 @@ export default function ShareBar({ url, title, description, className = '' }: Sh
     }
   }
 
+  // Enhanced container class
+  const containerClass = `enhanced-container-inline ${isDynamicThemeActive && analysisResult ? 'dynamic-theme-active' : ''} ${className}`
+
   return (
-    <div className={`flex items-center gap-1 ${className}`}>
-      <span className="text-sm text-gray-600 dark:text-gray-400 mr-2">{t('share.shareLabel')}</span>
+    <div className={containerClass}>
+      <div className="flex items-center gap-1">
+        <span className="text-sm text-muted-foreground mr-2">{t('share.shareLabel')}</span>
       
       {shareButtons.map((platform) => {
         const Icon = platform.icon
@@ -188,29 +194,30 @@ export default function ShareBar({ url, title, description, className = '' }: Sh
         </PopoverContent>
       </Popover>
 
-      <div className="h-4 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+        <div className="h-4 w-px mx-1" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
 
-      <button
-        onClick={handleCopyLink}
-        className="p-2 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-        title={t('share.copyLink')}
-      >
-        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-      </button>
+        <button
+          onClick={handleCopyLink}
+          className="p-2 rounded-lg transition-all hover:bg-accent text-muted-foreground hover:text-foreground"
+          title={t('share.copyLink')}
+        >
+          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+        </button>
 
-      {/* Native Share for mobile */}
-      {typeof window !== 'undefined' && typeof navigator.share === 'function' && (
-        <>
-          <div className="h-4 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
-          <button
-            onClick={handleNativeShare}
-            className="p-2 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-            title={t('share.title')}
-          >
-            <Share2 className="h-4 w-4" />
-          </button>
-        </>
-      )}
+        {/* Native Share for mobile */}
+        {typeof window !== 'undefined' && typeof navigator.share === 'function' && (
+          <>
+            <div className="h-4 w-px mx-1" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
+            <button
+              onClick={handleNativeShare}
+              className="p-2 rounded-lg transition-all hover:bg-accent text-muted-foreground hover:text-foreground"
+              title={t('share.title')}
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+          </>
+        )}
+      </div>
     </div>
   )
 }

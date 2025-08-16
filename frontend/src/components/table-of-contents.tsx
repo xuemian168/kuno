@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { TocItem } from '@/lib/markdown-utils'
 import { useTableOfContents } from '@/hooks/use-table-of-contents'
 import { useTranslations } from 'next-intl'
+import { useDynamicTheme } from '@/contexts/dynamic-theme-context'
 import { List } from 'lucide-react'
 
 interface TableOfContentsProps {
@@ -14,6 +15,7 @@ interface TableOfContentsProps {
 
 export function TableOfContents({ tocItems, className }: TableOfContentsProps) {
   const t = useTranslations()
+  const { analysisResult, isDynamicThemeActive } = useDynamicTheme()
   const { activeId, scrollToHeading } = useTableOfContents(tocItems)
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -40,7 +42,7 @@ export function TableOfContents({ tocItems, className }: TableOfContentsProps) {
               className="fixed inset-0 bg-black/20 z-40"
               onClick={() => setIsExpanded(false)}
             />
-            <div className="fixed bottom-20 right-6 z-50 bg-background border border-border rounded-lg shadow-xl w-80 sm:w-96 max-h-96 overflow-hidden">
+            <div className={`fixed bottom-20 right-6 z-50 enhanced-container-inline ${isDynamicThemeActive && analysisResult ? 'dynamic-theme-active' : ''} shadow-xl w-80 sm:w-96 max-h-96 overflow-hidden`}>
               <div className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2 text-sm font-semibold">

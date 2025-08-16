@@ -19,6 +19,7 @@ import SocialShare from '@/components/social-share'
 import ShareBar from '@/components/share-bar'
 import { useAuth } from '@/contexts/auth-context'
 import { Link } from '@/i18n/routing'
+import { useDynamicTheme } from '@/contexts/dynamic-theme-context'
 
 interface ArticlePageClientProps {
   id: string
@@ -29,6 +30,7 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
   const t = useTranslations()
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
+  const { analysisResult, isDynamicThemeActive } = useDynamicTheme()
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -153,43 +155,47 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
           </div>
 
           {/* Article Header */}
-          <header className="space-y-4">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                {formatDate(article.created_at)}
-              </div>
-              {article.view_count !== undefined && siteSettings?.show_view_count !== false && (
-                <div className="flex items-center gap-2">
-                  <Eye className="h-4 w-4" />
-                  {article.view_count} {t('article.views')}
+          <div className={`enhanced-article-header ${isDynamicThemeActive && analysisResult ? 'dynamic-theme-active' : ''}`}>
+            <div className="enhanced-article-header-content">
+              <header className="space-y-4">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    {formatDate(article.created_at)}
+                  </div>
+                  {article.view_count !== undefined && siteSettings?.show_view_count !== false && (
+                    <div className="flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      {article.view_count} {t('article.views')}
+                    </div>
+                  )}
+                  <Badge variant="secondary">{article.category.name}</Badge>
                 </div>
-              )}
-              <Badge variant="secondary">{article.category.name}</Badge>
+                
+                <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+                  {article.title}
+                </h1>
+                
+                {article.summary && (
+                  <p className="text-xl text-muted-foreground leading-relaxed">
+                    {article.summary}
+                  </p>
+                )}
+                
+                {/* Share Bar */}
+                <div className="pt-4 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.2)' }}>
+                  <ShareBar 
+                    url={articleUrl} 
+                    title={article.title} 
+                    description={article.summary || ''} 
+                  />
+                </div>
+              </header>
             </div>
-            
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-              {article.title}
-            </h1>
-            
-            {article.summary && (
-              <p className="text-xl text-muted-foreground leading-relaxed">
-                {article.summary}
-              </p>
-            )}
-            
-            {/* Share Bar */}
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-              <ShareBar 
-                url={articleUrl} 
-                title={article.title} 
-                description={article.summary || ''} 
-              />
-            </div>
-          </header>
+          </div>
 
           {/* Article Content */}
-          <div className="enhanced-article-container">
+          <div className={`enhanced-article-container ${isDynamicThemeActive && analysisResult ? 'dynamic-theme-active' : ''}`}>
             <div className="enhanced-article-content">
               <article className="prose prose-lg dark:prose-invert max-w-none">
                 <MarkdownRenderer 
@@ -206,7 +212,7 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
           )}
 
           {/* Share Call-to-Action */}
-          <div className="enhanced-article-container">
+          <div className={`enhanced-article-container ${isDynamicThemeActive && analysisResult ? 'dynamic-theme-active' : ''}`}>
             <div className="enhanced-article-content text-center space-y-4">
               <p className="text-lg font-medium">{t('share.enjoyedArticle')}</p>
               <p className="text-sm text-muted-foreground">{t('share.shareWithFriends')}</p>

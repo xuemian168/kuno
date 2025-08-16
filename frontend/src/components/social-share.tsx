@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useDynamicTheme } from '@/contexts/dynamic-theme-context'
 import { Button } from '@/components/ui/button'
 import { 
   Dialog, 
@@ -31,6 +32,7 @@ interface SocialShareProps {
 
 export default function SocialShare({ url, title, description }: SocialShareProps) {
   const t = useTranslations()
+  const { analysisResult, isDynamicThemeActive } = useDynamicTheme()
   const [copied, setCopied] = useState(false)
   
   const encodedUrl = encodeURIComponent(url)
@@ -117,7 +119,8 @@ export default function SocialShare({ url, title, description }: SocialShareProp
               <button
                 key={platform.name}
                 onClick={() => handleShare(platform.url)}
-                className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-colors ${platform.color} border border-gray-200 dark:border-gray-700`}
+                className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-colors ${platform.color} border`}
+                style={{ borderColor: 'rgba(255, 255, 255, 0.2)' }}
               >
                 <Icon className="h-5 w-5" />
                 <span className="text-xs">{platform.name}</span>
@@ -132,7 +135,8 @@ export default function SocialShare({ url, title, description }: SocialShareProp
               type="text"
               value={url}
               readOnly
-              className="w-full px-3 py-2 text-sm border rounded-md bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+              className="w-full px-3 py-2 text-sm border rounded-md bg-gray-50 dark:bg-gray-800"
+              style={{ borderColor: 'rgba(255, 255, 255, 0.2)' }}
             />
           </div>
           <Button
@@ -156,7 +160,7 @@ export default function SocialShare({ url, title, description }: SocialShareProp
 
         {/* Native Share API for mobile */}
         {typeof window !== 'undefined' && navigator.share && (
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="pt-4 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.2)' }}>
             <Button
               className="w-full"
               onClick={() => {

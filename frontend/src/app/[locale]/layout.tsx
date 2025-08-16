@@ -7,6 +7,7 @@ import { routing } from '@/i18n/routing'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SettingsProvider } from '@/contexts/settings-context'
 import { AuthProvider } from '@/contexts/auth-context'
+import { DynamicThemeProvider } from '@/contexts/dynamic-theme-context'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import { CustomCSSInjector } from '@/components/custom-css-injector'
@@ -215,15 +216,17 @@ export default async function LocaleLayout({
           >
             <AuthProvider>
               <SettingsProvider>
-                <CustomCSSInjector />
-                <LayoutBackground />
-                <div className="min-h-screen bg-transparent flex flex-col relative">
-                  <Header />
-                  <main className="flex-1">
-                    {children}
-                  </main>
-                  <Footer />
-                </div>
+                <DynamicThemeProvider>
+                  <CustomCSSInjector />
+                  <LayoutBackground />
+                  <div className="min-h-screen bg-transparent flex flex-col relative">
+                    <Header />
+                    <main className="flex-1">
+                      {children}
+                    </main>
+                    <Footer />
+                  </div>
+                </DynamicThemeProvider>
               </SettingsProvider>
             </AuthProvider>
           </ThemeProvider>

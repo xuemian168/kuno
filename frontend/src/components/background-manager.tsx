@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSettings } from '@/contexts/settings-context'
+import { useDynamicTheme } from '@/contexts/dynamic-theme-context'
 import { getApiUrl } from '@/lib/config'
 
 interface BackgroundManagerProps {
@@ -10,6 +11,7 @@ interface BackgroundManagerProps {
 
 export function BackgroundManager({ isAdminRoute = false }: BackgroundManagerProps) {
   const { settings } = useSettings()
+  const { analyzeBackground, isDynamicThemeActive } = useDynamicTheme()
   const [backgroundStyle, setBackgroundStyle] = useState<React.CSSProperties>({})
 
   useEffect(() => {
@@ -54,6 +56,13 @@ export function BackgroundManager({ isAdminRoute = false }: BackgroundManagerPro
             backgroundAttachment: 'fixed',
             opacity: background_opacity || 0.8,
           }
+
+          // Analyze background image for dynamic theming
+          if (isDynamicThemeActive && !isAdminRoute) {
+            analyzeBackground(imageUrl).catch(error => {
+              console.warn('Failed to analyze background image for dynamic theming:', error)
+            })
+          }
         }
         break
       
@@ -64,7 +73,7 @@ export function BackgroundManager({ isAdminRoute = false }: BackgroundManagerPro
     }
 
     setBackgroundStyle(style)
-  }, [settings, isAdminRoute])
+  }, [settings, isAdminRoute, analyzeBackground, isDynamicThemeActive])
 
   // Don't render anything if no background or on admin routes
   if (isAdminRoute || !settings || settings.background_type === 'none' || Object.keys(backgroundStyle).length === 0) {

@@ -1012,6 +1012,23 @@
     "autoAdjustNote": "The embedded article will automatically adjust to your container width if set to 100%.",
     "readOnOriginalSite": "Read on original site →"
   },
+  "themeSettings": {
+    "title": "Theme Settings",
+    "baseTheme": "Base Theme",
+    "light": "Light",
+    "dark": "Dark", 
+    "system": "System",
+    "dynamicTheme": "Dynamic Theme",
+    "enableDynamicTheme": "Enable Dynamic Theme",
+    "disableDynamicTheme": "Disable Dynamic Theme",
+    "contrastAnalysis": "Contrast Analysis",
+    "contrastRatio": "Contrast Ratio",
+    "textColor": "Text Color",
+    "background": "Background",
+    "analyzingBackground": "Analyzing background...",
+    "clearAnalysisCache": "Clear Analysis Cache",
+    "lowContrastWarning": "Low contrast detected. Consider adjusting colors for better accessibility."
+  },
   "ai": {
     "llms_txt_manager": "LLMs.txt Manager",
     "llms_txt_description": "Generate and manage LLMs.txt files for AI search engines and language models, providing structured website content descriptions.",

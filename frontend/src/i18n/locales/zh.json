@@ -1013,6 +1013,23 @@
     "autoAdjustNote": "如果宽度设置为100%，嵌入的文章将自动适应您的容器宽度。",
     "readOnOriginalSite": "在原网站阅读 →"
   },
+  "themeSettings": {
+    "title": "主题设置",
+    "baseTheme": "基础主题",
+    "light": "浅色",
+    "dark": "深色",
+    "system": "跟随系统",
+    "dynamicTheme": "动态主题",
+    "enableDynamicTheme": "启用动态主题",
+    "disableDynamicTheme": "禁用动态主题", 
+    "contrastAnalysis": "对比度分析",
+    "contrastRatio": "对比度",
+    "textColor": "文字颜色",
+    "background": "背景",
+    "analyzingBackground": "正在分析背景...",
+    "clearAnalysisCache": "清除分析缓存",
+    "lowContrastWarning": "检测到低对比度。请考虑调整颜色以获得更好的可访问性。"
+  },
   "ai": {
     "llms_txt_manager": "LLMs.txt 管理器",
     "llms_txt_description": "为AI搜索引擎和语言模型生成和管理 LLMs.txt 文件，提供结构化的网站内容描述。",
