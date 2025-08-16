@@ -48,18 +48,18 @@
   color: inherit;
 }
 
-/* Tables */
+/* Tables - defer to enhanced table components */
 .prose table {
-  @apply w-full border-collapse;
+  /* Styles handled by enhanced-table classes */
 }
 
 .prose th,
 .prose td {
-  @apply border border-border px-3 py-2 text-left;
+  /* Styles handled by enhanced-table-head and enhanced-table-cell classes */
 }
 
 .prose th {
-  @apply bg-muted font-semibold;
+  /* Styles handled by enhanced-table-head class */
 }
 
 /* Blockquotes */

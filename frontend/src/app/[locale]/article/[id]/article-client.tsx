@@ -189,12 +189,16 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
           </header>
 
           {/* Article Content */}
-          <article className="prose prose-lg dark:prose-invert max-w-none">
-            <MarkdownRenderer 
-              content={article.content} 
-              includeStructuredData={true}
-            />
-          </article>
+          <div className="enhanced-article-container">
+            <div className="enhanced-article-content">
+              <article className="prose prose-lg dark:prose-invert max-w-none">
+                <MarkdownRenderer 
+                  content={article.content} 
+                  includeStructuredData={true}
+                />
+              </article>
+            </div>
+          </div>
           
           {/* Table of Contents - Floating/Fixed position */}
           {tocItems.length > 0 && (
@@ -202,15 +206,17 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
           )}
 
           {/* Share Call-to-Action */}
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 text-center space-y-4">
-            <p className="text-lg font-medium">{t('share.enjoyedArticle')}</p>
-            <p className="text-sm text-muted-foreground">{t('share.shareWithFriends')}</p>
-            <ShareBar 
-              url={articleUrl} 
-              title={article.title} 
-              description={article.summary || ''} 
-              className="justify-center"
-            />
+          <div className="enhanced-article-container">
+            <div className="enhanced-article-content text-center space-y-4">
+              <p className="text-lg font-medium">{t('share.enjoyedArticle')}</p>
+              <p className="text-sm text-muted-foreground">{t('share.shareWithFriends')}</p>
+              <ShareBar 
+                url={articleUrl} 
+                title={article.title} 
+                description={article.summary || ''} 
+                className="justify-center"
+              />
+            </div>
           </div>
 
           {/* Article Footer */}

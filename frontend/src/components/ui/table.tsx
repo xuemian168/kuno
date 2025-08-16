@@ -3,12 +3,19 @@ import { cn } from "@/lib/utils"
 
 const Table = React.forwardRef<
   HTMLTableElement,
-  React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
+  React.HTMLAttributes<HTMLTableElement> & {
+    variant?: 'default' | 'striped' | 'bordered'
+  }
+>(({ className, variant = 'default', ...props }, ref) => (
+  <div className="enhanced-table-container">
     <table
       ref={ref}
-      className={cn("w-full caption-bottom text-sm", className)}
+      className={cn(
+        "enhanced-table",
+        variant === 'striped' && 'enhanced-table-striped',
+        variant === 'bordered' && 'enhanced-table-bordered',
+        className
+      )}
       {...props}
     />
   </div>
@@ -19,7 +26,11 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
+  <thead
+    ref={ref}
+    className={cn('enhanced-table-header', className)}
+    {...props}
+  />
 ))
 TableHeader.displayName = "TableHeader"
 
@@ -29,7 +40,7 @@ const TableBody = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <tbody
     ref={ref}
-    className={cn("[&_tr:last-child]:border-0", className)}
+    className={cn('enhanced-table-body', className)}
     {...props}
   />
 ))
@@ -41,7 +52,7 @@ const TableFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <tfoot
     ref={ref}
-    className={cn("border-t bg-muted/50 font-medium [&>tr]:last:border-b-0", className)}
+    className={cn('enhanced-table-footer', className)}
     {...props}
   />
 ))
@@ -53,10 +64,7 @@ const TableRow = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <tr
     ref={ref}
-    className={cn(
-      "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
-      className
-    )}
+    className={cn('enhanced-table-row', className)}
     {...props}
   />
 ))
@@ -64,29 +72,58 @@ TableRow.displayName = "TableRow"
 
 const TableHead = React.forwardRef<
   HTMLTableCellElement,
-  React.ThHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
+  React.ThHTMLAttributes<HTMLTableCellElement> & {
+    sortable?: boolean
+    align?: 'left' | 'center' | 'right'
+  }
+>(({ className, sortable, align = 'left', children, ...props }, ref) => (
   <th
     ref={ref}
     className={cn(
-      "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
+      'enhanced-table-head',
+      align === 'center' && 'text-center',
+      align === 'right' && 'text-right',
+      sortable && 'enhanced-table-head-sortable',
       className
     )}
     {...props}
-  />
+  >
+    {children}
+  </th>
 ))
 TableHead.displayName = "TableHead"
 
 const TableCell = React.forwardRef<
   HTMLTableCellElement,
-  React.TdHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
-  <td
-    ref={ref}
-    className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)}
-    {...props}
-  />
-))
+  React.TdHTMLAttributes<HTMLTableCellElement> & {
+    align?: 'left' | 'center' | 'right'
+    numeric?: boolean
+  }
+>(({ className, align, numeric, children, ...props }, ref) => {
+  // Auto-detect numeric content if not explicitly set
+  const isNumeric = numeric ?? (
+    typeof children === 'string' && 
+    /^[\d\s,.\-+$€¥£%]+$/.test(children.trim())
+  )
+  
+  const finalAlign = align ?? (isNumeric ? 'right' : 'left')
+  
+  return (
+    <td
+      ref={ref}
+      className={cn(
+        'enhanced-table-cell',
+        finalAlign === 'center' && 'text-center',
+        finalAlign === 'right' && 'text-right',
+        isNumeric && 'font-mono',
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </td>
+  )
+})
 TableCell.displayName = "TableCell"
 
 const TableCaption = React.forwardRef<
@@ -95,7 +132,7 @@ const TableCaption = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <caption
     ref={ref}
-    className={cn("mt-4 text-sm text-muted-foreground", className)}
+    className={cn('enhanced-table-caption', className)}
     {...props}
   />
 ))

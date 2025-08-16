@@ -1,25 +1,34 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Copy, Check, Code } from 'lucide-react'
+import { Copy, Check, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { useTheme } from 'next-themes'
+import { getLanguageIcon } from './language-icons'
 
 interface CodeBlockProps {
   children: React.ReactNode
   className?: string
   language?: string
   showLineNumbers?: boolean
+  title?: string
+  maxHeight?: number
 }
 
 export function CodeBlock({ 
   children, 
   className = '', 
   language, 
-  showLineNumbers = false 
+  showLineNumbers = true,
+  title,
+  maxHeight = 600
 }: CodeBlockProps) {
   const [copied, setCopied] = useState(false)
-  const [highlightedCode, setHighlightedCode] = useState<string>('')
+  const [isExpanded, setIsExpanded] = useState(false)
+  const { theme, resolvedTheme } = useTheme()
   const codeRef = useRef<HTMLElement>(null)
 
   // Extract language from className (format: language-javascript)
@@ -27,42 +36,22 @@ export function CodeBlock({
   
   // Get the code content
   const getCodeContent = (): string => {
-    if (codeRef.current) {
-      return codeRef.current.textContent || ''
-    }
     return String(children)
   }
 
-  // Apply syntax highlighting
-  useEffect(() => {
-    const applyHighlighting = async () => {
-      try {
-        const hljs = await import('highlight.js')
-        const codeContent = String(children)
-        
-        if (detectedLanguage && detectedLanguage !== 'text') {
-          // Try to highlight with specific language
-          try {
-            const result = hljs.default.highlight(codeContent, { language: detectedLanguage })
-            setHighlightedCode(result.value)
-          } catch {
-            // Fall back to auto-detection if language not supported
-            const result = hljs.default.highlightAuto(codeContent)
-            setHighlightedCode(result.value)
-          }
-        } else {
-          // Auto-detect language
-          const result = hljs.default.highlightAuto(codeContent)
-          setHighlightedCode(result.value)
-        }
-      } catch (error) {
-        console.error('Failed to apply syntax highlighting:', error)
-        setHighlightedCode(String(children))
-      }
-    }
+  // Get syntax highlighter theme based on current theme
+  const getSyntaxTheme = () => {
+    const isDark = resolvedTheme === 'dark'
+    return isDark ? oneDark : oneLight
+  }
 
-    applyHighlighting()
-  }, [children, detectedLanguage])
+  // Get language icon
+  const LanguageIcon = getLanguageIcon(detectedLanguage)
+
+  // Check if code block is tall and should be collapsible
+  const codeLines = String(children).split('\n')
+  const shouldBeCollapsible = codeLines.length > 20
+  const displayHeight = shouldBeCollapsible && !isExpanded ? Math.min(maxHeight, 400) : undefined
 
   const copyToClipboard = async () => {
     try {
@@ -75,62 +64,110 @@ export function CodeBlock({
     }
   }
 
-  // Split code into lines for line numbers  
-  const codeLines = String(children).split('\n')
-  const highlightedLines = highlightedCode.split('\n')
-
   return (
-    <div className="group relative my-6 overflow-hidden rounded-lg border border-border bg-muted">
+    <div className="group relative my-6 code-block-enhanced">
       {/* Code block header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-muted/50 border-b border-border">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Code className="h-3 w-3" />
-          <span className="font-mono uppercase text-xs">
-            {detectedLanguage}
-          </span>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={copyToClipboard}
-          className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          {copied ? (
-            <Check className="h-3 w-3 text-green-500" />
-          ) : (
-            <Copy className="h-3 w-3" />
+      <div className="code-block-header">
+        <div className="flex items-center gap-3">
+          <div className="language-tag">
+            <LanguageIcon className="h-3 w-3" />
+            <span className="font-mono uppercase text-xs">
+              {detectedLanguage}
+            </span>
+          </div>
+          {title && (
+            <span className="text-sm text-muted-foreground font-medium">
+              {title}
+            </span>
           )}
-        </Button>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {shouldBeCollapsible && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="h-7 px-2 text-xs opacity-70 hover:opacity-100 transition-opacity"
+            >
+              {isExpanded ? 'Collapse' : 'Expand'}
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={copyToClipboard}
+            className={cn(
+              "h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-all copy-button-enhanced",
+              copied && "opacity-100"
+            )}
+          >
+            {copied ? (
+              <Check className="h-3 w-3 text-green-500" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Code content */}
-      <div className="relative">
-        <pre className="bg-muted p-0 m-0 overflow-x-auto">
-          <div className="flex">
-            {/* Line numbers */}
-            {showLineNumbers && (
-              <div className="flex flex-col text-xs text-muted-foreground/50 select-none border-r border-border pr-3 pl-4 py-6 font-mono bg-muted/30">
-                {codeLines.map((_, index) => (
-                  <span key={index} className="leading-6 h-6">
-                    {index + 1}
-                  </span>
-                ))}
-              </div>
-            )}
-            
-            {/* Code with syntax highlighting */}
-            <code 
-              ref={codeRef}
-              className={cn(
-                "block px-8 py-6 text-sm font-mono leading-6 bg-transparent min-w-0 flex-1 hljs",
-                className
-              )}
-              dangerouslySetInnerHTML={{
-                __html: highlightedCode || String(children)
-              }}
-            />
-          </div>
-        </pre>
+      <div className="relative code-content">
+        <div 
+          className={cn(
+            "overflow-hidden transition-all duration-300 ease-in-out",
+            shouldBeCollapsible && !isExpanded && "relative"
+          )}
+          style={{
+            maxHeight: displayHeight ? `${displayHeight}px` : undefined
+          }}
+        >
+          <SyntaxHighlighter
+            language={detectedLanguage === 'text' ? 'plaintext' : detectedLanguage}
+            style={getSyntaxTheme()}
+            showLineNumbers={showLineNumbers}
+            customStyle={{
+              margin: 0,
+              padding: showLineNumbers ? '1.5rem 1.5rem 1.5rem 0' : '1.5rem',
+              background: 'transparent',
+              fontSize: '0.875rem',
+              lineHeight: '1.5'
+            }}
+            codeTagProps={{
+              className: 'code-scrollbar',
+              style: {
+                fontFamily: 'var(--font-mono), Consolas, "Courier New", monospace'
+              }
+            }}
+            lineNumberStyle={{
+              minWidth: '3rem',
+              paddingRight: '1.5rem',
+              paddingLeft: '1.5rem',
+              color: 'hsl(var(--muted-foreground))',
+              opacity: 0.6,
+              userSelect: 'none',
+              textAlign: 'right' as const,
+              borderRight: '1px solid hsl(var(--border) / 0.3)',
+              marginRight: '1.5rem',
+              backgroundColor: 'hsl(var(--muted) / 0.3)'
+            }}
+            wrapLines={true}
+            lineProps={(lineNumber) => ({
+              className: 'code-line',
+              style: {
+                display: 'block',
+                width: '100%'
+              }
+            })}
+          >
+            {String(children).replace(/\n$/, '')}
+          </SyntaxHighlighter>
+          
+          {/* Fade overlay for collapsed long code */}
+          {shouldBeCollapsible && !isExpanded && (
+            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-card to-transparent pointer-events-none" />
+          )}
+        </div>
       </div>
     </div>
   )

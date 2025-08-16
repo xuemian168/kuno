@@ -3,17 +3,12 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
-import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
 import rehypeSlug from 'rehype-slug'
-import { useEffect } from 'react'
 import YouTubeEmbed from '@/components/youtube-embed'
 import BiliBiliEmbed from '@/components/bilibili-embed'
 import { CodeBlock } from '@/components/code-block'
-
-// Import highlight.js styles - use themes that work well with dark/light mode
-import 'highlight.js/styles/atom-one-light.css'
-import 'highlight.js/styles/atom-one-dark.css'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 
 interface MarkdownRendererProps {
   content: string
@@ -22,12 +17,6 @@ interface MarkdownRendererProps {
 }
 
 export function MarkdownRenderer({ content, className = "", includeStructuredData = false }: MarkdownRendererProps) {
-  useEffect(() => {
-    // Import highlight.js only on client side
-    import('highlight.js').then((hljs) => {
-      hljs.default.highlightAll()
-    })
-  }, [content])
 
   const extractVideoId = (url: string): string | null => {
     const patterns = [
@@ -93,7 +82,7 @@ export function MarkdownRenderer({ content, className = "", includeStructuredDat
     <div className={`prose prose-neutral dark:prose-invert max-w-none ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={[rehypeHighlight, rehypeRaw, rehypeSlug]}
+        rehypePlugins={[rehypeRaw, rehypeSlug]}
         components={{
           // Custom component for code blocks
           code({ className, children, ...props }) {
@@ -117,7 +106,7 @@ export function MarkdownRenderer({ content, className = "", includeStructuredDat
               <CodeBlock 
                 className={className} 
                 language={language}
-                showLineNumbers={false}
+                showLineNumbers={true}
               >
                 {children}
               </CodeBlock>
@@ -158,23 +147,36 @@ export function MarkdownRenderer({ content, className = "", includeStructuredDat
               {children}
             </h6>
           ),
-          // Custom component for tables
+          // Enhanced table components
           table: ({ children }) => (
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-700">
-                {children}
-              </table>
-            </div>
+            <Table variant="striped">
+              {children}
+            </Table>
+          ),
+          thead: ({ children }) => (
+            <TableHeader>
+              {children}
+            </TableHeader>
+          ),
+          tbody: ({ children }) => (
+            <TableBody>
+              {children}
+            </TableBody>
+          ),
+          tr: ({ children }) => (
+            <TableRow>
+              {children}
+            </TableRow>
           ),
           th: ({ children }) => (
-            <th className="border border-gray-300 dark:border-gray-700 px-3 py-2 bg-gray-100 dark:bg-gray-800 font-semibold text-left">
+            <TableHead>
               {children}
-            </th>
+            </TableHead>
           ),
           td: ({ children }) => (
-            <td className="border border-gray-300 dark:border-gray-700 px-3 py-2">
+            <TableCell>
               {children}
-            </td>
+            </TableCell>
           ),
           // Custom component for blockquotes
           blockquote: ({ children }) => (
