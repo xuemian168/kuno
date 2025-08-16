@@ -250,6 +250,12 @@ export interface SetupResponse {
   token?: string
 }
 
+export interface LanguageConfig {
+  default_language: string
+  enabled_languages: string[]
+  supported_languages: Record<string, string>
+}
+
 export interface SocialMedia {
   id: number
   platform: string
@@ -358,6 +364,201 @@ export interface MediaListResponse {
   total: number
   page: number
   limit: number
+}
+
+// SEO-related types
+export interface SEOKeyword {
+  id: number
+  article_id?: number
+  keyword: string
+  language: string
+  target_url: string
+  current_rank: number
+  best_rank: number
+  search_volume: number
+  difficulty: 'easy' | 'medium' | 'hard'
+  tracking_status: 'active' | 'paused'
+  notes: string
+  tags: string
+  created_at: string
+  updated_at: string
+  article?: Article
+}
+
+export interface SEOKeywordGroup {
+  id: number
+  name: string
+  description: string
+  color: string
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface SEOHealthCheck {
+  id: number
+  article_id?: number
+  check_type: 'article' | 'site' | 'auto'
+  overall_score: number
+  title_score: number
+  description_score: number
+  content_score: number
+  keyword_score: number
+  readability_score: number
+  technical_score: number
+  issues_found: number
+  check_results: string
+  suggestions: string
+  language: string
+  check_duration: number
+  created_at: string
+  updated_at: string
+  article?: Article
+}
+
+export interface SEOAnalysisResult {
+  overall_score: number
+  title_analysis: {
+    score: number
+    length: number
+    optimal_length: { min: number; max: number }
+    has_focus_keyword: boolean
+    brand_included: boolean
+    uniqueness: number
+    issues: string[]
+    suggestions: string[]
+  }
+  description_analysis: {
+    score: number
+    length: number
+    optimal_length: { min: number; max: number }
+    has_focus_keyword: boolean
+    has_call_to_action: boolean
+    uniqueness: number
+    issues: string[]
+    suggestions: string[]
+  }
+  content_analysis: {
+    score: number
+    word_count: number
+    paragraph_count: number
+    heading_structure: {
+      h1_count: number
+      h2_count: number
+      h3_count: number
+      structure_score: number
+      has_keyword_in_headings: boolean
+      issues: string[]
+    }
+    keyword_density: Array<{
+      keyword: string
+      count: number
+      density: number
+    }>
+    internal_links: number
+    external_links: number
+    image_optimization: {
+      total_images: number
+      images_with_alt: number
+      images_with_title: number
+      optimized_images: number
+      score: number
+      issues: string[]
+    }
+    issues: string[]
+    suggestions: string[]
+  }
+  keyword_analysis: {
+    score: number
+    focus_keyword_usage: number
+    keyword_distribution: Array<{
+      keyword: string
+      title: number
+      headings: number
+      content: number
+      meta: number
+    }>
+    keyword_density: number
+    optimal_density: { min: number; max: number }
+    related_keywords_found: number
+    issues: string[]
+    suggestions: string[]
+  }
+  readability_analysis: {
+    score: number
+    reading_level: string
+    avg_sentence_length: number
+    avg_paragraph_length: number
+    passive_voice_percentage: number
+    transition_words_percentage: number
+    issues: string[]
+    suggestions: string[]
+  }
+  technical_analysis: {
+    score: number
+    url_structure: {
+      length: number
+      has_keywords: boolean
+      is_readable: boolean
+      has_underscore: boolean
+      score: number
+    }
+    meta_tags: {
+      has_title: boolean
+      has_description: boolean
+      has_keywords: boolean
+      has_viewport: boolean
+      has_canonical: boolean
+      score: number
+    }
+    schema: {
+      has_article_schema: boolean
+      has_breadcrumbs: boolean
+      has_author: boolean
+      score: number
+    }
+    issues: string[]
+    suggestions: string[]
+  }
+  suggestions: string[]
+  created_at: string
+}
+
+export interface SEOAutomationRule {
+  id: number
+  name: string
+  rule_type: 'health_check' | 'keyword_monitor' | 'content_audit'
+  trigger_condition: 'schedule' | 'on_publish' | 'on_update' | 'threshold'
+  schedule: string
+  target_scope: 'all' | 'category' | 'specific_articles'
+  target_ids: string
+  rule_config: string
+  notification_settings: string
+  is_active: boolean
+  last_run?: string
+  next_run?: string
+  run_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface SEONotification {
+  id: number
+  type: 'health_alert' | 'ranking_change' | 'keyword_opportunity'
+  severity: 'info' | 'warning' | 'error' | 'critical'
+  title: string
+  message: string
+  article_id?: number
+  keyword_id?: number
+  action_url: string
+  is_read: boolean
+  is_archived: boolean
+  expires_at?: string
+  created_at: string
+  updated_at: string
+  article?: Article
+  keyword?: SEOKeyword
 }
 
 class ApiClient {
@@ -524,6 +725,11 @@ class ApiClient {
     }
     const url = queryParams.toString() ? `/settings?${queryParams}` : '/settings'
     return this.request<SiteSettings>(url)
+  }
+
+  // Language configuration
+  async getLanguageConfig(): Promise<LanguageConfig> {
+    return this.request<LanguageConfig>('/languages')
   }
 
   async updateSettings(settings: Partial<SiteSettings>): Promise<SiteSettings> {
@@ -1251,6 +1457,253 @@ class ApiClient {
     }
   }> {
     return this.request(`/llms-txt/usage-stats?days=${days}`)
+  }
+
+  // SEO Management endpoints
+  async getSEOHealth(): Promise<{
+    health_check: SEOHealthCheck
+    message: string
+  }> {
+    return this.request('/seo/health')
+  }
+
+  async runSEOHealthCheck(type: 'site' | 'article' = 'site', articleId?: number): Promise<{
+    health_check: SEOHealthCheck
+    message: string
+  }> {
+    const params = new URLSearchParams({ type })
+    if (type === 'article' && articleId) {
+      params.append('article_id', articleId.toString())
+    }
+    return this.request(`/seo/health/check?${params.toString()}`, {
+      method: 'POST'
+    })
+  }
+
+  async getSEOHealthHistory(filters?: {
+    article_id?: number
+    check_type?: string
+    limit?: number
+  }): Promise<{
+    history: SEOHealthCheck[]
+    count: number
+  }> {
+    const params = new URLSearchParams()
+    if (filters?.article_id) params.append('article_id', filters.article_id.toString())
+    if (filters?.check_type) params.append('check_type', filters.check_type)
+    if (filters?.limit) params.append('limit', filters.limit.toString())
+    
+    const queryString = params.toString()
+    return this.request(`/seo/health/history${queryString ? `?${queryString}` : ''}`)
+  }
+
+  async getArticleSEO(articleId: number): Promise<{
+    article: Article
+    latest_health_check: SEOHealthCheck | null
+    keywords: SEOKeyword[]
+    keyword_count: number
+  }> {
+    return this.request(`/seo/articles/${articleId}`)
+  }
+
+  async updateArticleSEO(articleId: number, data: {
+    seo_title?: string
+    seo_description?: string
+    seo_keywords?: string
+    seo_slug?: string
+  }): Promise<{
+    article: Article
+    message: string
+  }> {
+    return this.request(`/seo/articles/${articleId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    })
+  }
+
+  async analyzeArticleSEO(articleId: number, options?: {
+    focus_keyword?: string
+    language?: string
+  }): Promise<{
+    analysis: SEOAnalysisResult
+    message: string
+  }> {
+    return this.request(`/seo/articles/${articleId}/analyze`, {
+      method: 'POST',
+      body: JSON.stringify(options || {})
+    })
+  }
+
+  async generateArticleSEO(articleId: number, options: {
+    generate_title?: boolean
+    generate_description?: boolean
+    generate_keywords?: boolean
+    focus_keyword?: string
+    language?: string
+  }): Promise<{
+    result: {
+      generated_content: Record<string, string>
+      suggestions: string[]
+    }
+    message: string
+  }> {
+    return this.request(`/seo/articles/${articleId}/generate`, {
+      method: 'POST',
+      body: JSON.stringify(options)
+    })
+  }
+
+  async getSEOKeywords(filters?: {
+    article_id?: number
+    language?: string
+    tracking_status?: string
+    difficulty?: string
+    search?: string
+  }): Promise<{
+    keywords: SEOKeyword[]
+    count: number
+  }> {
+    const params = new URLSearchParams()
+    if (filters?.article_id) params.append('article_id', filters.article_id.toString())
+    if (filters?.language) params.append('language', filters.language)
+    if (filters?.tracking_status) params.append('tracking_status', filters.tracking_status)
+    if (filters?.difficulty) params.append('difficulty', filters.difficulty)
+    if (filters?.search) params.append('search', filters.search)
+    
+    const queryString = params.toString()
+    return this.request(`/seo/keywords${queryString ? `?${queryString}` : ''}`)
+  }
+
+  async createSEOKeyword(keyword: Omit<SEOKeyword, 'id' | 'created_at' | 'updated_at'>): Promise<{
+    keyword: SEOKeyword
+    message: string
+  }> {
+    return this.request('/seo/keywords', {
+      method: 'POST',
+      body: JSON.stringify(keyword)
+    })
+  }
+
+  async updateSEOKeyword(keywordId: number, updates: Partial<SEOKeyword>): Promise<{
+    keyword: SEOKeyword
+    message: string
+  }> {
+    return this.request(`/seo/keywords/${keywordId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates)
+    })
+  }
+
+  async deleteSEOKeyword(keywordId: number): Promise<{
+    message: string
+  }> {
+    return this.request(`/seo/keywords/${keywordId}`, {
+      method: 'DELETE'
+    })
+  }
+
+  async suggestSEOKeywords(articleId: number, baseKeyword: string): Promise<{
+    suggestions: string[]
+    count: number
+  }> {
+    return this.request('/seo/keywords/suggest', {
+      method: 'POST',
+      body: JSON.stringify({
+        article_id: articleId,
+        base_keyword: baseKeyword
+      })
+    })
+  }
+
+  async getSEOKeywordStats(): Promise<{
+    stats: Record<string, any>
+  }> {
+    return this.request('/seo/keywords/stats')
+  }
+
+  async getSEOKeywordGroups(): Promise<{
+    groups: SEOKeywordGroup[]
+    count: number
+  }> {
+    return this.request('/seo/keywords/groups')
+  }
+
+  async createSEOKeywordGroup(group: Omit<SEOKeywordGroup, 'id' | 'created_at' | 'updated_at'>): Promise<{
+    group: SEOKeywordGroup
+    message: string
+  }> {
+    return this.request('/seo/keywords/groups', {
+      method: 'POST',
+      body: JSON.stringify(group)
+    })
+  }
+
+  async getSEOKeywordsByGroup(): Promise<{
+    grouped_keywords: Record<string, SEOKeyword[]>
+  }> {
+    return this.request('/seo/keywords/by-group')
+  }
+
+  async bulkImportSEOKeywords(data: {
+    article_id?: number
+    keywords: string[]
+    language?: string
+  }): Promise<{
+    created_keywords: SEOKeyword[]
+    count: number
+    message: string
+  }> {
+    return this.request('/seo/keywords/bulk-import', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+  }
+
+  async updateKeywordRankings(): Promise<{
+    message: string
+  }> {
+    return this.request('/seo/keywords/update-rankings', {
+      method: 'POST'
+    })
+  }
+
+  async getSEOMetrics(): Promise<{
+    metrics: Record<string, any>
+    message: string
+  }> {
+    return this.request('/seo/metrics')
+  }
+
+  async getSEOAutomationRules(): Promise<{
+    rules: SEOAutomationRule[]
+    count: number
+  }> {
+    return this.request('/seo/automation/rules')
+  }
+
+  async getSEONotifications(filters?: {
+    is_read?: boolean
+    severity?: string
+    limit?: number
+  }): Promise<{
+    notifications: SEONotification[]
+    count: number
+  }> {
+    const params = new URLSearchParams()
+    if (filters?.is_read !== undefined) params.append('is_read', filters.is_read.toString())
+    if (filters?.severity) params.append('severity', filters.severity)
+    if (filters?.limit) params.append('limit', filters.limit.toString())
+    
+    const queryString = params.toString()
+    return this.request(`/seo/notifications${queryString ? `?${queryString}` : ''}`)
+  }
+
+  async markSEONotificationRead(notificationId: number): Promise<{
+    message: string
+  }> {
+    return this.request(`/seo/notifications/${notificationId}/read`, {
+      method: 'PUT'
+    })
   }
 }
 

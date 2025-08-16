@@ -1621,6 +1621,32 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           <div className="p-4 space-y-4">
             <h1 className="text-2xl font-bold">{translation.title || 'Untitled'}</h1>
             <p className="text-muted-foreground leading-relaxed">{translation.summary || 'No summary'}</p>
+            
+            {/* SEO信息预览 */}
+            {(formData.seo_title || formData.seo_description) && (
+              <div className="border rounded-lg p-3 bg-muted/30">
+                <h3 className="text-sm font-medium mb-2">{t('seo.seoPreview')}</h3>
+                <div className="space-y-2">
+                  {formData.seo_title && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t('seo.seoTitle')}</p>
+                      <p className="text-sm text-blue-600 dark:text-blue-400 truncate">
+                        {formData.seo_title} <span className="text-xs text-muted-foreground">({formData.seo_title.length}/60)</span>
+                      </p>
+                    </div>
+                  )}
+                  {formData.seo_description && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t('seo.seoDescription')}</p>
+                      <p className="text-sm text-foreground/80 leading-tight line-clamp-2">
+                        {formData.seo_description} <span className="text-xs text-muted-foreground">({formData.seo_description.length}/160)</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
             <div className="text-sm text-muted-foreground space-y-1">
               <div className="flex items-center gap-2">
                 <span>
@@ -1654,6 +1680,84 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 className="min-h-[100px] resize-none"
               />
             </div>
+            {/* SEO快捷字段 - Only show on source side and only if it's default language */}
+            {isSource && language === getDefaultLanguage() && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor={`seo_title-${side}`} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {t('seo.seoTitle')}
+                      <span className="text-xs text-muted-foreground">
+                        ({formData.seo_title.length}/60)
+                      </span>
+                    </div>
+                    {!formData.seo_title && formData.title && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFormData(prev => ({ ...prev, seo_title: prev.title }))}
+                        className="h-6 px-2 text-xs"
+                      >
+                        {normalizedLocale === 'zh' ? '使用标题' : 'Use Title'}
+                      </Button>
+                    )}
+                  </Label>
+                  <Input
+                    id={`seo_title-${side}`}
+                    value={formData.seo_title}
+                    onChange={(e) => setFormData(prev => ({ ...prev, seo_title: e.target.value }))}
+                    placeholder={formData.title || t('seo.seoTitlePlaceholder')}
+                    className={cn(
+                      formData.seo_title.length > 60 && "border-yellow-500 focus:border-yellow-500"
+                    )}
+                  />
+                  {formData.seo_title.length > 60 && (
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                      {normalizedLocale === 'zh' ? '建议不超过60个字符' : 'Recommended under 60 characters'}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor={`seo_description-${side}`} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {t('seo.seoDescription')}
+                      <span className="text-xs text-muted-foreground">
+                        ({formData.seo_description.length}/160)
+                      </span>
+                    </div>
+                    {!formData.seo_description && formData.summary && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFormData(prev => ({ ...prev, seo_description: prev.summary }))}
+                        className="h-6 px-2 text-xs"
+                      >
+                        {normalizedLocale === 'zh' ? '使用摘要' : 'Use Summary'}
+                      </Button>
+                    )}
+                  </Label>
+                  <Textarea
+                    id={`seo_description-${side}`}
+                    value={formData.seo_description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, seo_description: e.target.value }))}
+                    placeholder={formData.summary || t('seo.seoDescriptionPlaceholder')}
+                    className={cn(
+                      "min-h-[80px] resize-none",
+                      formData.seo_description.length > 160 && "border-yellow-500 focus:border-yellow-500"
+                    )}
+                  />
+                  {formData.seo_description.length > 160 && (
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                      {normalizedLocale === 'zh' ? '建议不超过160个字符' : 'Recommended under 160 characters'}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+
             {/* Publication Time - Only show on source side and only if it's default language */}
             {isSource && language === getDefaultLanguage() && (
               <div className="space-y-2">

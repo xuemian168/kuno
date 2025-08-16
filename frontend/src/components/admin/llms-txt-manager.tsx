@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { RefreshCw, Download, Eye, Trash2, Clock, Globe, Database, FileText, BarChart3, TrendingUp } from "lucide-react"
+import { RefreshCw, Download, Eye, Trash2, Clock, Globe, Database, FileText, BarChart3, TrendingUp, BookOpen } from "lucide-react"
 import { apiClient } from "@/lib/api"
+import { LLMsTxtIntroduction } from './llms-txt-introduction'
 
 interface CacheStats {
   cache_entries: number
@@ -198,12 +199,20 @@ export function LLMsTxtManager({ locale }: LLMsTxtManagerProps) {
       )}
 
       {/* Main Content */}
-      <Tabs defaultValue="generator" className="w-full">
-        <TabsList>
+      <Tabs defaultValue="introduction" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="introduction" className="gap-2">
+            <BookOpen className="h-4 w-4" />
+            {locale === 'zh' ? '关于LLMs.txt' : 'About LLMs.txt'}
+          </TabsTrigger>
           <TabsTrigger value="generator">{t('ai.generator')}</TabsTrigger>
           <TabsTrigger value="cache">{t('ai.cache_management')}</TabsTrigger>
           <TabsTrigger value="usage">{t('ai.usage_statistics')}</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="introduction">
+          <LLMsTxtIntroduction locale={locale} />
+        </TabsContent>
 
         <TabsContent value="generator" className="space-y-4">
           {/* Language Selection and Controls */}

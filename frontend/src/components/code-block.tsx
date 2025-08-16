@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Copy, Check, Code } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -19,6 +19,7 @@ export function CodeBlock({
   showLineNumbers = false 
 }: CodeBlockProps) {
   const [copied, setCopied] = useState(false)
+  const [highlightedCode, setHighlightedCode] = useState<string>('')
   const codeRef = useRef<HTMLElement>(null)
 
   // Extract language from className (format: language-javascript)
@@ -32,6 +33,37 @@ export function CodeBlock({
     return String(children)
   }
 
+  // Apply syntax highlighting
+  useEffect(() => {
+    const applyHighlighting = async () => {
+      try {
+        const hljs = await import('highlight.js')
+        const codeContent = String(children)
+        
+        if (detectedLanguage && detectedLanguage !== 'text') {
+          // Try to highlight with specific language
+          try {
+            const result = hljs.default.highlight(codeContent, { language: detectedLanguage })
+            setHighlightedCode(result.value)
+          } catch {
+            // Fall back to auto-detection if language not supported
+            const result = hljs.default.highlightAuto(codeContent)
+            setHighlightedCode(result.value)
+          }
+        } else {
+          // Auto-detect language
+          const result = hljs.default.highlightAuto(codeContent)
+          setHighlightedCode(result.value)
+        }
+      } catch (error) {
+        console.error('Failed to apply syntax highlighting:', error)
+        setHighlightedCode(String(children))
+      }
+    }
+
+    applyHighlighting()
+  }, [children, detectedLanguage])
+
   const copyToClipboard = async () => {
     try {
       const code = getCodeContent()
@@ -43,8 +75,9 @@ export function CodeBlock({
     }
   }
 
-  // Split code into lines for line numbers
-  const codeLines = getCodeContent().split('\n')
+  // Split code into lines for line numbers  
+  const codeLines = String(children).split('\n')
+  const highlightedLines = highlightedCode.split('\n')
 
   return (
     <div className="group relative my-6 overflow-hidden rounded-lg border border-border bg-muted">
@@ -76,25 +109,26 @@ export function CodeBlock({
           <div className="flex">
             {/* Line numbers */}
             {showLineNumbers && (
-              <div className="flex flex-col text-xs text-muted-foreground/50 select-none border-r border-border pr-3 pl-4 py-4 font-mono bg-muted/30">
+              <div className="flex flex-col text-xs text-muted-foreground/50 select-none border-r border-border pr-3 pl-4 py-6 font-mono bg-muted/30">
                 {codeLines.map((_, index) => (
-                  <span key={index} className="leading-6">
+                  <span key={index} className="leading-6 h-6">
                     {index + 1}
                   </span>
                 ))}
               </div>
             )}
             
-            {/* Code */}
+            {/* Code with syntax highlighting */}
             <code 
               ref={codeRef}
               className={cn(
-                "block p-4 text-sm font-mono leading-6 bg-transparent min-w-0 flex-1",
+                "block px-8 py-6 text-sm font-mono leading-6 bg-transparent min-w-0 flex-1 hljs",
                 className
               )}
-            >
-              {children}
-            </code>
+              dangerouslySetInnerHTML={{
+                __html: highlightedCode || String(children)
+              }}
+            />
           </div>
         </pre>
       </div>

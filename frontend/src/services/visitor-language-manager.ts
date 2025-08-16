@@ -1,5 +1,6 @@
 import { SUPPORTED_LANGUAGES, SupportedLanguage } from './translation/types'
 import { languageManager } from './translation/language-manager'
+import { apiClient } from '@/lib/api'
 
 export interface VisitorLanguageConfig {
   enabledLocales: SupportedLanguage[]
@@ -22,9 +23,27 @@ class VisitorLanguageManager {
     return VisitorLanguageManager.instance
   }
 
+  private async loadConfigFromAPI(): Promise<VisitorLanguageConfig | null> {
+    try {
+      const apiConfig = await apiClient.getLanguageConfig()
+      
+      // Create locale names mapping
+      const localeNames: Record<string, string> = apiConfig.supported_languages
+
+      return {
+        enabledLocales: apiConfig.enabled_languages as SupportedLanguage[],
+        defaultLocale: apiConfig.default_language as SupportedLanguage,
+        localeNames
+      }
+    } catch (error) {
+      console.warn('Failed to load language config from API:', error)
+      return null
+    }
+  }
+
   private loadConfig(): VisitorLanguageConfig {
     try {
-      // Get enabled languages from language manager
+      // Get enabled languages from language manager as fallback
       const enabledLanguages = languageManager.getEnabledLanguages()
       
       // Create locale names mapping
@@ -40,17 +59,55 @@ class VisitorLanguageManager {
       }
     } catch (error) {
       console.error('Failed to load visitor language config:', error)
-      // Fallback configuration
+      // Ultimate fallback configuration with Arabic included
       return {
-        enabledLocales: ['zh', 'en'],
+        enabledLocales: ['zh', 'en', 'ja', 'ko', 'es', 'fr', 'de', 'ru', 'ar'],
         defaultLocale: 'zh',
-        localeNames: { zh: '中文', en: 'English' }
+        localeNames: { 
+          zh: '中文', 
+          en: 'English',
+          ja: '日本語',
+          ko: '한국어',
+          es: 'Español',
+          fr: 'Français',
+          de: 'Deutsch',
+          ru: 'Русский',
+          ar: 'العربية'
+        }
       }
     }
   }
 
   public getConfig(): VisitorLanguageConfig {
-    // Refresh config each time to get latest settings
+    // Return cached config if available
+    if (this.config) {
+      return this.config
+    }
+    
+    // Load from local fallback first
+    this.config = this.loadConfig()
+    
+    // Try to update from API in the background
+    this.loadConfigFromAPI().then(apiConfig => {
+      if (apiConfig) {
+        this.config = apiConfig
+      }
+    }).catch(error => {
+      console.warn('Background API config loading failed:', error)
+    })
+    
+    return this.config
+  }
+
+  public async getConfigAsync(): Promise<VisitorLanguageConfig> {
+    // Try to load from API first
+    const apiConfig = await this.loadConfigFromAPI()
+    if (apiConfig) {
+      this.config = apiConfig
+      return this.config
+    }
+    
+    // Fall back to local config
     this.config = this.loadConfig()
     return this.config
   }
@@ -107,4 +164,19 @@ export function getDynamicDefaultLocale(): SupportedLanguage {
 
 export function getDynamicLocaleNames(): Record<string, string> {
   return visitorLanguageManager.getLocaleNames()
+}
+
+export async function getDynamicLocalesAsync(): Promise<SupportedLanguage[]> {
+  const config = await visitorLanguageManager.getConfigAsync()
+  return config.enabledLocales
+}
+
+export async function getDynamicDefaultLocaleAsync(): Promise<SupportedLanguage> {
+  const config = await visitorLanguageManager.getConfigAsync()
+  return config.defaultLocale
+}
+
+export async function getDynamicLocaleNamesAsync(): Promise<Record<string, string>> {
+  const config = await visitorLanguageManager.getConfigAsync()
+  return config.localeNames
 }

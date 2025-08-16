@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
+import QRCode from 'qrcode'
 import { 
   Twitter, 
   Facebook, 
@@ -12,6 +13,8 @@ import {
   Check,
   Share2
 } from 'lucide-react'
+import Image from 'next/image'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 interface ShareBarProps {
   url: string
@@ -20,9 +23,22 @@ interface ShareBarProps {
   className?: string
 }
 
+// WeChat Icon Component
+const WeChatIcon = ({ className }: { className?: string }) => (
+  <Image
+    src="/browsers/wechat.svg"
+    alt="WeChat"
+    width={16}
+    height={16}
+    className={className}
+  />
+)
+
 export default function ShareBar({ url, title, description, className = '' }: ShareBarProps) {
   const t = useTranslations()
   const [copied, setCopied] = useState(false)
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
+  const [qrLoading, setQrLoading] = useState(false)
   
   const encodedUrl = encodeURIComponent(url)
   const encodedTitle = encodeURIComponent(title)
@@ -58,6 +74,12 @@ export default function ShareBar({ url, title, description, className = '' }: Sh
     }
   ]
 
+  const wechatButton = {
+    name: t('share.wechat'),
+    color: 'text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400',
+    bgColor: 'hover:bg-green-50 dark:hover:bg-green-950'
+  }
+
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(url)
@@ -70,6 +92,29 @@ export default function ShareBar({ url, title, description, className = '' }: Sh
 
   const handleShare = (shareUrl: string) => {
     window.open(shareUrl, '_blank', 'width=600,height=400')
+  }
+
+  const generateQRCode = async () => {
+    if (qrCodeUrl) return qrCodeUrl
+    
+    setQrLoading(true)
+    try {
+      const qr = await QRCode.toDataURL(url, {
+        width: 200,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      })
+      setQrCodeUrl(qr)
+      return qr
+    } catch (err) {
+      console.error('Failed to generate QR code:', err)
+      return ''
+    } finally {
+      setQrLoading(false)
+    }
   }
 
   const handleNativeShare = () => {
@@ -101,6 +146,47 @@ export default function ShareBar({ url, title, description, className = '' }: Sh
           </button>
         )
       })}
+
+      {/* WeChat QR Code Share */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            className={`p-2 rounded-lg transition-all ${wechatButton.bgColor} ${wechatButton.color}`}
+            title={wechatButton.name}
+            onMouseEnter={() => generateQRCode()}
+            onClick={() => generateQRCode()}
+          >
+            <WeChatIcon className="h-4 w-4" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-4" align="center">
+          <div className="text-center space-y-3">
+            <h3 className="font-medium text-sm">{t('share.wechatQRTitle')}</h3>
+            <div className="flex justify-center">
+              {qrLoading ? (
+                <div className="w-[200px] h-[200px] bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
+                </div>
+              ) : qrCodeUrl ? (
+                <img 
+                  src={qrCodeUrl} 
+                  alt="QR Code" 
+                  className="rounded-lg border"
+                  width={200}
+                  height={200}
+                />
+              ) : (
+                <div className="w-[200px] h-[200px] bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-gray-500">
+                  {t('share.qrError')}
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              {t('share.wechatQRDesc')}
+            </p>
+          </div>
+        </PopoverContent>
+      </Popover>
 
       <div className="h-4 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
 

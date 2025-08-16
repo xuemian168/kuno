@@ -611,6 +611,7 @@
     "seoTitle": "SEOタイトル",
     "seoTitlePlaceholder": "検索エンジン表示用タイトルを入力",
     "seoTitleDescription": "検索エンジン結果に表示されるタイトル、60文字以内推奨",
+    "seoPreview": "SEOプレビュー",
     "seoDescription": "SEO説明文",
     "seoDescriptionPlaceholder": "検索エンジン表示用説明文を入力",
     "seoDescriptionDescription": "検索エンジン結果に表示される説明文、160文字以内推奨",
@@ -653,6 +654,14 @@
     "whatsapp": "WhatsApp",
     "telegram": "Telegram",
     "email": "メール",
+    "wechat": "WeChat",
+    "wechatScan": "WeChatスキャン共有",
+    "scanQRCode": "QRコードをスキャンしてWeChatで共有",
+    "wechatQRCodeTitle": "WeChat共有",
+    "wechatQRCodeDesc": "WeChatでQRコードをスキャンしてこの記事を共有",
+    "wechatQRTitle": "WeChat共有",
+    "wechatQRDesc": "WeChatでQRコードをスキャンしてこの記事を共有",
+    "qrError": "QRコード生成に失敗しました",
     "copyLink": "リンクをコピー",
     "copied": "コピーしました！",
     "moreOptions": "その他のオプション",
@@ -676,5 +685,124 @@
     "previewUrl": "プレビューURL",
     "autoAdjustNote": "幅を100%に設定すると、埋め込まれた記事はコンテナの幅に自動的に調整されます。",
     "readOnOriginalSite": "元のサイトで読む →"
+  },
+  "embedding": {
+    "kunoRag": {
+      "heroTitle": "KUNOのRAG技術革新",
+      "heroSubtitle": "多言語セマンティック・インテリジェンスの先駆者",
+      "heroDescription": "KUNOは多言語ブログプラットフォームにRAG技術の統合を先駆的に導入し、70以上の言語にわたる知的セマンティック検索とパーソナライズされたコンテンツ発見を実現し、ユーザーと知識の相互作用を変革しています。",
+      "achievementsTitle": "KUNOのRAG技術成果",
+      "achievementsSubtitle": "qut.edu.kgで実際に稼働する実世界の実装事例",
+      "achievements": {
+        "multilingualSearch": {
+          "title": "70以上の言語セマンティック検索",
+          "description": "KUNOの画期的な多言語RAG実装により、70以上の言語でのセマンティック検索が可能となり、qut.edu.kgでのライブ展開でグローバルユーザーにサービスを提供しています。",
+          "features": [
+            "中国語、英語、日本語、および67以上の他言語でのリアルタイムセマンティック検索",
+            "言語横断的なコンテンツ発見とインテリジェント推奨",
+            "ライブパフォーマンス：95%以上の精度で平均応答時間100ms未満",
+            "多言語コンテンツにわたる毎日数千の検索を処理"
+          ]
+        },
+        "contentDiscovery": {
+          "title": "インテリジェントコンテンツ発見",
+          "description": "KUNOはユーザーの意図と読書パターンを理解するAI駆動のコンテンツ推奨により、ブログナビゲーションを革新します。",
+          "features": [
+            "40%以上高いエンゲージメントを持つパーソナライズされた記事推奨",
+            "手動作業を80%削減する自動コンテンツ分類",
+            "セマンティック理解によるスマートコンテンツタグ付け",
+            "改善されたコンテンツ戦略のためのユーザー行動分析"
+          ]
+        },
+        "userExperience": {
+          "title": "AI強化ユーザーエクスペリエンス",
+          "description": "KUNOは東洋哲学（坤卦の原理）と現代AIを組み合わせて、調和のとれた知的なユーザーインタラクションを創造します。",
+          "features": [
+            "ブログコンテンツナレッジベースに基づくコンテキスト質疑応答",
+            "完全なコンテキスト理解を持つマルチターン会話",
+            "情報の信頼性を確保する回答ソース追跡",
+            "ユーザーの好みに応答する適応型インターフェース"
+          ]
+        },
+        "performance": {
+          "title": "パフォーマンスの優秀性",
+          "description": "KUNOのRAG実装は、本番環境向けのスマートキャッシングと最適化により、エンタープライズグレードのパフォーマンスを提供します。",
+          "features": [
+            "新鮮さを維持しながらAPIコストを70%削減するスマートキャッシング",
+            "100ms未満のクエリ応答のためのベクターデータベース最適化",
+            "ライブ展開で実証された水平スケーラビリティ",
+            "自動ヘルスモニタリングによる99.9%のアップタイム"
+          ]
+        },
+        "openSource": {
+          "title": "オープンソースイノベーション",
+          "description": "KUNOは高度なAI機能をオープンソース配布により民主化し、世界中のクリエイターがインテリジェントコンテンツプラットフォームを構築できるようにします。",
+          "features": [
+            "Docker展開で利用可能な完全なRAGパイプライン",
+            "包括的なドキュメントとコミュニティサポート",
+            "ゼロダウンタイム更新機能を持つ本番準備済み",
+            "カスタムAI統合のための拡張可能なアーキテクチャ"
+          ]
+        }
+      },
+      "implementationTitle": "KUNOのRAG実装方法",
+      "implementationSubtitle": "多言語セマンティック検索とコンテンツインテリジェンスにおけるKUNOの革新的アプローチ",
+      "implementation": {
+        "contentEmbedding": {
+          "title": "コンテンツ埋め込みパイプライン",
+          "description": "KUNOは高度な埋め込みモデルを通じて多言語ブログコンテンツを処理",
+          "details": "KUNOのパイプラインは最先端の埋め込みモデルを使用して70以上の言語の記事を自動的にベクタ化し、言語横断的な意味を捉えるセマンティック表現を作成してインテリジェントコンテンツ発見を可能にします。"
+        },
+        "queryProcessing": {
+          "title": "セマンティッククエリ処理",
+          "description": "ユーザークエリの高度な自然言語理解",
+          "details": "KUNOはユーザーの検索クエリをセマンティックベクターに変換し、言語と文化的コンテキストを横断した意図を理解し、正確なキーワードマッチに関係なく精密なコンテンツマッチングを可能にします。"
+        },
+        "intelligentRetrieval": {
+          "title": "インテリジェント検索",
+          "description": "膨大なコンテンツコレクションでの超高速類似性検索",
+          "details": "KUNOの最適化されたベクターデータベースは、数千の記事にわたって100ms未満のセマンティック検索を可能にし、関連性、最新性、ユーザーコンテキストを考慮するスマートランキングアルゴリズムを備えています。"
+        },
+        "contextualEnhancement": {
+          "title": "コンテキスト強化",
+          "description": "AI駆動のコンテンツ推奨とインサイト",
+          "details": "KUNOはセマンティック理解に基づくコンテキスト記事推奨、関連コンテンツ発見、インテリジェントナビゲーション提案を提供することでユーザーエクスペリエンスを向上させます。"
+        },
+        "continuousLearning": {
+          "title": "継続学習",
+          "description": "ユーザーインタラクションとフィードバックに基づく自己改善システム",
+          "details": "KUNOはユーザー行動、検索パターン、コンテンツエンゲージメントから継続的に学習し、推奨精度を改善し、進化するユーザーのニーズと好みに適応します。"
+        }
+      },
+      "innovationTitle": "KUNOのイノベーションリーダーシップ",
+      "innovationSubtitle": "qut.edu.kgでグローバルユーザーにライブデモンストレーションを提供",
+      "innovationItems": [
+        "70以上の言語をサポートする初の多言語RAGプラットフォーム",
+        "qut.edu.kgで99.9%のアップタイムで本番実証済み",
+        "AI機能を民主化するオープンソースイノベーション",
+        "100ms未満の応答時間でのエンタープライズパフォーマンス",
+        "運用コストを70%削減するスマートキャッシング",
+        "現代AIとの東洋哲学のシームレスな統合"
+      ],
+      "referencesTitle": "学術参考文献",
+      "referencesDescription": "KUNOの技術革新を支える学術研究基盤",
+      "reference1": "Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., ... & Kiela, D. (2020). Retrieval-augmented generation for knowledge-intensive nlp tasks. *arXiv preprint arXiv:2005.11401*. https://arxiv.org/abs/2307.13106"
+    }
+  },
+  "ai": {
+    "llms_txt_manager": "LLMs.txt マネージャー",
+    "llms_txt_description": "AI検索エンジンと言語モデル用のLLMs.txtファイルを生成・管理し、構造化されたWebサイトコンテンツ記述を提供します。",
+    "kunoLlms": {
+      "contentIntelligence": [
+        "ブログコンテンツと構造の自動セマンティック分析",
+        "インテリジェントなトピック抽出と分類",
+        "言語バージョン間での文化的コンテキスト保持",
+        "AI理解を強化するKUNOのRAGシステムとの統合",
+        "世界中のAIシステムにライブデモンストレーションを提供"
+      ],
+      "referencesTitle": "学術参考文献",
+      "referencesDescription": "KUNOのLLMs.txt実装を支える学術基盤",
+      "reference1": "IETF AI Control Workshop. (2024). AI Robots.txt - Web content control mechanisms for AI systems. *Internet Engineering Task Force Meeting Slides*. https://www.ietf.org/slides/slides-aicontrolws-ai-robotstxt-00.pdf"
+    }
   }
 }

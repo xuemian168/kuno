@@ -393,7 +393,7 @@ export default function AdminPage({ params }: AdminPageProps) {
                 <Link href="/admin/llms-txt">
                   <Button variant="outline">
                     <FileText className="mr-2 h-4 w-4" />
-                    LLMs.txt
+                    LLMs
                   </Button>
                 </Link>
                 <Link href="/admin/import">

@@ -88,6 +88,9 @@ func SetupRoutes() *gin.Engine {
 			settings.GET("", GetSettings)
 		}
 
+		// Language configuration - public access
+		api.GET("/languages", GetLanguageConfig)
+
 		// RSS feeds - public access
 		rss := api.Group("/rss")
 		{
@@ -234,6 +237,41 @@ func SetupRoutes() *gin.Engine {
 					adminEmbeddings.GET("/similarity-graph", embeddingController.GetSimilarityGraph)
 					adminEmbeddings.GET("/quality-metrics", embeddingController.GetQualityMetrics)
 					adminEmbeddings.GET("/rag-process", embeddingController.GetRAGProcessVisualization)
+				}
+
+				// SEO management
+				seoController := NewSEOController()
+				adminSEO := admin.Group("/seo")
+				{
+					// Health check endpoints
+					adminSEO.GET("/health", seoController.GetSEOHealth)
+					adminSEO.POST("/health/check", seoController.RunSEOHealthCheck)
+					adminSEO.GET("/health/history", seoController.GetSEOHealthHistory)
+					
+					// Article SEO endpoints
+					adminSEO.GET("/articles/:id", seoController.GetArticleSEO)
+					adminSEO.PUT("/articles/:id", seoController.UpdateArticleSEO)
+					adminSEO.POST("/articles/:id/analyze", seoController.AnalyzeArticleSEO)
+					adminSEO.POST("/articles/:id/generate", seoController.GenerateArticleSEO)
+					
+					// Keyword management endpoints
+					adminSEO.GET("/keywords", seoController.GetKeywords)
+					adminSEO.POST("/keywords", seoController.CreateKeyword)
+					adminSEO.PUT("/keywords/:id", seoController.UpdateKeyword)
+					adminSEO.DELETE("/keywords/:id", seoController.DeleteKeyword)
+					adminSEO.POST("/keywords/suggest", seoController.SuggestKeywords)
+					adminSEO.POST("/keywords/bulk-import", seoController.BulkImportKeywords)
+					adminSEO.POST("/keywords/update-rankings", seoController.UpdateKeywordRankings)
+					adminSEO.GET("/keywords/stats", seoController.GetKeywordStats)
+					adminSEO.GET("/keywords/groups", seoController.GetKeywordGroups)
+					adminSEO.POST("/keywords/groups", seoController.CreateKeywordGroup)
+					adminSEO.GET("/keywords/by-group", seoController.GetKeywordsByGroup)
+					
+					// Metrics and automation
+					adminSEO.GET("/metrics", seoController.GetSEOMetrics)
+					adminSEO.GET("/automation/rules", seoController.GetAutomationRules)
+					adminSEO.GET("/notifications", seoController.GetSEONotifications)
+					adminSEO.PUT("/notifications/:id/read", seoController.MarkNotificationRead)
 				}
 			}
 		}

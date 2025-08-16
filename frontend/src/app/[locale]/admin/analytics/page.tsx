@@ -2,15 +2,20 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { Eye, TrendingUp, Calendar, Users, ArrowLeft } from "lucide-react"
+import { Eye, TrendingUp, Calendar, Users, ArrowLeft, BarChart3, Target, Zap, Search } from "lucide-react"
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { apiClient, Article, AnalyticsData } from "@/lib/api"
 import { GeographicChart } from "@/components/analytics/geographic-chart"
 import { BrowserChart } from "@/components/analytics/browser-chart"
+import { SEODashboard } from "@/components/admin/seo-dashboard"
+import { KeywordManager } from "@/components/admin/keyword-manager"
+import { SEOAutoChecker } from "@/components/admin/seo-auto-checker"
+import { SEOAnalyticsOverview } from "@/components/admin/seo-analytics-overview"
 
 interface AnalyticsPageProps {
   params: Promise<{ locale: string }>
@@ -22,6 +27,7 @@ export default function AnalyticsPage({ params }: AnalyticsPageProps) {
   const [locale, setLocale] = useState<string>('zh')
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('overview')
 
   useEffect(() => {
     params.then(({ locale: paramLocale }) => {
@@ -82,14 +88,48 @@ export default function AnalyticsPage({ params }: AnalyticsPageProps) {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold">{t('analytics.title')}</h1>
-            <p className="text-muted-foreground">{t('analytics.description')}</p>
+            <h1 className="text-3xl font-bold">{t('analytics.title')} & SEO</h1>
+            <p className="text-muted-foreground">{t('analytics.subtitle')}</p>
           </div>
         </div>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Main Content with Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-8">
+          <TabsTrigger value="overview" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            {t('analytics.tabs.websiteAnalytics')}
+          </TabsTrigger>
+          <TabsTrigger value="seo-health" className="gap-2">
+            <Search className="h-4 w-4" />
+            {t('analytics.tabs.seoHealth')}
+          </TabsTrigger>
+          <TabsTrigger value="keywords" className="gap-2">
+            <Target className="h-4 w-4" />
+            {t('analytics.tabs.keywordManagement')}
+          </TabsTrigger>
+          <TabsTrigger value="auto-checks" className="gap-2">
+            <Zap className="h-4 w-4" />
+            {t('analytics.tabs.autoChecks')}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Website Analytics Tab */}
+        <TabsContent value="overview" className="space-y-8">
+          {/* SEO & Analytics Impact Overview */}
+          <SEOAnalyticsOverview 
+            websiteTraffic={analytics?.total_views}
+            totalViews={analytics?.total_views}
+          />
+
+          {/* Website Stats Overview */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              {t('analytics.websiteStats')}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t('analytics.totalViews')}</CardTitle>
@@ -133,10 +173,16 @@ export default function AnalyticsPage({ params }: AnalyticsPageProps) {
             <p className="text-xs text-muted-foreground">{t('analytics.viewsToday')}</p>
           </CardContent>
         </Card>
-      </div>
+            </div>
+          </div>
 
-      {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Website Content Analysis */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              {t('analytics.contentAnalysis')}
+            </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Top Performing Articles */}
         <Card>
           <CardHeader>
@@ -202,11 +248,12 @@ export default function AnalyticsPage({ params }: AnalyticsPageProps) {
             </div>
           </CardContent>
         </Card>
-      </div>
+            </div>
+          </div>
 
-      {/* Most Viewed Article Highlight */}
-      {topArticles.length > 0 && (
-        <Card className="mt-8">
+          {/* Most Viewed Article Highlight */}
+          {topArticles.length > 0 && (
+            <Card>
           <CardHeader>
             <CardTitle>{t('analytics.mostViewedArticle')}</CardTitle>
             <CardDescription>{t('analytics.topPerformingContent')}</CardDescription>
@@ -232,18 +279,35 @@ export default function AnalyticsPage({ params }: AnalyticsPageProps) {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+            </Card>
+          )}
 
-      {/* Enhanced Analytics Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-        {/* Geographic Analytics */}
-        <GeographicChart />
-        
-        {/* Browser & Device Analytics */}
-        <BrowserChart />
-      </div>
+          {/* Enhanced Analytics Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Geographic Analytics */}
+            <GeographicChart />
+            
+            {/* Browser & Device Analytics */}
+            <BrowserChart />
+          </div>
+        </TabsContent>
+
+        {/* SEO Health Tab */}
+        <TabsContent value="seo-health">
+          <SEODashboard />
+        </TabsContent>
+
+        {/* Keywords Management Tab */}
+        <TabsContent value="keywords">
+          <KeywordManager />
+        </TabsContent>
+
+        {/* Auto SEO Checks Tab */}
+        <TabsContent value="auto-checks">
+          <SEOAutoChecker />
+        </TabsContent>
+      </Tabs>
     </motion.div>
   )
 }

@@ -429,3 +429,73 @@ func uploadBrandingFile(c *gin.Context, fileType string) {
 		"message": fmt.Sprintf("%s uploaded successfully", strings.Title(fileType)),
 	})
 }
+
+// LanguageConfig represents the language configuration response
+type LanguageConfig struct {
+	DefaultLanguage    string            `json:"default_language"`
+	EnabledLanguages   []string          `json:"enabled_languages"`
+	SupportedLanguages map[string]string `json:"supported_languages"`
+}
+
+// GetLanguageConfig returns the current language configuration
+func GetLanguageConfig(c *gin.Context) {
+	var settings models.SiteSettings
+	if err := database.DB.First(&settings).Error; err != nil {
+		log.Printf("Failed to get settings for language config: %v", err)
+		// Return fallback configuration
+		c.JSON(http.StatusOK, LanguageConfig{
+			DefaultLanguage: "zh",
+			EnabledLanguages: []string{"zh", "en", "ja", "ko", "es", "fr", "de", "ru", "ar"},
+			SupportedLanguages: map[string]string{
+				"zh": "中文 (Chinese)",
+				"en": "English",
+				"ja": "日本語 (Japanese)",
+				"ko": "한국어 (Korean)",
+				"es": "Español (Spanish)",
+				"fr": "Français (French)",
+				"de": "Deutsch (German)",
+				"it": "Italiano (Italian)",
+				"pt": "Português (Portuguese)",
+				"ru": "Русский (Russian)",
+				"ar": "العربية (Arabic)",
+				"hi": "हिन्दी (Hindi)",
+			},
+		})
+		return
+	}
+
+	defaultLanguage := settings.DefaultLanguage
+	if defaultLanguage == "" {
+		defaultLanguage = "zh"
+	}
+
+	// Define all supported languages
+	supportedLanguages := map[string]string{
+		"zh": "中文 (Chinese)",
+		"en": "English", 
+		"ja": "日本語 (Japanese)",
+		"ko": "한국어 (Korean)",
+		"es": "Español (Spanish)",
+		"fr": "Français (French)",
+		"de": "Deutsch (German)",
+		"it": "Italiano (Italian)",
+		"pt": "Português (Portuguese)",
+		"ru": "Русский (Russian)",
+		"ar": "العربية (Arabic)",
+		"hi": "हिन्दी (Hindi)",
+	}
+
+	// For now, we'll return all supported languages as enabled
+	// In the future, this could be configurable via admin settings
+	enabledLanguages := []string{
+		"zh", "en", "ja", "ko", "es", "fr", "de", "ru", "ar", "hi",
+	}
+
+	config := LanguageConfig{
+		DefaultLanguage:    defaultLanguage,
+		EnabledLanguages:   enabledLanguages,
+		SupportedLanguages: supportedLanguages,
+	}
+
+	c.JSON(http.StatusOK, config)
+}
