@@ -655,6 +655,7 @@
     "telegram": "Telegram",
     "email": "メール",
     "wechat": "WeChat",
+    "weibo": "Weibo",
     "wechatScan": "WeChatスキャン共有",
     "scanQRCode": "QRコードをスキャンしてWeChatで共有",
     "wechatQRCodeTitle": "WeChat共有",

@@ -70,8 +70,7 @@
 
 /* Links */
 .prose a {
-  @apply text-primary underline-offset-4 hover:underline;
-  text-decoration: none;
+  @apply text-primary underline-offset-4 underline;
 }
 
 .prose a:hover {

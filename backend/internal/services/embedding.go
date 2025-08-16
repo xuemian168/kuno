@@ -3,6 +3,7 @@ package services
 import (
 	"blog-backend/internal/database"
 	"blog-backend/internal/models"
+	"blog-backend/internal/security"
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
@@ -31,6 +32,7 @@ type EmbeddingService struct {
 	providers map[string]EmbeddingProvider
 	defaultProvider string
 	dbConfig *models.AIConfig // Database AI configuration
+	usageTracker *AIUsageTracker // Track AI usage for cost and analytics
 }
 
 // NewEmbeddingService creates a new embedding service instance
@@ -38,6 +40,7 @@ func NewEmbeddingService() *EmbeddingService {
 	service := &EmbeddingService{
 		providers: make(map[string]EmbeddingProvider),
 		defaultProvider: "openai",
+		usageTracker: NewAIUsageTracker(),
 	}
 	
 	// Load configuration from database
@@ -57,17 +60,66 @@ func (es *EmbeddingService) loadDatabaseConfig() {
 	}
 	
 	if settings.AIConfig != "" {
-		var aiConfig models.AIConfig
-		if err := json.Unmarshal([]byte(settings.AIConfig), &aiConfig); err != nil {
-			log.Printf("Failed to parse AI config: %v", err)
+		log.Printf("Loading AI config from database (length: %d chars)", len(settings.AIConfig))
+		
+		// Try to decrypt the secure AI config first
+		aiConfigService := security.GetGlobalAIConfigService()
+		
+		// Parse as secure config and decrypt
+		var secureConfig security.SecureAIConfig
+		if err := json.Unmarshal([]byte(settings.AIConfig), &secureConfig); err != nil {
+			log.Printf("Failed to parse secure AI config: %v", err)
 			return
 		}
+		
+		// Decrypt the configuration
+		inputConfig, err := aiConfigService.DecryptAIConfig(&secureConfig)
+		if err != nil {
+			log.Printf("Failed to decrypt AI config: %v", err)
+			return
+		}
+		
+		// Convert to models.AIConfig format
+		aiConfig := models.AIConfig{
+			DefaultProvider: inputConfig.DefaultProvider,
+			Providers:       make(map[string]models.AIProviderConfig),
+			EmbeddingConfig: struct {
+				DefaultProvider string `json:"default_provider"`
+				Enabled         bool   `json:"enabled"`
+			}{
+				DefaultProvider: inputConfig.EmbeddingConfig.DefaultProvider,
+				Enabled:         inputConfig.EmbeddingConfig.Enabled,
+			},
+		}
+		
+		// Convert providers
+		for name, provider := range inputConfig.Providers {
+			aiConfig.Providers[name] = models.AIProviderConfig{
+				Provider: provider.Provider,
+				APIKey:   provider.APIKey,
+				Model:    provider.Model,
+				Enabled:  provider.Enabled,
+			}
+		}
+		
 		es.dbConfig = &aiConfig
 		
 		// Update default provider from database config
 		if aiConfig.EmbeddingConfig.DefaultProvider != "" {
 			es.defaultProvider = aiConfig.EmbeddingConfig.DefaultProvider
+			log.Printf("Set embedding default provider to: %s", es.defaultProvider)
 		}
+		
+		// Log available providers (without API keys)
+		providerNames := make([]string, 0, len(aiConfig.Providers))
+		for name, provider := range aiConfig.Providers {
+			if provider.Enabled && provider.APIKey != "" {
+				providerNames = append(providerNames, name)
+			}
+		}
+		log.Printf("Loaded AI providers from database: %v", providerNames)
+	} else {
+		log.Printf("No AI config found in database")
 	}
 }
 
@@ -431,13 +483,25 @@ func (es *EmbeddingService) ReloadConfig() error {
 	// Clear existing providers
 	es.providers = make(map[string]EmbeddingProvider)
 	
-	// Reload database config
+	// Reset default provider to initial value
+	es.defaultProvider = "openai"
+	
+	// Reload database config (this may update defaultProvider)
 	es.loadDatabaseConfig()
 	
 	// Reinitialize providers
 	es.initializeProviders()
 	
-	log.Printf("Reloaded AI configuration, available providers: %v", es.GetAvailableProviders())
+	// If the configured default provider is not available, try to use the first available provider
+	if _, exists := es.providers[es.defaultProvider]; !exists && len(es.providers) > 0 {
+		for providerName := range es.providers {
+			es.defaultProvider = providerName
+			log.Printf("Default provider '%s' not available, switched to '%s'", es.defaultProvider, providerName)
+			break
+		}
+	}
+	
+	log.Printf("Reloaded AI configuration, default provider: %s, available providers: %v", es.defaultProvider, es.GetAvailableProviders())
 	return nil
 }
 
@@ -569,16 +633,65 @@ func (es *EmbeddingService) generateAndStoreEmbedding(articleID uint, contentTyp
 		return fmt.Errorf("failed to store embedding: %v", err)
 	}
 
-	log.Printf("Generated and stored embedding for article %d, content_type: %s, language: %s", articleID, contentType, language)
+	// Track AI usage for cost and analytics
+	cost := es.calculateEmbeddingCost(providerName, tokenCount)
+	usageMetrics := UsageMetrics{
+		ServiceType:   "embedding",
+		Provider:      providerName,
+		Model:         modelName,
+		Operation:     "generate_embedding",
+		InputTokens:   tokenCount,
+		OutputTokens:  0, // Embeddings don't have output tokens
+		TotalTokens:   tokenCount,
+		EstimatedCost: cost,
+		Currency:      "USD",
+		Language:      language,
+		InputLength:   len(text),
+		OutputLength:  len(embeddingJSON),
+		ResponseTime:  0, // Could be measured in the future
+		Success:       true,
+		ArticleID:     &articleID,
+	}
+	
+	if err := es.usageTracker.TrackUsage(usageMetrics); err != nil {
+		log.Printf("Failed to track embedding usage: %v", err)
+		// Don't fail the operation if usage tracking fails
+	}
+
+	log.Printf("Generated and stored embedding for article %d, content_type: %s, language: %s (tokens: %d, cost: $%.6f)", 
+		articleID, contentType, language, tokenCount, cost)
 	return nil
 }
 
 // SearchSimilarArticles performs semantic search using vector similarity
 func (es *EmbeddingService) SearchSimilarArticles(query string, language string, limit int, threshold float64) ([]models.EmbeddingSearchResult, error) {
 	// Generate embedding for search query
-	queryEmbedding, _, err := es.GenerateEmbedding(query)
+	queryEmbedding, tokenCount, err := es.GenerateEmbedding(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate query embedding: %v", err)
+	}
+
+	// Track search query usage
+	cost := es.calculateEmbeddingCost(es.defaultProvider, tokenCount)
+	usageMetrics := UsageMetrics{
+		ServiceType:   "embedding",
+		Provider:      es.defaultProvider,
+		Model:         es.getProviderModel(es.defaultProvider),
+		Operation:     "search_query_embedding",
+		InputTokens:   tokenCount,
+		OutputTokens:  0,
+		TotalTokens:   tokenCount,
+		EstimatedCost: cost,
+		Currency:      "USD",
+		Language:      language,
+		InputLength:   len(query),
+		OutputLength:  0,
+		ResponseTime:  0,
+		Success:       true,
+	}
+	
+	if err := es.usageTracker.TrackUsage(usageMetrics); err != nil {
+		log.Printf("Failed to track search embedding usage: %v", err)
 	}
 
 	// Get all embeddings for the specified language
@@ -1157,6 +1270,35 @@ func (es *EmbeddingService) GetRAGProcessVisualization(query string, language st
 		RetrievedDocs: retrievedDocs,
 		SimilarityMap: similarityMap,
 	}, nil
+}
+
+// calculateEmbeddingCost estimates the cost of embedding generation based on provider and tokens
+func (es *EmbeddingService) calculateEmbeddingCost(provider string, tokens int) float64 {
+	// Cost per 1K tokens for different providers (as of 2024)
+	var costPer1K float64
+	
+	switch provider {
+	case "openai":
+		// OpenAI text-embedding-ada-002: $0.0001 per 1K tokens
+		costPer1K = 0.0001
+	case "gemini":
+		// Google Gemini text-embedding-004: $0.00001 per 1K tokens
+		costPer1K = 0.00001
+	default:
+		// Default fallback cost
+		costPer1K = 0.0001
+	}
+	
+	// Calculate cost: (tokens / 1000) * cost_per_1k
+	return (float64(tokens) / 1000.0) * costPer1K
+}
+
+// getProviderModel returns the model name for a given provider
+func (es *EmbeddingService) getProviderModel(providerName string) string {
+	if provider, exists := es.providers[providerName]; exists {
+		return provider.GetModelName()
+	}
+	return "unknown"
 }
 
 // Helper functions

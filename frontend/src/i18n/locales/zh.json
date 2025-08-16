@@ -982,6 +982,7 @@
     "telegram": "Telegram",
     "email": "邮件",
     "wechat": "微信",
+    "weibo": "微博",
     "wechatScan": "微信扫码分享",
     "scanQRCode": "扫描二维码分享到微信",
     "wechatQRCodeTitle": "微信分享",

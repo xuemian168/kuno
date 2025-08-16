@@ -61,6 +61,13 @@ export default function ShareBar({ url, title, description, className = '' }: Sh
       bgColor: 'hover:bg-blue-100 dark:hover:bg-blue-900'
     },
     {
+      name: t('share.weibo'),
+      icon: Share2,
+      url: `https://service.weibo.com/share/share.php?url=${encodedUrl}&title=${encodedTitle}`,
+      color: 'text-orange-500 hover:text-orange-600 dark:text-orange-400 dark:hover:text-orange-300',
+      bgColor: 'hover:bg-orange-50 dark:hover:bg-orange-950'
+    },
+    {
       name: t('share.whatsapp'),
       icon: MessageCircle,
       url: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`,

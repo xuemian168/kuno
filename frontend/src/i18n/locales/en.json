@@ -981,6 +981,7 @@
     "telegram": "Telegram",
     "email": "Email",
     "wechat": "WeChat",
+    "weibo": "Weibo",
     "wechatScan": "WeChat Scan to Share",
     "scanQRCode": "Scan QR code to share on WeChat",
     "wechatQRCodeTitle": "WeChat Share",
