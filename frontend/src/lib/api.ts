@@ -27,6 +27,10 @@ export interface Article {
   default_lang: string
   translations: ArticleTranslation[]
   view_count?: number
+  // Pinned Fields
+  is_pinned?: boolean
+  pin_order?: number
+  pinned_at?: string
   // SEO Fields
   seo_title?: string
   seo_description?: string
@@ -69,6 +73,7 @@ export interface SiteSettings {
   logo_url?: string
   favicon_url?: string
   custom_css?: string
+  custom_js?: string
   theme_config?: string
   active_theme?: string
   default_language?: string  // Site default language
@@ -559,6 +564,193 @@ export interface SEONotification {
   updated_at: string
   article?: Article
   keyword?: SEOKeyword
+}
+
+// Content Assistant Interfaces
+export interface TopicGap {
+  topic: string
+  description: string
+  related_topics: string[]
+  priority: number
+  language: string
+  suggested_titles: string[]
+  keywords: string[]
+}
+
+export interface WritingIdea {
+  title: string
+  description: string
+  category: string
+  keywords: string[]
+  difficulty_level: string
+  estimated_length: number
+  inspiration: string
+  language: string
+  relevance_score: number
+}
+
+export interface SmartTag {
+  tag: string
+  confidence: number
+  type: string
+  context: string
+}
+
+export interface SEOKeywordRecommendation {
+  keyword: string
+  search_volume: number
+  difficulty: number
+  relevance: number
+  type: string
+  suggestions: string[]
+  language: string
+}
+
+export interface TopicCluster {
+  name: string
+  articles: number[]
+  keywords: string[]
+  size: number
+  coherence: number
+}
+
+export interface ContentGapAnalysis {
+  total_articles: number
+  language_distribution: Record<string, number>
+  topic_clusters: TopicCluster[]
+  identified_gaps: TopicGap[]
+  recommendations: WritingIdea[]
+  coverage_score: number
+  generated_at: string
+}
+
+export interface ContentAssistantStats {
+  total_analyses_performed: number
+  total_ideas_generated: number
+  total_tags_generated: number
+  cache_hit_rate: number
+}
+
+export interface TopicTrends {
+  top_clusters: TopicCluster[]
+  coverage_score: number
+  language_distribution: Record<string, number>
+  generated_at: string
+}
+
+export interface ContentIdeaValidation {
+  is_viable: boolean
+  confidence: number
+  suggested_tags: SmartTag[]
+  recommendations: string[]
+}
+
+// Personalized Recommendations Interfaces
+export interface RecommendationResult {
+  article: Article
+  confidence: number
+  reason_type: string
+  reason_details: string
+  similarity?: number
+  position: number
+  recommendation_type: string
+  category?: string
+  is_learning_path?: boolean
+}
+
+export interface ReadingPath {
+  path_id: string
+  title: string
+  description: string
+  articles: RecommendationResult[]
+  total_time: number
+  difficulty: string
+  progress: number
+  created_at: string
+}
+
+export interface UserProfile {
+  id: number
+  user_id: string
+  language: string
+  preferred_topics: string
+  reading_speed: number
+  avg_reading_time: number
+  avg_scroll_depth: number
+  device_preference: string
+  active_hours: string
+  interest_vector: string
+  last_active: string
+  total_reading_time: number
+  article_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface RecentUser {
+  user_id: string
+  last_active: string
+  total_reading_time: number
+  article_count: number
+  device_preference: string
+  language: string
+  avg_scroll_depth: number
+}
+
+export interface ReadingPatterns {
+  total_reading_time: number
+  average_reading_time: number
+  average_scroll_depth: number
+  reading_speed: number
+  preferred_hours: number[]
+  device_distribution: Record<string, number>
+  topic_interests: Record<string, number>
+  category_interests: Record<string, number>
+  reading_frequency: Record<string, number>
+}
+
+export interface RecommendationAnalytics {
+  total_recommendations: number
+  click_through_rate: number
+  type_distribution: Record<string, number>
+  avg_confidence: number
+}
+
+export interface UserBehaviorTrackingRequest {
+  user_id?: string
+  session_id: string
+  article_id: number
+  interaction_type: 'view' | 'share' | 'comment' | 'like'
+  reading_time?: number
+  scroll_depth?: number
+  device_info?: {
+    device_type: string
+    browser: string
+    os: string
+    screen_size: string
+    user_agent: string
+  }
+  utm_params?: Record<string, string>
+  referrer_type?: string
+  language?: string
+}
+
+export interface PersonalizedRecommendationsRequest {
+  user_id?: string
+  language?: string
+  limit?: number
+  exclude_read?: boolean
+  include_reason?: boolean
+  min_confidence?: number
+  categories?: string[]
+  max_age?: number
+  diversify?: boolean
+}
+
+export interface ReadingPathRequest {
+  user_id?: string
+  topic: string
+  language?: string
 }
 
 class ApiClient {
@@ -1704,6 +1896,206 @@ class ApiClient {
     return this.request(`/seo/notifications/${notificationId}/read`, {
       method: 'PUT'
     })
+  }
+
+  // Content Assistant Methods
+  async getTopicGaps(language: string = 'en'): Promise<{
+    analysis: ContentGapAnalysis
+    message: string
+  }> {
+    return this.request(`/content-assistant/topic-gaps?language=${language}`)
+  }
+
+  async getWritingInspiration(params: {
+    category?: string
+    language?: string
+    limit?: number
+  } = {}): Promise<{
+    ideas: WritingIdea[]
+    count: number
+    message: string
+  }> {
+    const searchParams = new URLSearchParams()
+    if (params.category) searchParams.append('category', params.category)
+    if (params.language) searchParams.append('language', params.language)
+    if (params.limit) searchParams.append('limit', params.limit.toString())
+    
+    const queryString = searchParams.toString()
+    return this.request(`/content-assistant/writing-inspiration${queryString ? `?${queryString}` : ''}`)
+  }
+
+  async generateSmartTags(data: {
+    content: string
+    language?: string
+  }): Promise<{
+    tags: SmartTag[]
+    count: number
+    message: string
+  }> {
+    return this.request('/content-assistant/smart-tags', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+  }
+
+  async recommendSEOKeywords(data: {
+    content: string
+    language?: string
+    primary_keyword?: string
+  }): Promise<{
+    keywords: SEOKeywordRecommendation[]
+    count: number
+    message: string
+  }> {
+    return this.request('/content-assistant/seo-keywords', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+  }
+
+  async getContentAssistantStats(): Promise<{
+    stats: ContentAssistantStats
+    message: string
+  }> {
+    return this.request('/content-assistant/stats')
+  }
+
+  async getTopicTrends(language: string = 'en'): Promise<{
+    trends: TopicTrends
+    message: string
+  }> {
+    return this.request(`/content-assistant/trends?language=${language}`)
+  }
+
+  async validateContentIdea(data: {
+    title: string
+    language?: string
+    category?: string
+  }): Promise<{
+    validation: ContentIdeaValidation
+    message: string
+  }> {
+    return this.request('/content-assistant/validate-idea', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+  }
+
+  // Personalized Recommendations Methods
+  async trackUserBehavior(data: UserBehaviorTrackingRequest): Promise<{
+    message: string
+  }> {
+    return this.request('/recommendations/track', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+  }
+
+  async getPersonalizedRecommendations(params: PersonalizedRecommendationsRequest = {}): Promise<{
+    recommendations: RecommendationResult[]
+    count: number
+    user_id: string
+    message: string
+  }> {
+    const searchParams = new URLSearchParams()
+    if (params.user_id) searchParams.append('user_id', params.user_id)
+    if (params.language) searchParams.append('language', params.language)
+    if (params.limit) searchParams.append('limit', params.limit.toString())
+    if (params.exclude_read !== undefined) searchParams.append('exclude_read', params.exclude_read.toString())
+    if (params.include_reason !== undefined) searchParams.append('include_reason', params.include_reason.toString())
+    if (params.min_confidence !== undefined) searchParams.append('min_confidence', params.min_confidence.toString())
+    if (params.diversify !== undefined) searchParams.append('diversify', params.diversify.toString())
+    if (params.categories) searchParams.append('categories', params.categories.join(','))
+    if (params.max_age) searchParams.append('max_age', params.max_age.toString())
+    
+    const queryString = searchParams.toString()
+    return this.request(`/recommendations/personalized${queryString ? `?${queryString}` : ''}`)
+  }
+
+  async generateReadingPath(data: ReadingPathRequest): Promise<{
+    reading_path: ReadingPath
+    message: string
+  }> {
+    return this.request('/recommendations/reading-path', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+  }
+
+  async getPopularContent(params: {
+    language?: string
+    limit?: number
+    days?: number
+  } = {}): Promise<{
+    popular_content: RecommendationResult[]
+    count: number
+    days: number
+    message: string
+  }> {
+    const searchParams = new URLSearchParams()
+    if (params.language) searchParams.append('language', params.language)
+    if (params.limit) searchParams.append('limit', params.limit.toString())
+    if (params.days) searchParams.append('days', params.days.toString())
+    
+    const queryString = searchParams.toString()
+    return this.request(`/recommendations/popular${queryString ? `?${queryString}` : ''}`)
+  }
+
+  // Admin Recommendation Management Methods
+  async getUserProfile(userId: string): Promise<{
+    profile: UserProfile
+    interests: Record<string, any>
+    message: string
+  }> {
+    return this.request(`/recommendations/users/${userId}/profile`)
+  }
+
+  async getUserReadingPatterns(userId: string, days: number = 30): Promise<{
+    patterns: ReadingPatterns
+    days: number
+    message: string
+  }> {
+    return this.request(`/recommendations/users/${userId}/patterns?days=${days}`)
+  }
+
+  async getSimilarUsers(userId: string, limit: number = 10): Promise<{
+    similar_users: string[]
+    count: number
+    message: string
+  }> {
+    return this.request(`/recommendations/users/${userId}/similar?limit=${limit}`)
+  }
+
+  async getRecommendationAnalytics(userId: string, days: number = 30): Promise<{
+    analytics: RecommendationAnalytics
+    days: number
+    message: string
+  }> {
+    return this.request(`/recommendations/users/${userId}/analytics?days=${days}`)
+  }
+
+  async markRecommendationClicked(userId: string, recommendationId: number): Promise<{
+    message: string
+  }> {
+    return this.request(`/recommendations/users/${userId}/recommendations/${recommendationId}/click`, {
+      method: 'PUT'
+    })
+  }
+
+  async getRecentUsers(options?: { limit?: number; offset?: number; days?: number }): Promise<{
+    users: RecentUser[]
+    count: number
+    limit: number
+    offset: number
+    days: number
+    message: string
+  }> {
+    const params = new URLSearchParams()
+    if (options?.limit) params.set('limit', options.limit.toString())
+    if (options?.offset) params.set('offset', options.offset.toString())
+    if (options?.days) params.set('days', options.days.toString())
+    const queryString = params.toString() ? `?${params.toString()}` : ''
+    return this.request(`/recommendations/users/recent${queryString}`)
   }
 }
 

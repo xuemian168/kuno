@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, SiteSettings, SiteSettingsTranslation, AIConfig, AIProviderConfig } from "@/lib/api"
 import { useSettings } from "@/contexts/settings-context"
-import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle, AlertTriangle, ChevronDown, Activity, Sparkles, Copy, Type, Trash2 } from "lucide-react"
+import { Settings, Save, RefreshCw, Globe, Check, Languages, Key, Info, Wand2, Loader2, Eye, EyeOff, Shield, Lock, Share2, Upload, Image, Star, Volume2, VolumeX, HelpCircle, AlertTriangle, ChevronDown, Activity, Sparkles, Copy, Type, Trash2, Code } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { translationService, TranslationConfig, SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation"
@@ -52,6 +52,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     enable_sound_effects: true,
     default_language: "zh",
     custom_css: "",
+    custom_js: "",
     theme_config: "",
     active_theme: "",
     // Background settings
@@ -226,6 +227,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
           enable_sound_effects: settingsData.enable_sound_effects ?? true,
           default_language: settingsData.default_language || "zh",
           custom_css: settingsData.custom_css || "",
+          custom_js: settingsData.custom_js || "",
           theme_config: settingsData.theme_config || "",
           active_theme: settingsData.active_theme || "",
           // Background settings
@@ -296,7 +298,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
   // Track original masked keys when AI config changes
   useEffect(() => {
     const maskedKeys: Record<string, string> = {}
-    Object.entries(aiConfig.providers).forEach(([name, config]) => {
+    Object.entries(aiConfig?.providers || {}).forEach(([name, config]) => {
       // Check if key is masked (contains * or other mask patterns)
       if (config.api_key && (config.api_key.includes('*') || config.api_key.includes('---') || config.api_key === 'configured' || config.api_key === '已配置')) {
         maskedKeys[name] = config.api_key
@@ -378,9 +380,9 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     
     console.log('[AI Key Filter] Starting filter process...')
     console.log('[AI Key Filter] Original masked keys:', originalMaskedKeys)
-    console.log('[AI Key Filter] Current config providers:', Object.keys(config.providers))
+    console.log('[AI Key Filter] Current config providers:', Object.keys(config?.providers || {}))
     
-    Object.entries(config.providers).forEach(([name, providerConfig]) => {
+    Object.entries(config?.providers || {}).forEach(([name, providerConfig]) => {
       const originalMasked = originalMaskedKeys[name]
       const currentKey = providerConfig.api_key
       
@@ -437,6 +439,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         default_language: formData.default_language,
         logo_url: settings?.logo_url || '',
         favicon_url: settings?.favicon_url || '',
+        custom_css: formData.custom_css,
+        custom_js: formData.custom_js,
         // Background settings
         background_type: formData.background_type,
         background_color: formData.background_color,
@@ -522,6 +526,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         enable_sound_effects: settings.enable_sound_effects ?? true,
         default_language: settings.default_language || "zh",
         custom_css: settings.custom_css || "",
+        custom_js: settings.custom_js || "",
         theme_config: settings.theme_config || "",
         active_theme: settings.active_theme || "",
         // Background settings
@@ -2242,6 +2247,161 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     <Eye className="h-4 w-4" />
                     {t('settings.previewCSS')}
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Custom JavaScript Card */}
+            <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 pt-0">
+              <CardHeader className="bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/50 dark:to-orange-900/50 border-b border-yellow-200 dark:border-yellow-700 pt-6 pb-4 px-4 rounded-t-lg flex flex-col justify-center min-h-[80px]">
+                <CardTitle className="flex items-center gap-2 text-yellow-900 dark:text-yellow-100">
+                  <Code className="h-5 w-5" />
+                  {locale === 'zh' ? '自定义JavaScript' : 'Custom JavaScript'}
+                </CardTitle>
+                <CardDescription className="text-yellow-700 dark:text-yellow-300">
+                  {locale === 'zh' ? '添加自定义JavaScript代码，例如聊天机器人、分析工具等' : 'Add custom JavaScript code for chatbots, analytics, or other features'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 p-6">
+                {/* JavaScript编辑器 */}
+                <div className="space-y-3">
+                  <Label htmlFor="custom_js" className="text-base font-medium text-gray-700 dark:text-gray-300">
+                    {locale === 'zh' ? '自定义JavaScript代码' : locale === 'ja' ? 'カスタムJavaScriptコード' : 'Custom JavaScript Code'}
+                  </Label>
+                  <Textarea
+                    id="custom_js"
+                    value={formData.custom_js}
+                    onChange={(e) => handleChange('custom_js', e.target.value)}
+                    placeholder={
+                      locale === 'zh' 
+                        ? '只需输入纯JavaScript代码，无需<script>标签\n\n例如：\n(function(){\n  // 您的代码\n})();' 
+                        : locale === 'ja'
+                        ? '純粋なJavaScriptコードのみを入力してください、<script>タグは不要\n\n例：\n(function(){\n  // あなたのコード\n})();'
+                        : 'Enter pure JavaScript code only, no <script> tags needed\n\nExample:\n(function(){\n  // Your code here\n})();'
+                    }
+                    className="h-64 font-mono text-sm border-2 border-gray-200 dark:border-gray-700 focus:border-yellow-500 dark:focus:border-yellow-400 rounded-lg transition-colors"
+                  />
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50 rounded-lg p-4">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-red-700 dark:text-red-300">
+                        <p className="font-medium mb-1">
+                          {locale === 'zh' ? '重要提示' : locale === 'ja' ? '重要な注意事項' : 'Important Notice'}
+                        </p>
+                        <div className="space-y-2">
+                          <p>
+                            {locale === 'zh' 
+                              ? '• 只输入纯JavaScript代码，不要包含<script>标签或HTML注释'
+                              : locale === 'ja'
+                              ? '• 純粋なJavaScriptコードのみを入力し、<script>タグやHTMLコメントは含めないでください'
+                              : '• Enter pure JavaScript code only, do not include <script> tags or HTML comments'
+                            }
+                          </p>
+                          <p>
+                            {locale === 'zh' 
+                              ? '• 代码将在所有访客页面执行，请确保来源可信'
+                              : locale === 'ja'
+                              ? '• コードはすべての訪問者ページで実行されるため、信頼できるソースであることを確認してください'
+                              : '• Code will execute on all visitor pages, ensure it\'s from trusted sources'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* JavaScript示例和帮助 */}
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {locale === 'zh' ? '使用示例' : locale === 'ja' ? '使用例' : 'Usage Examples'}
+                    </h4>
+                    <div className="space-y-3 text-xs text-gray-600 dark:text-gray-400">
+                      <div>
+                        <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
+                          {locale === 'zh' ? '// Chaport 聊天机器人' : locale === 'ja' ? '// Chaport チャットボット' : '// Chaport Chatbot'}
+                        </code>
+                        <pre className="bg-gray-200 dark:bg-gray-700 px-2 py-2 rounded mt-1 text-xs overflow-x-auto">
+{`(function(w,d,v3){
+w.chaportConfig = {
+appId : 'YOUR_APP_ID'
+};
+if(w.chaport)return;v3=w.chaport={};
+// ... rest of code
+})(window, document);`}
+                        </pre>
+                      </div>
+                      <div>
+                        <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
+                          {locale === 'zh' ? '// Google Analytics' : locale === 'ja' ? '// Google Analytics' : '// Google Analytics'}
+                        </code>
+                        <pre className="bg-gray-200 dark:bg-gray-700 px-2 py-2 rounded mt-1 text-xs overflow-x-auto">
+{`(function(i,s,o,g,r,a,m){
+  // GA code here
+})(window,document,'script',...);`}
+                        </pre>
+                      </div>
+                      <div>
+                        <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
+                          {locale === 'zh' ? '// 自定义功能' : locale === 'ja' ? '// カスタム機能' : '// Custom Feature'}
+                        </code>
+                        <pre className="bg-gray-200 dark:bg-gray-700 px-2 py-2 rounded mt-1 text-xs overflow-x-auto">
+{`(function() {
+  console.log('Custom JS loaded');
+  // Your custom code here
+})();`}
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chaport 特别说明 */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                      {locale === 'zh' ? '✨ Chaport 聊天机器人完整代码示例' : locale === 'ja' ? '✨ Chaport チャットボット完全なコード例' : '✨ Complete Chaport Chatbot Code Example'}
+                    </h4>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+                      {locale === 'zh' 
+                        ? '复制以下代码并将 YOUR_APP_ID 替换为您的实际应用ID：'
+                        : locale === 'ja'
+                        ? '以下のコードをコピーし、YOUR_APP_IDを実際のアプリIDに置き換えてください：'
+                        : 'Copy the code below and replace YOUR_APP_ID with your actual app ID:'
+                      }
+                    </p>
+                    <pre className="bg-blue-100 dark:bg-blue-900/40 px-3 py-2 rounded text-xs overflow-x-auto border border-blue-200 dark:border-blue-700">
+{`(function(w,d,v3){
+w.chaportConfig = {
+appId : '67484784110b9aa2d9a4801c'
+};
+
+if(w.chaport)return;v3=w.chaport={};v3._q=[];v3._l={};v3.q=function(){v3._q.push(arguments)};v3.on=function(e,fn){if(!v3._l[e])v3._l[e]=[];v3._l[e].push(fn)};var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://app.chaport.com/javascripts/insert.js';var ss=d.getElementsByTagName('script')[0];ss.parentNode.insertBefore(s,ss)
+})(window, document);`}
+                    </pre>
+                  </div>
+
+                  {/* 控制按钮 */}
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleChange('custom_js', '')}
+                      className="flex items-center gap-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {locale === 'zh' ? '清空代码' : 'Clear Code'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        console.log('Preview JavaScript:', formData.custom_js)
+                        // You could add a preview modal here if needed
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <Eye className="h-4 w-4" />
+                      {locale === 'zh' ? '预览代码' : 'Preview Code'}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -107,6 +107,7 @@ func UpdateSettings(c *gin.Context) {
 		LogoURL            string                           `json:"logo_url"`
 		FaviconURL         string                           `json:"favicon_url"`
 		CustomCSS          string                           `json:"custom_css"`
+		CustomJS           string                           `json:"custom_js"`
 		ThemeConfig        string                           `json:"theme_config"`
 		ActiveTheme        string                           `json:"active_theme"`
 		// Background Settings
@@ -144,6 +145,7 @@ func UpdateSettings(c *gin.Context) {
 	settings.LogoURL = input.LogoURL
 	settings.FaviconURL = input.FaviconURL
 	settings.CustomCSS = input.CustomCSS
+	settings.CustomJS = input.CustomJS
 	settings.ThemeConfig = input.ThemeConfig
 	settings.ActiveTheme = input.ActiveTheme
 	

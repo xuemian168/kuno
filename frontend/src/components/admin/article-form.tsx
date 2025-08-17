@@ -10,12 +10,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { MarkdownEditor } from "@/components/markdown/markdown-editor"
 import { apiClient, Article, Category, ArticleTranslation } from "@/lib/api"
-import { Languages, Plus, Trash2 } from "lucide-react"
+import { Languages, Plus, Trash2, Pin } from "lucide-react"
 
 
 interface ArticleFormProps {
@@ -41,7 +42,9 @@ export function ArticleForm({ article, isEditing = false, locale = 'zh' }: Artic
     content_type: article?.content_type || "markdown",
     summary: article?.summary || "",
     category_id: article?.category_id || 0,
-    created_at: article?.created_at || new Date().toISOString()
+    created_at: article?.created_at || new Date().toISOString(),
+    is_pinned: article?.is_pinned || false,
+    pin_order: article?.pin_order || 1
   })
   const [translations, setTranslations] = useState<ArticleTranslation[]>(() => {
     // Initialize translations from article data if available
@@ -176,7 +179,7 @@ export function ArticleForm({ article, isEditing = false, locale = 'zh' }: Artic
     }
   }
 
-  const handleChange = (field: string, value: string | number) => {
+  const handleChange = (field: string, value: string | number | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -238,6 +241,42 @@ export function ArticleForm({ article, isEditing = false, locale = 'zh' }: Artic
                 value={new Date(formData.created_at).toISOString().slice(0, 16)}
                 onChange={(e) => handleChange('created_at', new Date(e.target.value).toISOString())}
               />
+            </div>
+
+            {/* Pin Settings */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is_pinned"
+                  checked={formData.is_pinned}
+                  onCheckedChange={(checked) => handleChange('is_pinned', checked)}
+                />
+                <Label htmlFor="is_pinned" className="flex items-center gap-2">
+                  <Pin className="h-4 w-4" />
+                  {t('admin.pinArticle')}
+                </Label>
+              </div>
+              
+              {formData.is_pinned && (
+                <div className="space-y-2 ml-6">
+                  <Label htmlFor="pin_order">{t('admin.pinPriority')}</Label>
+                  <Select
+                    value={formData.pin_order.toString()}
+                    onValueChange={(value) => handleChange('pin_order', parseInt(value))}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">{t('admin.firstPlace')}</SelectItem>
+                      <SelectItem value="2">{t('admin.secondPlace')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground">
+                    {t('admin.maxPinnedArticles')}
+                  </p>
+                </div>
+              )}
             </div>
 
             <Separator />

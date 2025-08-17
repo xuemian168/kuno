@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { ChevronRight, Home } from 'lucide-react'
 import { Link } from '@/i18n/routing'
 import { cn } from '@/lib/utils'
@@ -15,6 +15,7 @@ interface BreadcrumbItem {
 export function AdminBreadcrumb() {
   const pathname = usePathname()
   const t = useTranslations()
+  const locale = useLocale()
 
   // Remove locale prefix and split path
   const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}(?:\/|$)/, '/')
@@ -91,6 +92,41 @@ export function AdminBreadcrumb() {
         case 'analytics':
           items.push({
             label: t('admin.analytics'),
+            isActive: true
+          })
+          break
+
+        case 'recommendations':
+          items.push({
+            label: t('admin.recommendations'),
+            isActive: true
+          })
+          break
+
+        case 'content-assistant':
+          items.push({
+            label: t('admin.contentAssistant'),
+            isActive: true
+          })
+          break
+
+        case 'embeddings':
+          items.push({
+            label: 'RAG',
+            isActive: true
+          })
+          break
+
+        case 'llms-txt':
+          items.push({
+            label: 'LLMs.txt',
+            isActive: true
+          })
+          break
+
+        case 'import':
+          items.push({
+            label: t('import.contentImport'),
             isActive: true
           })
           break

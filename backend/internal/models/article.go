@@ -16,6 +16,10 @@ type Article struct {
 	DefaultLang  string               `gorm:"default:'zh'" json:"default_lang"`
 	Translations []ArticleTranslation `gorm:"foreignKey:ArticleID" json:"translations,omitempty"`
 	ViewCount    uint                 `gorm:"default:0" json:"view_count"`
+	// Pinned Fields
+	IsPinned     bool                 `gorm:"default:false" json:"is_pinned"`
+	PinOrder     int                  `gorm:"default:0" json:"pin_order"`
+	PinnedAt     *time.Time           `json:"pinned_at,omitempty"`
 	// SEO Fields
 	SEOTitle       string             `gorm:"size:255" json:"seo_title"`
 	SEODescription string             `gorm:"size:500" json:"seo_description"`
@@ -52,6 +56,7 @@ type SiteSettings struct {
 	LogoURL     string                    `gorm:"size:255" json:"logo_url"`
 	FaviconURL  string                    `gorm:"size:255" json:"favicon_url"`
 	CustomCSS   string                    `gorm:"type:text" json:"custom_css"`
+	CustomJS    string                    `gorm:"type:text" json:"custom_js"`
 	ThemeConfig string                    `gorm:"type:text" json:"theme_config"`
 	ActiveTheme string                    `gorm:"size:100" json:"active_theme"`
 	// Background Settings
@@ -287,4 +292,123 @@ type SearchIndex struct {
 	AverageQueryTime float64  `gorm:"default:0" json:"average_query_time"` // milliseconds
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// SearchCache stores cached search results and popular queries
+type SearchCache struct {
+	ID          uint       `gorm:"primaryKey" json:"id"`
+	CacheKey    string     `gorm:"unique;not null;size:255" json:"cache_key"`
+	CacheValue  string     `gorm:"type:text;not null" json:"cache_value"` // JSON string
+	AccessCount int        `gorm:"default:1" json:"access_count"`
+	ExpiresAt   *time.Time `gorm:"index" json:"expires_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+// PopularQuery tracks frequently searched queries
+type PopularQuery struct {
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	QueryHash    string    `gorm:"unique;not null;size:64" json:"query_hash"`
+	QueryText    string    `gorm:"type:text;not null" json:"query_text"`
+	HitCount     int       `gorm:"default:1" json:"hit_count"`
+	Language     string    `gorm:"size:10;index" json:"language"`
+	LastAccessed time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"last_accessed"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// ContentQualityAnalysis stores article content quality analysis results
+type ContentQualityAnalysis struct {
+	ID              uint      `gorm:"primaryKey" json:"id"`
+	ArticleID       uint      `gorm:"not null;index" json:"article_id"`
+	TopicClusters   string    `gorm:"type:text" json:"topic_clusters"`      // JSON format
+	ContentScore    float64   `gorm:"default:0" json:"content_score"`       // Content quality score
+	KeywordDensity  string    `gorm:"type:text" json:"keyword_density"`     // JSON format
+	ReadabilityScore float64  `gorm:"default:0" json:"readability_score"`   // Readability score
+	OriginalityScore float64  `gorm:"default:0" json:"originality_score"`   // Originality score
+	SEOScore        float64   `gorm:"default:0" json:"seo_score"`           // SEO optimization score
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+	
+	// Foreign key relationship
+	Article         Article   `gorm:"foreignKey:ArticleID" json:"article,omitempty"`
+}
+
+// WritingSuggestion stores AI-generated writing suggestions
+type WritingSuggestion struct {
+	ID             uint      `gorm:"primaryKey" json:"id"`
+	SuggestionType string    `gorm:"not null;size:50;index" json:"suggestion_type"` // 'topic_gap', 'keyword', 'tag', 'seo'
+	Content        string    `gorm:"type:text;not null" json:"content"`
+	RelevanceScore float64   `gorm:"default:0" json:"relevance_score"`
+	Language       string    `gorm:"size:10;index" json:"language"`
+	CategoryID     *uint     `gorm:"index" json:"category_id"`
+	IsUsed         bool      `gorm:"default:false" json:"is_used"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	
+	// Foreign key relationships
+	Category       *Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
+}
+
+// UserReadingBehavior tracks user reading patterns and engagement
+type UserReadingBehavior struct {
+	ID              uint      `gorm:"primaryKey" json:"id"`
+	UserID          string    `gorm:"size:255;index;not null" json:"user_id"` // IP fingerprint or session ID
+	ArticleID       uint      `gorm:"not null;index" json:"article_id"`
+	SessionID       string    `gorm:"size:255;index" json:"session_id"`
+	ReadingTime     int       `gorm:"default:0" json:"reading_time"`      // Reading time in seconds
+	ScrollDepth     float64   `gorm:"default:0" json:"scroll_depth"`      // Scroll depth percentage (0-1)
+	InteractionType string    `gorm:"size:20;index" json:"interaction_type"` // 'view', 'share', 'comment', 'like'
+	DeviceType      string    `gorm:"size:20" json:"device_type"`         // 'desktop', 'mobile', 'tablet'
+	Language        string    `gorm:"size:10;index" json:"language"`
+	ReferrerType    string    `gorm:"size:50" json:"referrer_type"`       // 'search', 'social', 'direct', 'internal'
+	UTMSource       string    `gorm:"size:100" json:"utm_source"`
+	UTMMedium       string    `gorm:"size:100" json:"utm_medium"`
+	UTMCampaign     string    `gorm:"size:100" json:"utm_campaign"`
+	CreatedAt       time.Time `json:"created_at"`
+	
+	// Foreign key relationship
+	Article         Article   `gorm:"foreignKey:ArticleID" json:"article,omitempty"`
+}
+
+// PersonalizedRecommendation stores personalized article recommendations
+type PersonalizedRecommendation struct {
+	ID                 uint      `gorm:"primaryKey" json:"id"`
+	UserID             string    `gorm:"size:255;index;not null" json:"user_id"`
+	ArticleID          uint      `gorm:"not null;index" json:"article_id"`
+	RecommendationType string    `gorm:"size:50;index" json:"recommendation_type"` // 'reading_path', 'similar_interest', 'trending', 'collaborative'
+	Confidence         float64   `gorm:"default:0" json:"confidence"`              // Recommendation confidence (0-1)
+	ReasonType         string    `gorm:"size:50" json:"reason_type"`               // 'similar_content', 'reading_history', 'popular_among_similar_users'
+	ReasonDetails      string    `gorm:"type:text" json:"reason_details"`          // JSON details about why this was recommended
+	Position           int       `gorm:"default:0" json:"position"`                // Position in recommendation list
+	Category           string    `gorm:"size:50;index" json:"category"`            // 'learning', 'discovery'
+	IsLearningPath     bool      `gorm:"default:false" json:"is_learning_path"`    // Whether this is part of a learning path
+	IsClicked          bool      `gorm:"default:false" json:"is_clicked"`
+	IsViewed           bool      `gorm:"default:false" json:"is_viewed"`
+	ClickedAt          *time.Time `json:"clicked_at"`
+	ViewedAt           *time.Time `json:"viewed_at"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+	
+	// Foreign key relationship
+	Article            Article   `gorm:"foreignKey:ArticleID" json:"article,omitempty"`
+}
+
+// UserProfile stores aggregated user preferences and interests
+type UserProfile struct {
+	ID                uint      `gorm:"primaryKey" json:"id"`
+	UserID            string    `gorm:"size:255;unique;not null" json:"user_id"`
+	Language          string    `gorm:"size:10;index" json:"language"`
+	PreferredTopics   string    `gorm:"type:text" json:"preferred_topics"`    // JSON array of topics
+	ReadingSpeed      float64   `gorm:"default:0" json:"reading_speed"`       // Words per minute
+	AvgReadingTime    int       `gorm:"default:0" json:"avg_reading_time"`    // Average reading time in seconds
+	AvgScrollDepth    float64   `gorm:"default:0" json:"avg_scroll_depth"`    // Average scroll depth
+	DevicePreference  string    `gorm:"size:20" json:"device_preference"`     // Most used device type
+	ActiveHours       string    `gorm:"type:text" json:"active_hours"`        // JSON array of preferred reading hours
+	InterestVector    string    `gorm:"type:text" json:"interest_vector"`     // JSON array representing user interests as vector
+	LastActive        time.Time `json:"last_active"`
+	TotalReadingTime  int       `gorm:"default:0" json:"total_reading_time"`  // Total reading time in seconds
+	ArticleCount      int       `gorm:"default:0" json:"article_count"`       // Number of articles read
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }

@@ -77,6 +77,16 @@ func SetupRoutes() *gin.Engine {
 			search.GET("/similar/:id", embeddingController.GetSimilarArticles)
 		}
 
+		// Personalized recommendations - public access
+		recommendationsController := NewRecommendationsController()
+		recommendations := api.Group("/recommendations")
+		{
+			recommendations.POST("/track", recommendationsController.TrackBehavior)
+			recommendations.GET("/personalized", recommendationsController.GetPersonalizedRecommendations)
+			recommendations.POST("/reading-path", recommendationsController.GenerateReadingPath)
+			recommendations.GET("/popular", recommendationsController.GetPopularContent)
+		}
+
 		categories := api.Group("/categories")
 		{
 			categories.GET("", GetCategories)
@@ -237,6 +247,35 @@ func SetupRoutes() *gin.Engine {
 					adminEmbeddings.GET("/similarity-graph", embeddingController.GetSimilarityGraph)
 					adminEmbeddings.GET("/quality-metrics", embeddingController.GetQualityMetrics)
 					adminEmbeddings.GET("/rag-process", embeddingController.GetRAGProcessVisualization)
+				}
+
+				// Content Assistant management
+				contentAssistantController := NewContentAssistantController()
+				adminContentAssistant := admin.Group("/content-assistant")
+				{
+					adminContentAssistant.GET("/topic-gaps", contentAssistantController.AnalyzeTopicGaps)
+					adminContentAssistant.GET("/writing-inspiration", contentAssistantController.GetWritingInspiration)
+					adminContentAssistant.POST("/smart-tags", contentAssistantController.GenerateSmartTags)
+					adminContentAssistant.POST("/seo-keywords", contentAssistantController.RecommendSEOKeywords)
+					adminContentAssistant.GET("/stats", contentAssistantController.GetContentAssistantStats)
+					adminContentAssistant.GET("/trends", contentAssistantController.GetTopicTrends)
+					adminContentAssistant.POST("/validate-idea", contentAssistantController.ValidateContentIdea)
+				}
+
+				// Personalized recommendations management
+				adminRecommendations := admin.Group("/recommendations")
+				{
+					adminRecommendations.GET("/users/recent", recommendationsController.GetRecentUsers)
+					adminRecommendations.GET("/users/:user_id/profile", recommendationsController.GetUserProfile)
+					adminRecommendations.GET("/users/:user_id/patterns", recommendationsController.GetReadingPatterns)
+					adminRecommendations.GET("/users/:user_id/similar", recommendationsController.GetSimilarUsers)
+					adminRecommendations.GET("/users/:user_id/analytics", recommendationsController.GetRecommendationAnalytics)
+					adminRecommendations.PUT("/users/:user_id/recommendations/:recommendation_id/click", recommendationsController.MarkRecommendationClicked)
+					
+					// Debug and testing endpoints
+					adminRecommendations.GET("/users/:user_id/status", recommendationsController.GetUserDataStatus)
+					adminRecommendations.POST("/users/:user_id/force-generate", recommendationsController.ForceGenerateRecommendations)
+					adminRecommendations.POST("/users/:user_id/create-test-behavior", recommendationsController.CreateTestBehavior)
 				}
 
 				// SEO management

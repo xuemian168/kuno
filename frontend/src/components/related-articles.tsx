@@ -138,7 +138,7 @@ export function RelatedArticles({
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {relatedArticles.map((article, index) => (
+        {relatedArticles && relatedArticles.length > 0 && relatedArticles.map((article, index) => (
           <div key={article.article_id} className="group">
             <Link 
               href={`/${currentLocale}/article/${article.article_id}`}
@@ -146,16 +146,16 @@ export function RelatedArticles({
             >
               <div className="flex items-start justify-between gap-2">
                 <h4 className="font-medium text-sm leading-tight group-hover:text-primary line-clamp-2">
-                  {article.title}
+                  {article?.title || ''}
                 </h4>
                 <div className="flex items-center gap-1 shrink-0">
                   <Badge variant="secondary" className="text-xs">
-                    {Math.round(article.similarity * 100)}%
+                    {Math.round((article?.similarity || 0) * 100)}%
                   </Badge>
                 </div>
               </div>
               
-              {article.summary && (
+              {article?.summary && (
                 <p className="text-xs text-muted-foreground line-clamp-2">
                   {truncateText(article.summary, 120)}
                 </p>
@@ -165,15 +165,15 @@ export function RelatedArticles({
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    {formatDate(article.created_at)}
+                    {article?.created_at ? formatDate(article.created_at) : ''}
                   </span>
                   <span className="flex items-center gap-1">
                     <BarChart3 className="h-3 w-3" />
-                    {article.view_count}
+                    {article?.view_count || 0}
                   </span>
                 </div>
                 <Badge variant="outline" className="text-xs">
-                  {article.category_name}
+                  {article?.category_name || ''}
                 </Badge>
               </div>
             </Link>

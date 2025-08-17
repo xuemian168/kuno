@@ -6,11 +6,12 @@ import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Calendar, ArrowRight, Eye, Rss } from 'lucide-react'
+import { Calendar, ArrowRight, Eye, Rss, Pin } from 'lucide-react'
 import { apiClient, Article, Category } from '@/lib/api'
 import NextLink from 'next/link'
 import { WebsiteStructuredData } from '@/components/seo/structured-data'
 import { getBaseUrl } from '@/lib/utils'
+import { PersonalizedRecommendations } from '@/components/recommendations'
 
 interface HomePageClientProps {
   locale: string
@@ -130,59 +131,79 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
           </div>
         </section>
 
-        {/* Articles Grid */}
-        <section>
-          {filteredArticles.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No articles found</p>
-            </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredArticles.map((article, index) => (
-                <motion.div
-                  key={article.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                >
-                  <NextLink href={`/${locale}/article/${article.id}`} className="block h-full">
-                    <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group">
-                      <CardHeader>
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge variant="secondary">{article.category.name}</Badge>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            <div className="flex items-center">
-                              <Calendar className="h-4 w-4 mr-1" />
-                              {formatDate(article.created_at)}
+        {/* Main Content: Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Articles Section - Left Column */}
+          <section className="lg:col-span-3">
+            {filteredArticles.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No articles found</p>
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {filteredArticles.map((article, index) => (
+                  <motion.div
+                    key={article.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <NextLink href={`/${locale}/article/${article.id}`} className="block h-full">
+                      <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group">
+                        <CardHeader>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {article.is_pinned && (
+                                <div className="bg-yellow-500 text-white rounded-full p-1 shadow-lg">
+                                  <Pin className="h-3 w-3" />
+                                </div>
+                              )}
+                              <Badge variant="secondary">{article.category.name}</Badge>
                             </div>
-                            {article.view_count !== undefined && siteSettings?.show_view_count !== false && (
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
                               <div className="flex items-center">
-                                <Eye className="h-4 w-4 mr-1" />
-                                {article.view_count}
+                                <Calendar className="h-4 w-4 mr-1" />
+                                {formatDate(article.created_at)}
                               </div>
-                            )}
+                              {article.view_count !== undefined && siteSettings?.show_view_count !== false && (
+                                <div className="flex items-center">
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  {article.view_count}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <CardTitle className="group-hover:text-primary transition-colors">
-                          {article.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription className="mb-4">
-                          {article.summary}
-                        </CardDescription>
-                        <div className="flex items-center text-primary font-medium">
-                          Read More
-                          <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </NextLink>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </section>
+                          <CardTitle className="group-hover:text-primary transition-colors">
+                            {article.title}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <CardDescription className="mb-4">
+                            {article.summary}
+                          </CardDescription>
+                          <div className="flex items-center text-primary font-medium">
+                            {locale === 'zh' ? '阅读更多' : 'Read More'}
+                            <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </NextLink>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Recommendations Sidebar - Right Column */}
+          <aside className="lg:col-span-1">
+            <PersonalizedRecommendations 
+              language={locale}
+              maxRecommendations={1}
+              showReason={true}
+              className="sticky top-4"
+            />
+          </aside>
+        </div>
     </div>
   )
 }

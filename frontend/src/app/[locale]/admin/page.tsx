@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { Plus, Edit, Trash2, Settings, Eye, BarChart3, Download, Check, X, Upload, FileText, Brain } from "lucide-react"
+import { Plus, Edit, Trash2, Settings, Eye, BarChart3, Download, Check, X, Pin, PinOff } from "lucide-react"
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,8 @@ import { apiClient, Article, Category } from "@/lib/api"
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog"
 import { useThrottle } from "@/hooks/use-debounce"
 import { Clock, Calendar } from "lucide-react"
+import { AIToolsDropdown } from "@/components/admin/ai-tools-dropdown"
+import { ContentActionsDropdown } from "@/components/admin/content-actions-dropdown"
 
 interface AdminPageProps {
   params: Promise<{ locale: string }>
@@ -81,6 +83,62 @@ export default function AdminPage({ params }: AdminPageProps) {
       type: 'category',
       item: category
     })
+  }
+
+  const handleTogglePin = async (article: Article) => {
+    try {
+      const newPinnedState = !article.is_pinned
+      
+      // If trying to pin, check current pinned count
+      if (newPinnedState) {
+        const currentPinnedCount = articles.filter(a => a.is_pinned && a.id !== article.id).length
+        if (currentPinnedCount >= 2) {
+          alert(locale === 'zh' ? '最多只能置顶2篇文章' : 'Maximum 2 articles can be pinned')
+          return
+        }
+      }
+      
+      const updatedData = {
+        ...article,
+        is_pinned: newPinnedState,
+        pin_order: newPinnedState ? 1 : 0, // Default to first position when pinning
+        pinned_at: newPinnedState ? new Date().toISOString() : undefined
+      }
+      
+      await apiClient.updateArticle(article.id, updatedData)
+      
+      // Refresh the articles list to get the latest data with correct sorting
+      const [articlesData] = await Promise.all([
+        apiClient.getArticles({ lang: locale })
+      ])
+      setArticles(articlesData)
+      
+      // Clear selection if the article was selected
+      if (selectedArticles.has(article.id)) {
+        const newSelection = new Set(selectedArticles)
+        newSelection.delete(article.id)
+        setSelectedArticles(newSelection)
+      }
+      
+      // Show success message
+      const message = newPinnedState 
+        ? (locale === 'zh' ? '文章已置顶' : 'Article pinned successfully')
+        : (locale === 'zh' ? '已取消置顶' : 'Article unpinned successfully')
+      
+      // You can replace this with a toast notification if available
+      console.log(message)
+      
+    } catch (error: any) {
+      console.error('Failed to toggle pin:', error)
+      
+      // Handle specific error messages
+      let errorMessage = locale === 'zh' ? '置顶设置失败' : 'Failed to toggle pin'
+      if (error.response?.data?.error === 'Maximum 2 articles can be pinned') {
+        errorMessage = locale === 'zh' ? '最多只能置顶2篇文章' : 'Maximum 2 articles can be pinned'
+      }
+      
+      alert(errorMessage)
+    }
   }
 
   const handleExportAll = async () => {
@@ -375,51 +433,38 @@ export default function AdminPage({ params }: AdminPageProps) {
 
           {/* Articles Management */}
           <div className="mb-12">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:justify-between lg:items-center">
               <h2 className="text-2xl font-bold">{t('admin.articles')}</h2>
-              <div className="flex gap-2">
-                <Link href="/admin/analytics">
-                  <Button variant="outline">
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    {t('analytics.title')}
-                  </Button>
-                </Link>
-                <Link href="/admin/embeddings">
-                  <Button variant="outline">
-                    <Brain className="mr-2 h-4 w-4" />
-                    {locale === 'zh' ? 'RAG' : 'RAG'}
-                  </Button>
-                </Link>
-                <Link href="/admin/llms-txt">
-                  <Button variant="outline">
-                    <FileText className="mr-2 h-4 w-4" />
-                    LLMs
-                  </Button>
-                </Link>
-                <Link href="/admin/import">
-                  <Button variant="outline">
-                    <Upload className="mr-2 h-4 w-4" />
-                    {locale === 'zh' ? '内容导入' : 'Import Content'}
-                  </Button>
-                </Link>
-                <Button 
-                  variant="outline" 
-                  onClick={throttledExportAll}
-                  disabled={exporting}
-                >
-                  {exporting ? (
-                    <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  ) : (
-                    <Download className="mr-2 h-4 w-4" />
-                  )}
-                  {exporting ? t('export.exporting') : t('export.exportAll')}
-                </Button>
-                <Link href="/admin/articles/new">
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    {t('article.createArticle')}
-                  </Button>
-                </Link>
+              
+              {/* Button Groups - Responsive Layout */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap lg:gap-2">
+                {/* Primary Actions - Always visible */}
+                <div className="flex gap-2">
+                  <Link href="/admin/analytics">
+                    <Button variant="outline" className="flex-shrink-0">
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      <span className="hidden sm:inline">{t('analytics.title')}</span>
+                      <span className="sm:hidden">{locale === 'zh' ? '分析' : 'Analytics'}</span>
+                    </Button>
+                  </Link>
+                  <Link href="/admin/articles/new">
+                    <Button className="flex-shrink-0">
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span className="hidden sm:inline">{t('article.createArticle')}</span>
+                      <span className="sm:hidden">{locale === 'zh' ? '创建' : 'Create'}</span>
+                    </Button>
+                  </Link>
+                </div>
+                
+                {/* Secondary Actions - Grouped in dropdowns */}
+                <div className="flex gap-2">
+                  <AIToolsDropdown locale={locale} />
+                  <ContentActionsDropdown 
+                    locale={locale} 
+                    onExportAll={throttledExportAll}
+                    exporting={exporting}
+                  />
+                </div>
               </div>
             </div>
 
@@ -499,7 +544,13 @@ export default function AdminPage({ params }: AdminPageProps) {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.05 }}
                   >
-                    <Card className={selectedArticles.has(article.id) ? 'ring-2 ring-primary' : ''}>
+                    <Card className={`relative ${selectedArticles.has(article.id) ? 'ring-2 ring-primary' : ''}`}>
+                      {/* Pin indicator in top right corner */}
+                      {article.is_pinned && (
+                        <div className="absolute top-2 right-2 z-10 bg-yellow-500 text-white rounded-full p-1.5 shadow-lg">
+                          <Pin className="h-3 w-3" />
+                        </div>
+                      )}
                       <CardHeader>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -535,6 +586,15 @@ export default function AdminPage({ params }: AdminPageProps) {
                           </div>
                           <div className="flex gap-2">
                             <Button 
+                              variant={article.is_pinned ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleTogglePin(article)}
+                              title={article.is_pinned ? (locale === 'zh' ? '取消置顶' : 'Unpin') : (locale === 'zh' ? '置顶文章' : 'Pin Article')}
+                              className={article.is_pinned ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}
+                            >
+                              {article.is_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                            </Button>
+                            <Button 
                               variant="outline" 
                               size="sm"
                               onClick={() => throttledExportArticle(article.id)}
@@ -562,7 +622,9 @@ export default function AdminPage({ params }: AdminPageProps) {
                             </Button>
                           </div>
                         </div>
-                        <CardTitle className="text-lg">{article.title}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {article.title}
+                        </CardTitle>
                         <CardDescription className="line-clamp-2">
                           {article.summary}
                         </CardDescription>

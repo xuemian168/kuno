@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { notFound } from 'next/navigation'
@@ -20,6 +20,7 @@ import ShareBar from '@/components/share-bar'
 import { useAuth } from '@/contexts/auth-context'
 import { Link } from '@/i18n/routing'
 import { useDynamicTheme } from '@/contexts/dynamic-theme-context'
+import { RelatedArticles } from '@/components/related-articles'
 
 interface ArticlePageClientProps {
   id: string
@@ -36,6 +37,14 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
   const [error, setError] = useState('')
   const [siteSettings, setSiteSettings] = useState<{ site_title: string; site_subtitle: string; show_view_count?: boolean } | null>(null)
   const [tocItems, setTocItems] = useState<any[]>([])
+  
+  // Behavior tracking state
+  const [startTime] = useState(() => typeof window !== 'undefined' ? Date.now() : 0)
+  const [isVisible, setIsVisible] = useState(true)
+  const [hasTrackedView, setHasTrackedView] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const visibilityTimeRef = useRef(0)
+  const lastVisibilityTimeRef = useRef(typeof window !== 'undefined' ? Date.now() : 0)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -67,6 +76,138 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
 
     fetchData()
   }, [id, locale])
+
+  // Mount effect to ensure client-side only operations
+  useEffect(() => {
+    setIsMounted(true)
+    lastVisibilityTimeRef.current = Date.now()
+  }, [])
+
+  // Behavior tracking effects
+  useEffect(() => {
+    if (!article || !isMounted) return
+
+    // Track initial view after article loads
+    const trackView = async () => {
+      if (hasTrackedView) return
+      
+      try {
+        // Generate or get user session ID for tracking
+        let sessionId = localStorage.getItem('userSessionId')
+        if (!sessionId) {
+          sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          localStorage.setItem('userSessionId', sessionId)
+        }
+
+        await apiClient.trackUserBehavior({
+          session_id: sessionId,
+          article_id: parseInt(id),
+          interaction_type: 'view',
+          reading_time: 0,
+          scroll_depth: 0,
+          device_info: {
+            device_type: /Mobile|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+            browser: navigator.userAgent.includes('Chrome') ? 'Chrome' : navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Other',
+            os: navigator.platform,
+            screen_size: `${window.screen.width}x${window.screen.height}`,
+            user_agent: navigator.userAgent
+          },
+          language: locale
+        })
+        
+        setHasTrackedView(true)
+      } catch (error) {
+        console.error('Error tracking article view:', error)
+      }
+    }
+
+    // Delay tracking to ensure it's an intentional view
+    const trackingTimeout = setTimeout(trackView, 1000)
+    return () => clearTimeout(trackingTimeout)
+  }, [article, id, locale, hasTrackedView, isMounted])
+
+  // Track reading time and page visibility
+  useEffect(() => {
+    if (!article || !hasTrackedView || !isMounted) return
+
+    const handleVisibilityChange = () => {
+      if (typeof document === 'undefined') return
+      
+      const now = Date.now()
+      
+      if (document.hidden) {
+        // Page became hidden, add to visibility time
+        if (isVisible) {
+          visibilityTimeRef.current += now - lastVisibilityTimeRef.current
+          setIsVisible(false)
+        }
+      } else {
+        // Page became visible
+        if (!isVisible) {
+          lastVisibilityTimeRef.current = now
+          setIsVisible(true)
+        }
+      }
+    }
+
+    const handleBeforeUnload = async () => {
+      if (typeof window === 'undefined' || typeof document === 'undefined') return
+      
+      const now = Date.now()
+      const totalTime = visibilityTimeRef.current + (isVisible ? now - lastVisibilityTimeRef.current : 0)
+      const readingTime = Math.round(totalTime / 1000) // Convert to seconds
+
+      if (readingTime > 5) { // Only track if user spent more than 5 seconds
+        try {
+          const sessionId = localStorage.getItem('userSessionId')
+          if (sessionId) {
+            // Calculate scroll depth safely
+            const scrollDepth = document.body && window.scrollY !== undefined
+              ? Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100)
+              : 0
+            
+            // Track reading time using the API client
+            await apiClient.trackUserBehavior({
+              session_id: sessionId,
+              article_id: parseInt(id),
+              interaction_type: 'view',
+              reading_time: readingTime,
+              scroll_depth: scrollDepth,
+              device_info: {
+                device_type: /Mobile|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+                browser: navigator.userAgent.includes('Chrome') ? 'Chrome' : navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Other',
+                os: navigator.platform,
+                screen_size: `${window.screen.width}x${window.screen.height}`,
+                user_agent: navigator.userAgent
+              },
+              language: locale
+            })
+          }
+        } catch (error) {
+          console.error('Error tracking reading time:', error)
+        }
+      }
+    }
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', handleBeforeUnload)
+    }
+
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('beforeunload', handleBeforeUnload)
+      }
+      
+      // Also track on component unmount
+      handleBeforeUnload()
+    }
+  }, [article, hasTrackedView, id, locale, startTime, isVisible, isMounted])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US', {
@@ -207,7 +348,7 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
           </div>
           
           {/* Table of Contents - Floating/Fixed position */}
-          {tocItems.length > 0 && (
+          {tocItems && tocItems.length > 0 && (
             <TableOfContents tocItems={tocItems} />
           )}
 
@@ -218,8 +359,8 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
               <p className="text-sm text-muted-foreground">{t('share.shareWithFriends')}</p>
               <ShareBar 
                 url={articleUrl} 
-                title={article.title} 
-                description={article.summary || ''} 
+                title={article?.title || ''} 
+                description={article?.summary || ''} 
                 className="justify-center"
               />
             </div>
@@ -230,13 +371,23 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Tag className="h-4 w-4" />
-                <span>{article.category.name}</span>
+                <span>{article?.category?.name || ''}</span>
               </div>
               <div className="text-sm text-muted-foreground">
-                Last updated: {formatDate(article.updated_at)}
+                Last updated: {article?.updated_at ? formatDate(article.updated_at) : ''}
               </div>
             </div>
           </footer>
+
+          {/* Related Articles Section */}
+          <div className="border-t pt-8">
+            <RelatedArticles 
+              articleId={parseInt(id)}
+              currentTitle={article?.title || ''}
+              maxItems={6}
+              enableSemanticSearch={true}
+            />
+          </div>
         </motion.div>
     </div>
   )

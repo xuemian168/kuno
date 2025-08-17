@@ -402,7 +402,7 @@ export function EmbeddingQualityDashboard({ className = '' }: EmbeddingQualityDa
                     {currentLocale === 'zh' ? '详细分布' : 'Detailed Distribution'}
                   </h4>
                   
-                  {Object.entries(metrics.vector_distribution)
+                  {Object.entries(metrics?.vector_distribution || {})
                     .sort(([,a], [,b]) => b - a)
                     .map(([language, count]) => (
                       <div key={language} className="flex items-center justify-between">

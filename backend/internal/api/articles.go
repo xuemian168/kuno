@@ -41,7 +41,7 @@ func GetArticles(c *gin.Context) {
 		query = query.Where("created_at <= ?", time.Now())
 	}
 	
-	if err := query.Find(&articles).Error; err != nil {
+	if err := query.Order("is_pinned DESC, pin_order ASC, created_at DESC").Find(&articles).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -190,6 +190,10 @@ func UpdateArticle(c *gin.Context) {
 		CategoryID  uint   `json:"category_id"`
 		DefaultLang string `json:"default_lang"`
 		CreatedAt   string `json:"created_at"`
+		// Pinned Fields
+		IsPinned    *bool      `json:"is_pinned"`
+		PinOrder    *int       `json:"pin_order"`
+		PinnedAt    *string    `json:"pinned_at"`
 		Translations []struct {
 			Language string `json:"language"`
 			Title    string `json:"title"`
@@ -218,6 +222,41 @@ func UpdateArticle(c *gin.Context) {
 		if parsedTime, err := time.Parse(time.RFC3339, req.CreatedAt); err == nil {
 			article.CreatedAt = parsedTime
 		}
+	}
+	
+	// Handle pinned fields with validation
+	if req.IsPinned != nil {
+		// If trying to pin the article
+		if *req.IsPinned && !article.IsPinned {
+			// Check how many articles are already pinned
+			var pinnedCount int64
+			database.DB.Model(&models.Article{}).Where("is_pinned = ?", true).Count(&pinnedCount)
+			
+			if pinnedCount >= 2 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Maximum 2 articles can be pinned"})
+				return
+			}
+			
+			article.IsPinned = *req.IsPinned
+			if req.PinOrder != nil {
+				article.PinOrder = *req.PinOrder
+			} else {
+				// Default to position 1 if not specified
+				article.PinOrder = 1
+			}
+			now := time.Now()
+			article.PinnedAt = &now
+		} else if !*req.IsPinned {
+			// Unpinning the article
+			article.IsPinned = false
+			article.PinOrder = 0
+			article.PinnedAt = nil
+		}
+	}
+	
+	// Update pin order if provided (only if article is pinned)
+	if req.PinOrder != nil && article.IsPinned {
+		article.PinOrder = *req.PinOrder
 	}
 	
 	if err := database.DB.Save(&article).Error; err != nil {

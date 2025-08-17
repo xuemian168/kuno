@@ -37,7 +37,16 @@
     "logout": "Logout",
     "manageBlogContent": "Manage your blog content and categories",
     "noArticlesFound": "No articles found.",
-    "noCategoriesFound": "No categories found."
+    "noCategoriesFound": "No categories found.",
+    "recommendations": "Recommendations",
+    "contentAssistant": "Content Assistant",
+    "aiTools": "AI Tools",
+    "pinArticle": "Pin Article",
+    "pinPriority": "Pin Priority",
+    "pinnedArticle": "Pinned",
+    "firstPlace": "1st Place",
+    "secondPlace": "2nd Place",
+    "maxPinnedArticles": "Maximum 2 articles can be pinned"
   },
   "setup": {
     "title": "Setup KUNO",

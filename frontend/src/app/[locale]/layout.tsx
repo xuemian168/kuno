@@ -11,6 +11,7 @@ import { DynamicThemeProvider } from '@/contexts/dynamic-theme-context'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import { CustomCSSInjector } from '@/components/custom-css-injector'
+import { CustomJSInjector } from '@/components/custom-js-injector'
 import { LayoutBackground } from '@/components/layout-background'
 import '../globals.css'
 import { getBaseUrl, getSiteUrl, getApiUrl } from '@/lib/config'
@@ -218,6 +219,7 @@ export default async function LocaleLayout({
               <SettingsProvider>
                 <DynamicThemeProvider>
                   <CustomCSSInjector />
+                  <CustomJSInjector />
                   <LayoutBackground />
                   <div className="min-h-screen bg-transparent flex flex-col relative">
                     <Header />

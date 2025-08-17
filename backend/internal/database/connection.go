@@ -36,7 +36,7 @@ func InitDatabase() {
 		log.Fatal("Failed to connect database:", err)
 	}
 
-	err = DB.AutoMigrate(&models.Article{}, &models.Category{}, &models.SiteSettings{}, &models.User{}, &models.MediaLibrary{}, &models.ArticleTranslation{}, &models.CategoryTranslation{}, &models.SiteSettingsTranslation{}, &models.ArticleView{}, &models.SocialMedia{}, &models.AIUsageRecord{}, &models.ArticleEmbedding{}, &models.SearchIndex{}, &models.SEOKeyword{}, &models.SEOHealthCheck{}, &models.SEOMetrics{}, &models.SEOKeywordGroup{}, &models.SEOKeywordGroupMember{}, &models.SEOAutomationRule{}, &models.SEONotification{}, &models.SEOTemplate{})
+	err = DB.AutoMigrate(&models.Article{}, &models.Category{}, &models.SiteSettings{}, &models.User{}, &models.MediaLibrary{}, &models.ArticleTranslation{}, &models.CategoryTranslation{}, &models.SiteSettingsTranslation{}, &models.ArticleView{}, &models.SocialMedia{}, &models.AIUsageRecord{}, &models.ArticleEmbedding{}, &models.SearchIndex{}, &models.SEOKeyword{}, &models.SEOHealthCheck{}, &models.SEOMetrics{}, &models.SEOKeywordGroup{}, &models.SEOKeywordGroupMember{}, &models.SEOAutomationRule{}, &models.SEONotification{}, &models.SEOTemplate{}, &models.SearchCache{}, &models.PopularQuery{}, &models.ContentQualityAnalysis{}, &models.WritingSuggestion{}, &models.UserReadingBehavior{}, &models.PersonalizedRecommendation{}, &models.UserProfile{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}

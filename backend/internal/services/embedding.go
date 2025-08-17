@@ -665,6 +665,17 @@ func (es *EmbeddingService) generateAndStoreEmbedding(articleID uint, contentTyp
 
 // SearchSimilarArticles performs semantic search using vector similarity
 func (es *EmbeddingService) SearchSimilarArticles(query string, language string, limit int, threshold float64) ([]models.EmbeddingSearchResult, error) {
+	// Check cache first for frequently used queries
+	cacheKey := fmt.Sprintf("search_%s_%s_%d_%.2f", 
+		fmt.Sprintf("%x", sha256.Sum256([]byte(query))), language, limit, threshold)
+	
+	if cached, exists := GetGlobalCache().Get(cacheKey); exists {
+		if results, ok := cached.([]models.EmbeddingSearchResult); ok {
+			log.Printf("🔄 Using cached search results for query (no API call needed)")
+			return results, nil
+		}
+	}
+	
 	// Generate embedding for search query
 	queryEmbedding, tokenCount, err := es.GenerateEmbedding(query)
 	if err != nil {
@@ -770,6 +781,121 @@ func (es *EmbeddingService) SearchSimilarArticles(query string, language string,
 		results = append(results, result)
 	}
 
+	// Cache the results for future use
+	GetGlobalCache().Set(cacheKey, results)
+
+	return results, nil
+}
+
+// SearchSimilarByArticleID finds similar articles using existing embeddings for a specific article
+func (es *EmbeddingService) SearchSimilarByArticleID(articleID uint, language string, limit int, threshold float64) ([]models.EmbeddingSearchResult, error) {
+	log.Printf("🔍 Searching similar articles for article ID %d (using cached embeddings)", articleID)
+	
+	// Get the embedding for the source article
+	var sourceEmbedding models.ArticleEmbedding
+	result := database.DB.Where("article_id = ? AND language = ? AND content_type = ?", articleID, language, "combined").First(&sourceEmbedding)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to find embedding for article %d: %v", articleID, result.Error)
+	}
+	
+	// Parse source article embedding
+	var sourceVector []float64
+	if err := json.Unmarshal([]byte(sourceEmbedding.Embedding), &sourceVector); err != nil {
+		return nil, fmt.Errorf("failed to parse source embedding: %v", err)
+	}
+	
+	// Get all other embeddings for the specified language (excluding the source article)
+	var embeddings []models.ArticleEmbedding
+	result = database.DB.Where("language = ? AND content_type = ? AND article_id != ?", language, "combined", articleID).Find(&embeddings)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to fetch target embeddings: %v", result.Error)
+	}
+	
+	// Calculate similarities
+	type similarityResult struct {
+		ArticleID  uint
+		Similarity float64
+	}
+	
+	var similarities []similarityResult
+	for _, embedding := range embeddings {
+		// Parse stored embedding
+		var storedEmbedding []float64
+		if err := json.Unmarshal([]byte(embedding.Embedding), &storedEmbedding); err != nil {
+			log.Printf("Failed to parse embedding for article %d: %v", embedding.ArticleID, err)
+			continue
+		}
+		
+		// Calculate cosine similarity
+		similarity := cosineSimilarity(sourceVector, storedEmbedding)
+		if similarity >= threshold {
+			similarities = append(similarities, similarityResult{
+				ArticleID:  embedding.ArticleID,
+				Similarity: similarity,
+			})
+		}
+	}
+	
+	// Sort by similarity (descending)
+	sort.Slice(similarities, func(i, j int) bool {
+		return similarities[i].Similarity > similarities[j].Similarity
+	})
+	
+	// Limit results
+	if limit > 0 && len(similarities) > limit {
+		similarities = similarities[:limit]
+	}
+	
+	// Fetch article details
+	if len(similarities) == 0 {
+		log.Printf("⚠️ No similar articles found for article %d (threshold: %.2f)", articleID, threshold)
+		return []models.EmbeddingSearchResult{}, nil
+	}
+	
+	var articleIDs []uint
+	similarityMap := make(map[uint]float64)
+	for _, sim := range similarities {
+		articleIDs = append(articleIDs, sim.ArticleID)
+		similarityMap[sim.ArticleID] = sim.Similarity
+	}
+	
+	var articles []models.Article
+	if err := database.DB.Preload("Category").Where("id IN ?", articleIDs).Find(&articles).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch article details: %v", err)
+	}
+	
+	// Build results maintaining similarity order
+	var results []models.EmbeddingSearchResult
+	for _, articleID := range articleIDs {
+		for _, article := range articles {
+			if article.ID == articleID {
+				result := models.EmbeddingSearchResult{
+					ArticleID:    article.ID,
+					Title:        article.Title,
+					Summary:      article.Summary,
+					CategoryName: article.Category.Name,
+					Language:     language,
+					Similarity:   similarityMap[articleID],
+					ViewCount:    article.ViewCount,
+					CreatedAt:    article.CreatedAt,
+				}
+
+				// If language is not the default language, try to get translation
+				if language != article.DefaultLang {
+					var translation models.ArticleTranslation
+					if err := database.DB.Where("article_id = ? AND language = ?", article.ID, language).First(&translation).Error; err == nil {
+						result.Title = translation.Title
+						result.Summary = translation.Summary
+					}
+				}
+
+				results = append(results, result)
+				break
+			}
+		}
+	}
+	
+	log.Printf("✅ Found %d similar articles for article %d (no API calls needed)", len(results), articleID)
 	return results, nil
 }
 
@@ -1307,4 +1433,22 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// Global embedding service instance (moved from api package)
+var globalEmbeddingServiceForServices *EmbeddingService
+
+// GetGlobalEmbeddingService returns the global embedding service instance
+func GetGlobalEmbeddingService() *EmbeddingService {
+	if globalEmbeddingServiceForServices == nil {
+		globalEmbeddingServiceForServices = NewEmbeddingService()
+	}
+	return globalEmbeddingServiceForServices
 }

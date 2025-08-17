@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { LogOut, Home, Rss, LayoutDashboard, Settings, Image, Shield, User, Upload } from "lucide-react"
+import { LogOut, Home, Rss, LayoutDashboard, Settings, Image, Shield, User } from "lucide-react"
 import { useTranslations } from 'next-intl'
 import { usePathname } from 'next/navigation'
 import LanguageSwitcher from "@/components/language-switcher"
@@ -122,7 +122,7 @@ export default function Header() {
                     href="/admin"
                   >
                     <LayoutDashboard className="h-4 w-4" />
-                    <span>Dashboard</span>
+                    <span>{t('admin.dashboard')}</span>
                   </Link>
                   <Link
                     className={cn(
@@ -134,7 +134,7 @@ export default function Header() {
                     href="/admin/settings"
                   >
                     <Settings className="h-4 w-4" />
-                    <span>Settings</span>
+                    <span>{t('admin.settings')}</span>
                   </Link>
                   <Link
                     className={cn(
@@ -146,19 +146,7 @@ export default function Header() {
                     href="/admin/media"
                   >
                     <Image className="h-4 w-4" />
-                    <span>Media</span>
-                  </Link>
-                  <Link
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all hover:bg-accent",
-                      pathname.includes('/admin/import')
-                        ? "text-foreground font-semibold bg-accent" 
-                        : "text-foreground/60 hover:text-foreground/80"
-                    )}
-                    href="/admin/import"
-                  >
-                    <Upload className="h-4 w-4" />
-                    <span>Import</span>
+                    <span>{t('admin.media')}</span>
                   </Link>
                 </div>
               </>

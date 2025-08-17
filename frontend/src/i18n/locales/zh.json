@@ -37,7 +37,16 @@
     "logout": "退出登录",
     "manageBlogContent": "管理您的博客内容和分类",
     "noArticlesFound": "未找到文章。",
-    "noCategoriesFound": "未找到分类。"
+    "noCategoriesFound": "未找到分类。",
+    "recommendations": "推荐系统",
+    "contentAssistant": "内容助手",
+    "aiTools": "AI工具",
+    "pinArticle": "置顶文章",
+    "pinPriority": "置顶优先级",
+    "pinnedArticle": "置顶",
+    "firstPlace": "第一位",
+    "secondPlace": "第二位",
+    "maxPinnedArticles": "最多可以设置2篇文章置顶"
   },
   "setup": {
     "title": "设置 KUNO",

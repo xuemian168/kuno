@@ -462,7 +462,7 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
                           setTranslationError(null)
                           setIsErrorRetryable(false)
                         }}
-                        className="ml-2 bg-white hover:bg-gray-50"
+                        className="ml-2"
                       >
                         <RefreshCw className="h-3 w-3 mr-1" />
                         重试
