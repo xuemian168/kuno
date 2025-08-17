@@ -27,13 +27,28 @@ export function RelatedArticles({
   const [relatedArticles, setRelatedArticles] = useState<EmbeddingSearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [ragAvailable, setRagAvailable] = useState<boolean | null>(null)
   const { currentLocale } = useClientLocale()
 
   useEffect(() => {
-    if (enableSemanticSearch && articleId) {
+    checkRAGAvailability()
+  }, [])
+
+  useEffect(() => {
+    if (enableSemanticSearch && articleId && ragAvailable) {
       fetchRelatedArticles()
     }
-  }, [articleId, currentLocale, enableSemanticSearch])
+  }, [articleId, currentLocale, enableSemanticSearch, ragAvailable])
+
+  const checkRAGAvailability = async () => {
+    try {
+      const status = await apiClient.getRAGServiceStatus()
+      setRagAvailable(status.rag_enabled)
+    } catch (err) {
+      console.error('Error checking RAG availability:', err)
+      setRagAvailable(false)
+    }
+  }
 
   const fetchRelatedArticles = async () => {
     setLoading(true)
@@ -71,9 +86,28 @@ export function RelatedArticles({
     return text.slice(0, maxLength) + '...'
   }
 
-  // Don't render if semantic search is disabled
-  if (!enableSemanticSearch) {
+  // Don't render if semantic search is disabled or RAG is not available
+  if (!enableSemanticSearch || ragAvailable === false) {
     return null
+  }
+
+  // Show loading while checking RAG availability
+  if (ragAvailable === null) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="h-5 w-5 text-primary" />
+            {currentLocale === 'zh' ? '相关文章' : 'Related Articles'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            {currentLocale === 'zh' ? '正在检查服务状态...' : 'Checking service availability...'}
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   // Don't render if loading and no previous results

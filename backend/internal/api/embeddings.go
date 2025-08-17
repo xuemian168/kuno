@@ -36,6 +36,26 @@ func GetGlobalEmbeddingService() *services.EmbeddingService {
 	return globalEmbeddingService
 }
 
+// isRAGAvailable checks if RAG services are available and operational
+func (ec *EmbeddingController) isRAGAvailable() bool {
+	// Check if embedding service is available
+	if ec.embeddingService == nil {
+		return false
+	}
+	
+	providers := ec.embeddingService.GetAvailableProviders()
+	if len(providers) == 0 {
+		return false
+	}
+	
+	// Check if there are embeddings in the database
+	var embeddingCount int64
+	database.DB.Model(&models.ArticleEmbedding{}).Count(&embeddingCount)
+	
+	// RAG is available if we have embeddings and services are configured
+	return embeddingCount > 0
+}
+
 // SemanticSearchRequest represents the request body for semantic search
 type SemanticSearchRequest struct {
 	Query     string  `json:"query" binding:"required"`
@@ -165,6 +185,17 @@ func (ec *EmbeddingController) HybridSearch(c *gin.Context) {
 
 // GetSimilarArticles returns articles similar to a given article
 func (ec *EmbeddingController) GetSimilarArticles(c *gin.Context) {
+	// Check if RAG services are available
+	if !ec.isRAGAvailable() {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "Similar articles service temporarily unavailable",
+			"details": "RAG (Retrieval-Augmented Generation) services are not configured or available",
+			"results": []interface{}{},
+			"count": 0,
+		})
+		return
+	}
+
 	articleIDStr := c.Param("id")
 	articleID, err := strconv.ParseUint(articleIDStr, 10, 32)
 	if err != nil {
@@ -450,6 +481,73 @@ func (ec *EmbeddingController) GetRAGProcessVisualization(c *gin.Context) {
 		"query": query,
 		"language": language,
 	})
+}
+
+// GetRAGServiceStatus returns the status of RAG-related services
+func (ec *EmbeddingController) GetRAGServiceStatus(c *gin.Context) {
+	// Check if embedding service is available and configured
+	isEmbeddingAvailable := false
+	embeddingProviders := []string{}
+	var embeddingError string
+	
+	if ec.embeddingService != nil {
+		providers := ec.embeddingService.GetAvailableProviders()
+		if len(providers) > 0 {
+			isEmbeddingAvailable = true
+			embeddingProviders = providers
+		} else {
+			embeddingError = "No embedding providers configured"
+		}
+	} else {
+		embeddingError = "Embedding service not initialized"
+	}
+	
+	// Check if there are any embeddings in the database
+	var embeddingCount int64
+	database.DB.Model(&models.ArticleEmbedding{}).Count(&embeddingCount)
+	
+	// Check recommendation engine availability
+	isRecommendationAvailable := false
+	var recommendationError string
+	
+	recommendationEngine := services.GetGlobalRecommendationEngine()
+	if recommendationEngine != nil {
+		isRecommendationAvailable = true
+	} else {
+		recommendationError = "Recommendation engine not initialized"
+	}
+	
+	// Overall RAG status
+	isRAGEnabled := isEmbeddingAvailable && embeddingCount > 0
+	
+	status := gin.H{
+		"rag_enabled": isRAGEnabled,
+		"services": gin.H{
+			"embedding": gin.H{
+				"available": isEmbeddingAvailable,
+				"providers": embeddingProviders,
+				"embedding_count": embeddingCount,
+				"error": embeddingError,
+			},
+			"recommendation": gin.H{
+				"available": isRecommendationAvailable,
+				"error": recommendationError,
+			},
+		},
+		"message": func() string {
+			if isRAGEnabled {
+				return "RAG services are available and operational"
+			} else if !isEmbeddingAvailable {
+				return "RAG services unavailable - embedding service not configured"
+			} else if embeddingCount == 0 {
+				return "RAG services unavailable - no embeddings generated yet"
+			} else {
+				return "RAG services partially available"
+			}
+		}(),
+	}
+	
+	c.JSON(http.StatusOK, status)
 }
 
 // Helper function

@@ -1991,6 +1991,26 @@ class ApiClient {
     })
   }
 
+  // RAG service status
+  async getRAGServiceStatus(): Promise<{
+    rag_enabled: boolean
+    services: {
+      embedding: {
+        available: boolean
+        providers: string[]
+        embedding_count: number
+        error?: string
+      }
+      recommendation: {
+        available: boolean
+        error?: string
+      }
+    }
+    message: string
+  }> {
+    return this.request('/rag/status')
+  }
+
   async getPersonalizedRecommendations(params: PersonalizedRecommendationsRequest = {}): Promise<{
     recommendations: RecommendationResult[]
     count: number

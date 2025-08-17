@@ -27,6 +27,32 @@ func NewRecommendationsController() *RecommendationsController {
 	}
 }
 
+// isRAGAvailable checks if RAG services are available and operational
+func (rc *RecommendationsController) isRAGAvailable() bool {
+	// Check if recommendation engine is available
+	if rc.recommendationEngine == nil {
+		return false
+	}
+	
+	// Check if there are embeddings in the database
+	var embeddingCount int64
+	database.DB.Model(&models.ArticleEmbedding{}).Count(&embeddingCount)
+	
+	// Check if embedding service is available
+	embeddingService := GetGlobalEmbeddingService()
+	if embeddingService == nil {
+		return false
+	}
+	
+	providers := embeddingService.GetAvailableProviders()
+	if len(providers) == 0 {
+		return false
+	}
+	
+	// RAG is available if we have embeddings and services are configured
+	return embeddingCount > 0
+}
+
 // TrackUserBehaviorRequest represents user behavior tracking request
 type TrackUserBehaviorRequest struct {
 	UserID          string            `json:"user_id"`
@@ -103,6 +129,16 @@ func (rc *RecommendationsController) TrackBehavior(c *gin.Context) {
 
 // GetPersonalizedRecommendations returns personalized article recommendations
 func (rc *RecommendationsController) GetPersonalizedRecommendations(c *gin.Context) {
+	// Check if RAG services are available
+	if !rc.isRAGAvailable() {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "Recommendation service temporarily unavailable",
+			"details": "RAG (Retrieval-Augmented Generation) services are not configured or available",
+			"recommendations": []interface{}{},
+		})
+		return
+	}
+
 	// Parse query parameters
 	userID := c.Query("user_id")
 	if userID == "" {

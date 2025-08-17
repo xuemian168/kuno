@@ -31,6 +31,18 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isMounted, setIsMounted] = useState(false)
+  const [ragAvailable, setRagAvailable] = useState<boolean | null>(null)
+
+  // Check RAG availability
+  const checkRAGAvailability = useCallback(async () => {
+    try {
+      const status = await apiClient.getRAGServiceStatus()
+      setRagAvailable(status.rag_enabled)
+    } catch (err) {
+      console.error('Error checking RAG availability:', err)
+      setRagAvailable(false)
+    }
+  }, [])
 
   // Generate a session-based user ID if none provided
   const getSessionUserId = useCallback(() => {
@@ -49,7 +61,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
   }, [userId])
 
   const loadRecommendations = useCallback(async () => {
-    if (!isMounted) return
+    if (!isMounted || ragAvailable === false) return
     
     try {
       setLoading(true)
@@ -82,7 +94,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
     } finally {
       setLoading(false)
     }
-  }, [language, maxRecommendations, showReason, getSessionUserId, excludeArticleId, isMounted])
+  }, [language, maxRecommendations, showReason, getSessionUserId, excludeArticleId, isMounted, ragAvailable])
 
   // Track user behavior when viewing an article
   const trackClick = async (articleId: number, recommendationType: string) => {
@@ -178,15 +190,41 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
   // Mount effect
   useEffect(() => {
     setIsMounted(true)
-  }, [])
+    checkRAGAvailability()
+  }, [checkRAGAvailability])
 
   useEffect(() => {
-    if (isMounted) {
+    if (isMounted && ragAvailable === true) {
       loadRecommendations()
     }
-  }, [loadRecommendations, isMounted])
+  }, [loadRecommendations, isMounted, ragAvailable])
 
   const texts = getTexts()
+
+  // Don't render if RAG is not available
+  if (ragAvailable === false) {
+    return null
+  }
+
+  // Show loading while checking RAG availability
+  if (ragAvailable === null) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5" />
+            {texts.title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin mr-2" />
+            <span>{language === 'zh' ? '正在检查服务状态...' : 'Checking service availability...'}</span>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (loading) {
     return (

@@ -77,6 +77,9 @@ func SetupRoutes() *gin.Engine {
 			search.GET("/similar/:id", embeddingController.GetSimilarArticles)
 		}
 
+		// RAG service status - public access
+		api.GET("/rag/status", embeddingController.GetRAGServiceStatus)
+
 		// Personalized recommendations - public access
 		recommendationsController := NewRecommendationsController()
 		recommendations := api.Group("/recommendations")
