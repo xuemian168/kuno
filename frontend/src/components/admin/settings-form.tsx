@@ -1604,265 +1604,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
               </CardContent>
             </Card>
 
-            {/* AI Usage Statistics Section */}
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  {locale === 'zh' ? 'AI使用统计' : 'AI Usage Statistics'}
-                </CardTitle>
-                <CardDescription>
-                  {locale === 'zh' ? '查看AI服务API使用情况和费用统计' : 'View AI service API usage and cost statistics'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AIUsageStatsComponent showDetailed={true} locale={locale} />
-              </CardContent>
-            </Card>
 
-            {/* AI Summary Configuration Section */}
-            <Card className="pt-0">
-              <CardHeader className="pt-6 pb-4 px-6">
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5" />
-                  {locale === 'zh' ? 'AI摘要配置' : 'AI Summary Configuration'}
-                </CardTitle>
-                <CardDescription>
-                  {locale === 'zh' ? '配置AI摘要服务用于自动生成文章标题、摘要和SEO关键字' : 'Configure AI summary service for automatic article title, summary, and SEO keywords generation'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    {locale === 'zh' ? 'AI摘要配置信息将保存在本地浏览器中。' : 'AI summary configuration is stored locally in your browser.'}
-                  </AlertDescription>
-                </Alert>
-
-                {/* Copy Translation API Configuration */}
-                {(translationConfig.provider === 'openai' || translationConfig.provider === 'gemini' || translationConfig.provider === 'volcano') && translationConfig.apiKey && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Key className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                          {locale === 'zh' ? '检测到翻译服务配置' : 'Translation Service Configuration Detected'}
-                        </span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (translationConfig.provider === 'openai' || translationConfig.provider === 'gemini' || translationConfig.provider === 'volcano') {
-                            const newConfig = {
-                              ...aiSummaryConfig,
-                              provider: translationConfig.provider as any,
-                              apiKey: translationConfig.apiKey,
-                              model: translationConfig.provider === 'openai' 
-                                ? (translationConfig.model || 'gpt-3.5-turbo')
-                                : translationConfig.provider === 'volcano'
-                                ? 'doubao-seed-1-6-250615'
-                                : 'gemini-1.5-flash'
-                            }
-                            setAISummaryConfig(newConfig)
-                            try {
-                              aiSummaryService.configureFromSettings(newConfig)
-                              setHasAISummaryProvider(aiSummaryService.isConfigured())
-                            } catch (error) {
-                              console.error('Failed to configure AI summary service:', error)
-                              setHasAISummaryProvider(false)
-                            }
-                          }
-                        }}
-                        className="h-7 px-3 text-xs"
-                      >
-                        <Copy className="h-3 w-3 mr-1" />
-                        {locale === 'zh' ? '复制配置' : 'Copy Config'}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                      {locale === 'zh' 
-                        ? `使用${translationConfig.provider === 'openai' ? 'OpenAI' : translationConfig.provider === 'volcano' ? '火山引擎' : 'Gemini'}翻译服务的API配置来设置AI摘要服务`
-                        : `Use your ${translationConfig.provider === 'openai' ? 'OpenAI' : translationConfig.provider === 'volcano' ? 'Volcano Engine' : 'Gemini'} translation service API configuration for AI summary service`
-                      }
-                    </p>
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  <Label>{locale === 'zh' ? 'AI服务提供商' : 'AI Service Provider'}</Label>
-                  <Select
-                    value={aiSummaryConfig.provider}
-                    onValueChange={(value) => {
-                      const newConfig = { ...aiSummaryConfig, provider: value as any }
-                      setAISummaryConfig(newConfig)
-                      try {
-                        aiSummaryService.configureFromSettings(newConfig)
-                        setHasAISummaryProvider(aiSummaryService.isConfigured())
-                      } catch (error) {
-                        console.error('Failed to configure AI summary service:', error)
-                        setHasAISummaryProvider(false)
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="openai">OpenAI GPT</SelectItem>
-                      <SelectItem value="gemini">Google Gemini</SelectItem>
-                      <SelectItem value="volcano">Volcano Engine (豆包)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {(aiSummaryConfig.provider === 'openai' || aiSummaryConfig.provider === 'gemini' || aiSummaryConfig.provider === 'volcano') && (
-                  <div className="space-y-2">
-                    <Label>{locale === 'zh' ? 'API密钥' : 'API Key'}</Label>
-                    <div className="relative">
-                      <Input
-                        type="password"
-                        value={aiSummaryConfig.apiKey}
-                        onChange={(e) => {
-                          const newConfig = { ...aiSummaryConfig, apiKey: e.target.value }
-                          setAISummaryConfig(newConfig)
-                          try {
-                            aiSummaryService.configureFromSettings(newConfig)
-                            setHasAISummaryProvider(aiSummaryService.isConfigured())
-                          } catch (error) {
-                            console.error('Failed to configure AI summary service:', error)
-                            setHasAISummaryProvider(false)
-                          }
-                        }}
-                        placeholder={
-                          aiSummaryConfig.provider === 'openai' ? 'sk-...' :
-                          aiSummaryConfig.provider === 'gemini' ? 'AI...' :
-                          aiSummaryConfig.provider === 'volcano' ? 'Enter your ARK API Key' : 'Enter your API key'
-                        }
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label>{locale === 'zh' ? '模型' : 'Model'}</Label>
-                  <Select
-                    value={aiSummaryConfig.model}
-                    onValueChange={(value) => {
-                      const newConfig = { ...aiSummaryConfig, model: value }
-                      setAISummaryConfig(newConfig)
-                      try {
-                        aiSummaryService.configureFromSettings(newConfig)
-                        setHasAISummaryProvider(aiSummaryService.isConfigured())
-                      } catch (error) {
-                        console.error('Failed to configure AI summary service:', error)
-                        setHasAISummaryProvider(false)
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {aiSummaryConfig.provider === 'openai' && (
-                        <>
-                          <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                          <SelectItem value="gpt-4">GPT-4</SelectItem>
-                          <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                          <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
-                        </>
-                      )}
-                      {aiSummaryConfig.provider === 'gemini' && (
-                        <>
-                          <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
-                          <SelectItem value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</SelectItem>
-                          <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
-                        </>
-                      )}
-                      {aiSummaryConfig.provider === 'volcano' && (
-                        <>
-                          <SelectItem value="doubao-seed-1-6-250615">Doubao-1.6 (Pro-32k)</SelectItem>
-                          <SelectItem value="doubao-seed-1-6-flash-250615">Doubao-1.6-Flash (Lite)</SelectItem>
-                          <SelectItem value="doubao-1-5-lite-32k-250115">Doubao-1.5-lite-32k</SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{locale === 'zh' ? '最大关键字数量' : 'Max Keywords'}</Label>
-                    <Select
-                      value={String(aiSummaryConfig.maxKeywords)}
-                      onValueChange={(value) => {
-                        const newConfig = { ...aiSummaryConfig, maxKeywords: parseInt(value) }
-                        setAISummaryConfig(newConfig)
-                        try {
-                          aiSummaryService.configureFromSettings(newConfig)
-                          setHasAISummaryProvider(aiSummaryService.isConfigured())
-                        } catch (error) {
-                          console.error('Failed to configure AI summary service:', error)
-                          setHasAISummaryProvider(false)
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="5">5</SelectItem>
-                        <SelectItem value="10">10</SelectItem>
-                        <SelectItem value="15">15</SelectItem>
-                        <SelectItem value="20">20</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{locale === 'zh' ? '摘要长度' : 'Summary Length'}</Label>
-                    <Select
-                      value={aiSummaryConfig.summaryLength}
-                      onValueChange={(value) => {
-                        const newConfig = { ...aiSummaryConfig, summaryLength: value as any }
-                        setAISummaryConfig(newConfig)
-                        try {
-                          aiSummaryService.configureFromSettings(newConfig)
-                          setHasAISummaryProvider(aiSummaryService.isConfigured())
-                        } catch (error) {
-                          console.error('Failed to configure AI summary service:', error)
-                          setHasAISummaryProvider(false)
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="short">{locale === 'zh' ? '短 (1-2句)' : 'Short (1-2 sentences)'}</SelectItem>
-                        <SelectItem value="medium">{locale === 'zh' ? '中 (3-4句)' : 'Medium (3-4 sentences)'}</SelectItem>
-                        <SelectItem value="long">{locale === 'zh' ? '长 (5-6句)' : 'Long (5-6 sentences)'}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <span className="text-sm font-medium">
-                    {locale === 'zh' ? '配置状态' : 'Configuration Status'}
-                  </span>
-                  {hasAISummaryProvider ? (
-                    <Badge variant="default" className="gap-1">
-                      <Check className="h-3 w-3" />
-                      {locale === 'zh' ? '已配置' : 'Configured'}
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">{locale === 'zh' ? '需要API密钥' : 'API Key Required'}</Badge>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Site Translations Section */}
             <Card className="pt-0">
@@ -2138,6 +1880,265 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                   locale={locale}
                   originalMaskedKeys={originalMaskedKeys}
                 />
+              </CardContent>
+            </Card>
+
+            {/* AI Usage Statistics Section */}
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  {locale === 'zh' ? 'AI使用统计' : 'AI Usage Statistics'}
+                </CardTitle>
+                <CardDescription>
+                  {locale === 'zh' ? '查看AI服务API使用情况和费用统计' : 'View AI service API usage and cost statistics'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AIUsageStatsComponent showDetailed={true} locale={locale} />
+              </CardContent>
+            </Card>
+
+            {/* AI Summary Configuration Section */}
+            <Card className="pt-0">
+              <CardHeader className="pt-6 pb-4 px-6">
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  {locale === 'zh' ? 'AI摘要配置' : 'AI Summary Configuration'}
+                </CardTitle>
+                <CardDescription>
+                  {locale === 'zh' ? '配置AI摘要服务用于自动生成文章标题、摘要和SEO关键字' : 'Configure AI summary service for automatic article title, summary, and SEO keywords generation'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    {locale === 'zh' ? 'AI摘要配置信息将保存在本地浏览器中。' : 'AI summary configuration is stored locally in your browser.'}
+                  </AlertDescription>
+                </Alert>
+
+                {/* Copy Translation API Configuration */}
+                {(translationConfig.provider === 'openai' || translationConfig.provider === 'gemini' || translationConfig.provider === 'volcano') && translationConfig.apiKey && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Key className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                          {locale === 'zh' ? '检测到翻译服务配置' : 'Translation Service Configuration Detected'}
+                        </span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (translationConfig.provider === 'openai' || translationConfig.provider === 'gemini' || translationConfig.provider === 'volcano') {
+                            const newConfig = {
+                              ...aiSummaryConfig,
+                              provider: translationConfig.provider as any,
+                              apiKey: translationConfig.apiKey,
+                              model: translationConfig.provider === 'openai' 
+                                ? (translationConfig.model || 'gpt-3.5-turbo')
+                                : translationConfig.provider === 'volcano'
+                                ? 'doubao-seed-1-6-250615'
+                                : 'gemini-1.5-flash'
+                            }
+                            setAISummaryConfig(newConfig)
+                            try {
+                              aiSummaryService.configureFromSettings(newConfig)
+                              setHasAISummaryProvider(aiSummaryService.isConfigured())
+                            } catch (error) {
+                              console.error('Failed to configure AI summary service:', error)
+                              setHasAISummaryProvider(false)
+                            }
+                          }
+                        }}
+                        className="h-7 px-3 text-xs"
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        {locale === 'zh' ? '复制配置' : 'Copy Config'}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                      {locale === 'zh' 
+                        ? `使用${translationConfig.provider === 'openai' ? 'OpenAI' : translationConfig.provider === 'volcano' ? '火山引擎' : 'Gemini'}翻译服务的API配置来设置AI摘要服务`
+                        : `Use your ${translationConfig.provider === 'openai' ? 'OpenAI' : translationConfig.provider === 'volcano' ? 'Volcano Engine' : 'Gemini'} translation service API configuration for AI summary service`
+                      }
+                    </p>
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <Label>{locale === 'zh' ? 'AI服务提供商' : 'AI Service Provider'}</Label>
+                  <Select
+                    value={aiSummaryConfig.provider}
+                    onValueChange={(value) => {
+                      const newConfig = { ...aiSummaryConfig, provider: value as any }
+                      setAISummaryConfig(newConfig)
+                      try {
+                        aiSummaryService.configureFromSettings(newConfig)
+                        setHasAISummaryProvider(aiSummaryService.isConfigured())
+                      } catch (error) {
+                        console.error('Failed to configure AI summary service:', error)
+                        setHasAISummaryProvider(false)
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="openai">OpenAI GPT</SelectItem>
+                      <SelectItem value="gemini">Google Gemini</SelectItem>
+                      <SelectItem value="volcano">Volcano Engine (豆包)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {(aiSummaryConfig.provider === 'openai' || aiSummaryConfig.provider === 'gemini' || aiSummaryConfig.provider === 'volcano') && (
+                  <div className="space-y-2">
+                    <Label>{locale === 'zh' ? 'API密钥' : 'API Key'}</Label>
+                    <div className="relative">
+                      <Input
+                        type="password"
+                        value={aiSummaryConfig.apiKey}
+                        onChange={(e) => {
+                          const newConfig = { ...aiSummaryConfig, apiKey: e.target.value }
+                          setAISummaryConfig(newConfig)
+                          try {
+                            aiSummaryService.configureFromSettings(newConfig)
+                            setHasAISummaryProvider(aiSummaryService.isConfigured())
+                          } catch (error) {
+                            console.error('Failed to configure AI summary service:', error)
+                            setHasAISummaryProvider(false)
+                          }
+                        }}
+                        placeholder={
+                          aiSummaryConfig.provider === 'openai' ? 'sk-...' :
+                          aiSummaryConfig.provider === 'gemini' ? 'AI...' :
+                          aiSummaryConfig.provider === 'volcano' ? 'Enter your ARK API Key' : 'Enter your API key'
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>{locale === 'zh' ? '模型' : 'Model'}</Label>
+                  <Select
+                    value={aiSummaryConfig.model}
+                    onValueChange={(value) => {
+                      const newConfig = { ...aiSummaryConfig, model: value }
+                      setAISummaryConfig(newConfig)
+                      try {
+                        aiSummaryService.configureFromSettings(newConfig)
+                        setHasAISummaryProvider(aiSummaryService.isConfigured())
+                      } catch (error) {
+                        console.error('Failed to configure AI summary service:', error)
+                        setHasAISummaryProvider(false)
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {aiSummaryConfig.provider === 'openai' && (
+                        <>
+                          <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                          <SelectItem value="gpt-4">GPT-4</SelectItem>
+                          <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                          <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
+                        </>
+                      )}
+                      {aiSummaryConfig.provider === 'gemini' && (
+                        <>
+                          <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
+                          <SelectItem value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</SelectItem>
+                          <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
+                        </>
+                      )}
+                      {aiSummaryConfig.provider === 'volcano' && (
+                        <>
+                          <SelectItem value="doubao-seed-1-6-250615">Doubao-1.6 (Pro-32k)</SelectItem>
+                          <SelectItem value="doubao-seed-1-6-flash-250615">Doubao-1.6-Flash (Lite)</SelectItem>
+                          <SelectItem value="doubao-1-5-lite-32k-250115">Doubao-1.5-lite-32k</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{locale === 'zh' ? '最大关键字数量' : 'Max Keywords'}</Label>
+                    <Select
+                      value={String(aiSummaryConfig.maxKeywords)}
+                      onValueChange={(value) => {
+                        const newConfig = { ...aiSummaryConfig, maxKeywords: parseInt(value) }
+                        setAISummaryConfig(newConfig)
+                        try {
+                          aiSummaryService.configureFromSettings(newConfig)
+                          setHasAISummaryProvider(aiSummaryService.isConfigured())
+                        } catch (error) {
+                          console.error('Failed to configure AI summary service:', error)
+                          setHasAISummaryProvider(false)
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="15">15</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{locale === 'zh' ? '摘要长度' : 'Summary Length'}</Label>
+                    <Select
+                      value={aiSummaryConfig.summaryLength}
+                      onValueChange={(value) => {
+                        const newConfig = { ...aiSummaryConfig, summaryLength: value as any }
+                        setAISummaryConfig(newConfig)
+                        try {
+                          aiSummaryService.configureFromSettings(newConfig)
+                          setHasAISummaryProvider(aiSummaryService.isConfigured())
+                        } catch (error) {
+                          console.error('Failed to configure AI summary service:', error)
+                          setHasAISummaryProvider(false)
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="short">{locale === 'zh' ? '短 (1-2句)' : 'Short (1-2 sentences)'}</SelectItem>
+                        <SelectItem value="medium">{locale === 'zh' ? '中 (3-4句)' : 'Medium (3-4 sentences)'}</SelectItem>
+                        <SelectItem value="long">{locale === 'zh' ? '长 (5-6句)' : 'Long (5-6 sentences)'}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <span className="text-sm font-medium">
+                    {locale === 'zh' ? '配置状态' : 'Configuration Status'}
+                  </span>
+                  {hasAISummaryProvider ? (
+                    <Badge variant="default" className="gap-1">
+                      <Check className="h-3 w-3" />
+                      {locale === 'zh' ? '已配置' : 'Configured'}
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">{locale === 'zh' ? '需要API密钥' : 'API Key Required'}</Badge>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
