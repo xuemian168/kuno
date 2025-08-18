@@ -67,6 +67,9 @@ type SiteSettings struct {
 	SetupCompleted     bool    `gorm:"default:false" json:"setup_completed"`
 	// AI API Configuration
 	AIConfig           string                    `gorm:"type:text" json:"ai_config"`
+	// Privacy and Indexing Control
+	BlockSearchEngines bool                      `gorm:"default:false" json:"block_search_engines"`
+	BlockAITraining    bool                      `gorm:"default:false" json:"block_ai_training"`
 	Translations []SiteSettingsTranslation `gorm:"foreignKey:SettingsID" json:"translations,omitempty"`
 	CreatedAt   time.Time                 `json:"created_at"`
 	UpdatedAt   time.Time                 `json:"updated_at"`

@@ -675,6 +675,15 @@
     "excellent": "优秀",
     "good": "良好",
     "needsImprovement": "需要改进",
+    "privacy": {
+      "title": "隐私与索引控制",
+      "description": "控制搜索引擎和AI系统对网站内容的访问权限",
+      "blockSearchEngines": "阻止搜索引擎索引",
+      "blockSearchEnginesDesc": "阻止所有搜索引擎抓取和索引网站内容",
+      "blockAITraining": "阻止AI训练使用",
+      "blockAITrainingDesc": "阻止AI系统使用网站内容进行训练和学习",
+      "activeWarning": "当前隐私保护已启用，网站内容将不会被相应系统发现和使用"
+    },
     "dashboard": {
       "title": "SEO Dashboard",
       "subtitle": "监控和优化您的网站SEO表现",

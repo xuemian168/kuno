@@ -43,6 +43,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   let siteTitle = t('site.title')
   let siteDescription = t('site.description')
   let faviconUrl: string | undefined
+  let blockSearchEngines = false
+  let blockAITraining = false
   
   try {
     // Try to fetch site settings
@@ -53,6 +55,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       const settings = await response.json()
       siteTitle = settings.site_title || siteTitle
       siteDescription = settings.site_subtitle || siteDescription
+      blockSearchEngines = settings.block_search_engines || false
+      blockAITraining = settings.block_ai_training || false
       
       // Handle favicon URL
       if (settings.favicon_url) {
@@ -120,7 +124,14 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       title: siteTitle,
       description: siteDescription,
     },
-    robots: {
+    robots: blockSearchEngines ? {
+      index: false,
+      follow: false,
+      googleBot: {
+        index: false,
+        follow: false,
+      },
+    } : {
       index: true,
       follow: true,
       googleBot: {
@@ -176,6 +187,25 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
         type: faviconType,
       },
     ],
+  }
+
+  // Add AI training blocking meta tags if enabled
+  if (blockAITraining || blockSearchEngines) {
+    const additionalMeta: Record<string, string> = {}
+    
+    if (blockSearchEngines) {
+      additionalMeta['robots'] = 'noindex, nofollow, noarchive, nosnippet'
+    }
+    
+    if (blockAITraining) {
+      additionalMeta['robots'] = (additionalMeta['robots'] || '') + ', noimageai'
+      // Specific AI training prevention meta tags
+      additionalMeta['ai-training'] = 'no'
+      additionalMeta['gptbot'] = 'noindex'
+      additionalMeta['chatgpt'] = 'noindex'
+    }
+    
+    metadata.other = additionalMeta
   }
 
   return metadata

@@ -116,6 +116,9 @@ func UpdateSettings(c *gin.Context) {
 		BackgroundImageURL string   `json:"background_image_url"`
 		BackgroundOpacity  *float64 `json:"background_opacity"`
 		AIConfig           string                           `json:"ai_config"`
+		// Privacy and Indexing Control
+		BlockSearchEngines *bool                            `json:"block_search_engines"`
+		BlockAITraining    *bool                            `json:"block_ai_training"`
 		Translations       []models.SiteSettingsTranslation `json:"translations"`
 	}
 
@@ -157,6 +160,14 @@ func UpdateSettings(c *gin.Context) {
 	settings.BackgroundImageURL = input.BackgroundImageURL
 	if input.BackgroundOpacity != nil {
 		settings.BackgroundOpacity = *input.BackgroundOpacity
+	}
+	
+	// Update privacy and indexing control settings
+	if input.BlockSearchEngines != nil {
+		settings.BlockSearchEngines = *input.BlockSearchEngines
+	}
+	if input.BlockAITraining != nil {
+		settings.BlockAITraining = *input.BlockAITraining
 	}
 	
 	// Update AI configuration with encryption

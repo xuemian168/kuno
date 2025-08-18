@@ -674,6 +674,15 @@
     "excellent": "Excellent",
     "good": "Good",
     "needsImprovement": "Needs Improvement",
+    "privacy": {
+      "title": "Privacy & Indexing Control",
+      "description": "Control search engines and AI systems access to your website content",
+      "blockSearchEngines": "Block Search Engine Indexing",
+      "blockSearchEnginesDesc": "Prevent all search engines from crawling and indexing website content",
+      "blockAITraining": "Block AI Training Use",
+      "blockAITrainingDesc": "Prevent AI systems from using website content for training and learning",
+      "activeWarning": "Privacy protection is currently active, your website content will not be discovered by respective systems"
+    },
     "dashboard": {
       "title": "SEO Dashboard",
       "subtitle": "Monitor and optimize your website's SEO performance",

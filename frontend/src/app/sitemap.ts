@@ -6,6 +6,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const apiUrl = getApiUrl()
   const baseUrl = getSiteUrl()
   
+  try {
+    // Check privacy settings first
+    const settingsResponse = await fetch(`${apiUrl}/settings`, {
+      headers: {
+        'Accept': 'application/json',
+      },
+      cache: 'no-store'
+    })
+    
+    if (settingsResponse.ok) {
+      const settings = await settingsResponse.json()
+      
+      // If search engines are blocked, return empty sitemap
+      if (settings.block_search_engines) {
+        return []
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch settings for sitemap:', error)
+    // Continue with normal sitemap generation if settings check fails
+  }
+  
   // Define supported locales (keeping it simple to avoid routing import issues)
   const locales = ['zh', 'en', 'ja', 'ko', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ar', 'hi']
   const defaultLocale = 'zh'

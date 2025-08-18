@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import {
   Search,
   TrendingUp,
@@ -26,7 +27,9 @@ import {
   Globe,
   Users,
   MousePointer,
-  Eye
+  Eye,
+  Shield,
+  Lock
 } from "lucide-react"
 import { seoAIService } from "@/services/seo-ai"
 import { SEOAnalyzer } from "@/services/seo-ai/analyzer"
@@ -77,6 +80,8 @@ export function SEODashboard() {
   const [selectedTab, setSelectedTab] = useState('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'optimized' | 'needs-attention' | 'poor'>('all')
+  const [settings, setSettings] = useState<any>(null)
+  const [savingSettings, setSavingSettings] = useState(false)
   
   // Data loaded from API
   const [overviewStats, setOverviewStats] = useState<SEOOverviewStats>({
@@ -101,10 +106,11 @@ export function SEODashboard() {
       setIsLoading(true)
       try {
         // Load multiple data sources in parallel
-        const [metricsResponse, keywordsResponse, healthResponse] = await Promise.all([
+        const [metricsResponse, keywordsResponse, healthResponse, settingsResponse] = await Promise.all([
           apiClient.getSEOMetrics(),
           apiClient.getSEOKeywords(),
-          apiClient.getSEOHealth().catch(() => null) // Optional, might not exist yet
+          apiClient.getSEOHealth().catch(() => null), // Optional, might not exist yet
+          apiClient.getSettings()
         ])
         
         // Extract metrics for overview stats
@@ -139,6 +145,9 @@ export function SEODashboard() {
           }))
         
         setKeywordPerformance(performanceData)
+        
+        // Set settings
+        setSettings(settingsResponse)
         
         // TODO: Load actual article SEO stats from analytics
         // For now, leave articleStats empty until we implement article analytics
@@ -241,6 +250,23 @@ export function SEODashboard() {
     }
   }
 
+  const updatePrivacySetting = async (field: 'block_search_engines' | 'block_ai_training', value: boolean) => {
+    setSavingSettings(true)
+    try {
+      const updatedSettings = {
+        ...settings,
+        [field]: value
+      }
+      
+      const response = await apiClient.updateSettings(updatedSettings)
+      setSettings(response)
+    } catch (error) {
+      console.error('Failed to update privacy settings:', error)
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
   const runHealthCheck = async () => {
     setIsLoading(true)
     try {
@@ -298,6 +324,65 @@ export function SEODashboard() {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
+          {/* Privacy and Indexing Control */}
+          {settings && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  {t('seo.privacy.title')}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  {t('seo.privacy.description')}
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <Lock className="h-4 w-4" />
+                      {t('seo.privacy.blockSearchEngines')}
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      {t('seo.privacy.blockSearchEnginesDesc')}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.block_search_engines || false}
+                    onCheckedChange={(checked) => updatePrivacySetting('block_search_engines', checked)}
+                    disabled={savingSettings}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      {t('seo.privacy.blockAITraining')}
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      {t('seo.privacy.blockAITrainingDesc')}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.block_ai_training || false}
+                    onCheckedChange={(checked) => updatePrivacySetting('block_ai_training', checked)}
+                    disabled={savingSettings}
+                  />
+                </div>
+                
+                {(settings.block_search_engines || settings.block_ai_training) && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      {t('seo.privacy.activeWarning')}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

@@ -84,6 +84,9 @@ export interface SiteSettings {
   background_opacity?: number
   setup_completed?: boolean
   ai_config?: string // JSON string of AI configuration
+  // Privacy and Indexing Control
+  block_search_engines?: boolean
+  block_ai_training?: boolean
   translations?: SiteSettingsTranslation[]
   created_at: string
   updated_at: string
