@@ -24,6 +24,18 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [siteSettings, setSiteSettings] = useState<{ site_title: string; site_subtitle: string; show_view_count?: boolean } | null>(null)
+  const [ragAvailable, setRagAvailable] = useState<boolean | null>(null)
+
+  // Check RAG availability
+  const checkRAGAvailability = async () => {
+    try {
+      const status = await apiClient.getRAGServiceStatus()
+      setRagAvailable(status.rag_enabled)
+    } catch (err) {
+      console.error('Error checking RAG availability:', err)
+      setRagAvailable(false)
+    }
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,6 +58,11 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
 
     fetchData()
   }, [locale, selectedCategory])
+
+  // Check RAG availability on component mount
+  useEffect(() => {
+    checkRAGAvailability()
+  }, [])
 
   const handleCategoryFilter = (categoryId: number | null) => {
     setSelectedCategory(categoryId)
@@ -131,16 +148,16 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
           </div>
         </section>
 
-        {/* Main Content: Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Articles Section - Left Column */}
-          <section className="lg:col-span-3">
+        {/* Main Content: Conditional Layout based on RAG availability */}
+        <div className={`grid grid-cols-1 gap-8 ${ragAvailable ? 'lg:grid-cols-4' : ''}`}>
+          {/* Articles Section */}
+          <section className={ragAvailable ? 'lg:col-span-3' : ''}>
             {filteredArticles.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">No articles found</p>
               </div>
             ) : (
-              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              <div className={`grid gap-6 md:grid-cols-2 ${ragAvailable ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
                 {filteredArticles.map((article, index) => (
                   <motion.div
                     key={article.id}
@@ -194,15 +211,17 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
             )}
           </section>
 
-          {/* Recommendations Sidebar - Right Column */}
-          <aside className="lg:col-span-1">
-            <PersonalizedRecommendations 
-              language={locale}
-              maxRecommendations={1}
-              showReason={true}
-              className="sticky top-4"
-            />
-          </aside>
+          {/* Recommendations Sidebar - Only render when RAG is available */}
+          {ragAvailable && (
+            <aside className="lg:col-span-1">
+              <PersonalizedRecommendations 
+                language={locale}
+                maxRecommendations={1}
+                showReason={true}
+                className="sticky top-4"
+              />
+            </aside>
+          )}
         </div>
     </div>
   )
