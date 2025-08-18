@@ -154,8 +154,8 @@ export default function ShareBar({ url, title, description, className = '' }: Sh
 
   return (
     <div className={containerClass}>
-      <div className="flex items-center gap-1">
-        <span className="text-sm text-muted-foreground mr-2">{t('share.shareLabel')}</span>
+      <div className="flex items-center gap-1 flex-wrap">
+        <span className="text-sm text-muted-foreground mr-2 whitespace-nowrap hidden sm:inline">{t('share.shareLabel')}</span>
       
       {shareButtons.map((platform) => {
         const Icon = platform.icon
