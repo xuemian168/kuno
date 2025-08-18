@@ -2,14 +2,14 @@ package api
 
 import (
 	"archive/zip"
+	"blog-backend/internal/database"
+	"blog-backend/internal/models"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-	"blog-backend/internal/database"
-	"blog-backend/internal/models"
-	"github.com/gin-gonic/gin"
 )
 
 // ExportArticle exports a single article as markdown file
@@ -221,23 +221,23 @@ func sanitizeFilename(filename string) string {
 	// Replace invalid characters with underscores
 	invalidChars := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|"}
 	result := filename
-	
+
 	for _, char := range invalidChars {
 		result = strings.ReplaceAll(result, char, "_")
 	}
-	
+
 	// Trim spaces and dots from the end
 	result = strings.TrimRight(result, " .")
-	
+
 	// Limit filename length to 100 characters
 	if len(result) > 100 {
 		result = result[:100]
 	}
-	
+
 	// Ensure filename is not empty
 	if result == "" {
 		result = "untitled"
 	}
-	
+
 	return result
 }

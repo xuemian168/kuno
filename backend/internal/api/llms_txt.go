@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"blog-backend/internal/database"
 	"blog-backend/internal/models"
 	"blog-backend/internal/services"
+	"github.com/gin-gonic/gin"
 )
 
 // Cache structure for LLMs.txt content
@@ -53,14 +53,14 @@ type CategoryInfo struct {
 }
 
 type ArticleInfo struct {
-	ID          uint
-	Title       string
-	Summary     string
-	SEOTitle    string
-	SEOKeywords string
+	ID           uint
+	Title        string
+	Summary      string
+	SEOTitle     string
+	SEOKeywords  string
 	CategoryName string
-	ViewCount   uint
-	CreatedAt   time.Time
+	ViewCount    uint
+	CreatedAt    time.Time
 }
 
 func generateLLMsTxt(c *gin.Context) {
@@ -74,7 +74,7 @@ func generateLLMsTxt(c *gin.Context) {
 	cacheKey := fmt.Sprintf("llms_%s", lang)
 	if cachedContent := getCachedLLMsTxt(cacheKey); cachedContent != "" {
 		contentLength = len(cachedContent)
-		
+
 		c.Header("Content-Type", "text/plain; charset=utf-8")
 		c.Header("Cache-Control", "public, max-age=3600")
 		c.Header("X-Cache-Status", "HIT")
@@ -88,7 +88,7 @@ func generateLLMsTxt(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate LLMs.txt"})
 		} else {
 			contentLength = len(content)
-			
+
 			// Cache the generated content
 			setCachedLLMsTxt(cacheKey, content, lang)
 
@@ -136,7 +136,7 @@ func generateLLMsTxtContentWithError(lang, baseURL string) (string, error) {
 		log.Printf("Error fetching site settings: %v", err)
 		return "", fmt.Errorf("failed to fetch site settings: %v", err)
 	}
-	
+
 	content := generateLLMsTxtContentInternal(settings, lang, baseURL)
 	return content, nil
 }
@@ -175,10 +175,10 @@ func generateLLMsTxtContentInternal(settings models.SiteSettings, lang, baseURL 
 	for _, cat := range dbCategories {
 		var count int64
 		database.DB.Model(&models.Article{}).Where("category_id = ?", cat.ID).Count(&count)
-		
+
 		categoryName := cat.Name
 		categoryDesc := cat.Description
-		
+
 		// Check for translations
 		for _, translation := range cat.Translations {
 			if translation.Language == lang {
@@ -187,7 +187,7 @@ func generateLLMsTxtContentInternal(settings models.SiteSettings, lang, baseURL 
 				break
 			}
 		}
-		
+
 		categories = append(categories, CategoryInfo{
 			Name:        categoryName,
 			Description: categoryDesc,
@@ -213,7 +213,7 @@ func generateLLMsTxtContentInternal(settings models.SiteSettings, lang, baseURL 
 		var translation models.ArticleTranslation
 		title := article.Title
 		summary := article.Summary
-		
+
 		err := database.DB.Where("article_id = ? AND language = ?", article.ID, lang).First(&translation).Error
 		if err == nil {
 			title = translation.Title
@@ -282,7 +282,7 @@ func AdminPreviewLLMsTxt(c *gin.Context) {
 
 func extractKeyTopics(articles []models.Article, _ string) []string {
 	topicMap := make(map[string]int)
-	
+
 	// Extract keywords from articles
 	for _, article := range articles {
 		if article.SEOKeywords != "" {
@@ -301,12 +301,12 @@ func extractKeyTopics(articles []models.Article, _ string) []string {
 		topic string
 		count int
 	}
-	
+
 	var topics []topicCount
 	for topic, count := range topicMap {
 		topics = append(topics, topicCount{topic, count})
 	}
-	
+
 	sort.Slice(topics, func(i, j int) bool {
 		return topics[i].count > topics[j].count
 	})
@@ -317,11 +317,11 @@ func extractKeyTopics(articles []models.Article, _ string) []string {
 	if len(topics) < limit {
 		limit = len(topics)
 	}
-	
+
 	for i := 0; i < limit; i++ {
 		result = append(result, topics[i].topic)
 	}
-	
+
 	return result
 }
 
@@ -376,21 +376,21 @@ func formatLLMsTxt(content LLMsTxtContent) string {
 			if i >= 5 { // Limit to top 5 for LLMs.txt
 				break
 			}
-			
+
 			title := article.Title
 			if article.SEOTitle != "" {
 				title = article.SEOTitle
 			}
-			
+
 			builder.WriteString(fmt.Sprintf("### %s\n", title))
 			if article.Summary != "" {
 				builder.WriteString(fmt.Sprintf("%s\n", article.Summary))
 			}
-			
+
 			builder.WriteString(fmt.Sprintf("- **Category**: %s\n", article.CategoryName))
 			builder.WriteString(fmt.Sprintf("- **Views**: %d\n", article.ViewCount))
 			builder.WriteString(fmt.Sprintf("- **Published**: %s\n", article.CreatedAt.Format("2006-01-02")))
-			
+
 			if article.SEOKeywords != "" {
 				builder.WriteString(fmt.Sprintf("- **Topics**: %s\n", article.SEOKeywords))
 			}
@@ -446,35 +446,35 @@ func formatLLMsTxt(content LLMsTxtContent) string {
 }
 
 type SEOStatistics struct {
-	TotalArticlesWithSEO     int
-	TotalSEOTitles          int
-	TotalSEODescriptions    int
-	TotalSEOKeywords        int
-	TotalSEOSlugs          int
-	AverageViewCount       float64
-	TotalViews             int64
+	TotalArticlesWithSEO int
+	TotalSEOTitles       int
+	TotalSEODescriptions int
+	TotalSEOKeywords     int
+	TotalSEOSlugs        int
+	AverageViewCount     float64
+	TotalViews           int64
 }
 
 func getSEOStatistics() SEOStatistics {
 	var stats SEOStatistics
-	
+
 	// Count articles with SEO data
 	var articlesWithSEO int64
 	database.DB.Model(&models.Article{}).Where("seo_title != '' OR seo_description != '' OR seo_keywords != '' OR seo_slug != ''").Count(&articlesWithSEO)
 	stats.TotalArticlesWithSEO = int(articlesWithSEO)
-	
+
 	// Count specific SEO fields
 	var seoTitles, seoDescriptions, seoKeywords, seoSlugs int64
 	database.DB.Model(&models.Article{}).Where("seo_title != ''").Count(&seoTitles)
 	database.DB.Model(&models.Article{}).Where("seo_description != ''").Count(&seoDescriptions)
 	database.DB.Model(&models.Article{}).Where("seo_keywords != ''").Count(&seoKeywords)
 	database.DB.Model(&models.Article{}).Where("seo_slug != ''").Count(&seoSlugs)
-	
+
 	stats.TotalSEOTitles = int(seoTitles)
 	stats.TotalSEODescriptions = int(seoDescriptions)
 	stats.TotalSEOKeywords = int(seoKeywords)
 	stats.TotalSEOSlugs = int(seoSlugs)
-	
+
 	// Calculate average view count
 	var totalArticles int64
 	database.DB.Model(&models.Article{}).Count(&totalArticles)
@@ -486,22 +486,22 @@ func getSEOStatistics() SEOStatistics {
 		stats.TotalViews = result.TotalViews
 		stats.AverageViewCount = float64(result.TotalViews) / float64(totalArticles)
 	}
-	
+
 	return stats
 }
 
 func generateAIEnhancedDescription(_, originalDescription string, articles []models.Article, lang string) string {
 	// This function would integrate with existing AI services
 	// For now, we'll create an intelligent description based on content analysis
-	
+
 	if len(articles) == 0 {
 		return originalDescription
 	}
-	
+
 	// Analyze content patterns
 	topicCounts := make(map[string]int)
 	categoryMap := make(map[string]int)
-	
+
 	for _, article := range articles {
 		// Count keywords
 		if article.SEOKeywords != "" {
@@ -513,21 +513,21 @@ func generateAIEnhancedDescription(_, originalDescription string, articles []mod
 				}
 			}
 		}
-		
+
 		// Count categories
 		if article.Category.Name != "" {
 			categoryMap[article.Category.Name]++
 		}
 	}
-	
+
 	// Generate enhanced description based on analysis
 	var enhancedParts []string
-	
+
 	// Add original description if exists
 	if originalDescription != "" {
 		enhancedParts = append(enhancedParts, originalDescription)
 	}
-	
+
 	// Add main topics
 	var topTopics []string
 	type topicCount struct {
@@ -543,13 +543,13 @@ func generateAIEnhancedDescription(_, originalDescription string, articles []mod
 	sort.Slice(sortedTopics, func(i, j int) bool {
 		return sortedTopics[i].count > sortedTopics[j].count
 	})
-	
+
 	for i, tc := range sortedTopics {
 		if i < 5 { // Top 5 topics
 			topTopics = append(topTopics, tc.topic)
 		}
 	}
-	
+
 	if len(topTopics) > 0 {
 		switch lang {
 		case "en":
@@ -562,7 +562,7 @@ func generateAIEnhancedDescription(_, originalDescription string, articles []mod
 			enhancedParts = append(enhancedParts, "Features content about "+strings.Join(topTopics, ", ")+".")
 		}
 	}
-	
+
 	// Add article count info
 	articleCount := len(articles)
 	switch lang {
@@ -575,7 +575,7 @@ func generateAIEnhancedDescription(_, originalDescription string, articles []mod
 	default:
 		enhancedParts = append(enhancedParts, fmt.Sprintf("Contains %d articles across various topics.", articleCount))
 	}
-	
+
 	return strings.Join(enhancedParts, " ")
 }
 
@@ -583,19 +583,19 @@ func generateAIEnhancedDescription(_, originalDescription string, articles []mod
 func getCachedLLMsTxt(cacheKey string) string {
 	llmsCacheMutex.RLock()
 	defer llmsCacheMutex.RUnlock()
-	
+
 	cached, exists := llmsTxtCache[cacheKey]
 	if !exists {
 		return ""
 	}
-	
+
 	// Check if cache is expired
 	if time.Since(cached.Timestamp) > llmsCacheExpiry {
 		// Cache expired, remove it
 		delete(llmsTxtCache, cacheKey)
 		return ""
 	}
-	
+
 	// Check if content is still valid (based on data hash)
 	currentHash := generateContentHash()
 	if cached.Hash != currentHash {
@@ -603,14 +603,14 @@ func getCachedLLMsTxt(cacheKey string) string {
 		delete(llmsTxtCache, cacheKey)
 		return ""
 	}
-	
+
 	return cached.Content
 }
 
 func setCachedLLMsTxt(cacheKey, content, lang string) {
 	llmsCacheMutex.Lock()
 	defer llmsCacheMutex.Unlock()
-	
+
 	llmsTxtCache[cacheKey] = &LLMsTxtCache{
 		Content:   content,
 		Language:  lang,
@@ -623,36 +623,36 @@ func generateContentHash() string {
 	// Generate a hash based on key data that affects LLMs.txt content
 	// This is a simple implementation - in production you might want to use actual hashing
 	var hashData []string
-	
+
 	// Count articles
 	var articleCount int64
 	database.DB.Model(&models.Article{}).Count(&articleCount)
 	hashData = append(hashData, fmt.Sprintf("articles:%d", articleCount))
-	
+
 	// Count categories
 	var categoryCount int64
 	database.DB.Model(&models.Category{}).Count(&categoryCount)
 	hashData = append(hashData, fmt.Sprintf("categories:%d", categoryCount))
-	
+
 	// Get latest article update time
 	var latestArticle models.Article
 	if err := database.DB.Order("updated_at DESC").First(&latestArticle).Error; err == nil {
 		hashData = append(hashData, fmt.Sprintf("latest:%d", latestArticle.UpdatedAt.Unix()))
 	}
-	
+
 	// Get settings update time
 	var settings models.SiteSettings
 	if err := database.DB.First(&settings).Error; err == nil {
 		hashData = append(hashData, fmt.Sprintf("settings:%d", settings.UpdatedAt.Unix()))
 	}
-	
+
 	return strings.Join(hashData, "|")
 }
 
 func ClearLLMsTxtCache() {
 	llmsCacheMutex.Lock()
 	defer llmsCacheMutex.Unlock()
-	
+
 	llmsTxtCache = make(map[string]*LLMsTxtCache)
 	log.Println("LLMs.txt cache cleared")
 }
@@ -660,23 +660,23 @@ func ClearLLMsTxtCache() {
 func GetCacheStats() map[string]interface{} {
 	llmsCacheMutex.RLock()
 	defer llmsCacheMutex.RUnlock()
-	
+
 	stats := map[string]interface{}{
-		"cache_entries": len(llmsTxtCache),
+		"cache_entries":      len(llmsTxtCache),
 		"cache_expiry_hours": llmsCacheExpiry.Hours(),
 	}
-	
+
 	entries := make([]map[string]interface{}, 0, len(llmsTxtCache))
 	for key, cache := range llmsTxtCache {
 		entries = append(entries, map[string]interface{}{
-			"key":       key,
-			"language":  cache.Language,
-			"timestamp": cache.Timestamp,
+			"key":         key,
+			"language":    cache.Language,
+			"timestamp":   cache.Timestamp,
 			"age_minutes": time.Since(cache.Timestamp).Minutes(),
 		})
 	}
 	stats["entries"] = entries
-	
+
 	return stats
 }
 

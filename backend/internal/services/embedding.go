@@ -29,23 +29,23 @@ type EmbeddingProvider interface {
 
 // EmbeddingService handles vector embeddings for semantic search
 type EmbeddingService struct {
-	providers map[string]EmbeddingProvider
+	providers       map[string]EmbeddingProvider
 	defaultProvider string
-	dbConfig *models.AIConfig // Database AI configuration
-	usageTracker *AIUsageTracker // Track AI usage for cost and analytics
+	dbConfig        *models.AIConfig // Database AI configuration
+	usageTracker    *AIUsageTracker  // Track AI usage for cost and analytics
 }
 
 // NewEmbeddingService creates a new embedding service instance
 func NewEmbeddingService() *EmbeddingService {
 	service := &EmbeddingService{
-		providers: make(map[string]EmbeddingProvider),
+		providers:       make(map[string]EmbeddingProvider),
 		defaultProvider: "openai",
-		usageTracker: NewAIUsageTracker(),
+		usageTracker:    NewAIUsageTracker(),
 	}
-	
+
 	// Load configuration from database
 	service.loadDatabaseConfig()
-	
+
 	// Initialize providers
 	service.initializeProviders()
 	return service
@@ -58,27 +58,27 @@ func (es *EmbeddingService) loadDatabaseConfig() {
 		log.Printf("Failed to load site settings: %v", err)
 		return
 	}
-	
+
 	if settings.AIConfig != "" {
 		log.Printf("Loading AI config from database (length: %d chars)", len(settings.AIConfig))
-		
+
 		// Try to decrypt the secure AI config first
 		aiConfigService := security.GetGlobalAIConfigService()
-		
+
 		// Parse as secure config and decrypt
 		var secureConfig security.SecureAIConfig
 		if err := json.Unmarshal([]byte(settings.AIConfig), &secureConfig); err != nil {
 			log.Printf("Failed to parse secure AI config: %v", err)
 			return
 		}
-		
+
 		// Decrypt the configuration
 		inputConfig, err := aiConfigService.DecryptAIConfig(&secureConfig)
 		if err != nil {
 			log.Printf("Failed to decrypt AI config: %v", err)
 			return
 		}
-		
+
 		// Convert to models.AIConfig format
 		aiConfig := models.AIConfig{
 			DefaultProvider: inputConfig.DefaultProvider,
@@ -91,7 +91,7 @@ func (es *EmbeddingService) loadDatabaseConfig() {
 				Enabled:         inputConfig.EmbeddingConfig.Enabled,
 			},
 		}
-		
+
 		// Convert providers
 		for name, provider := range inputConfig.Providers {
 			aiConfig.Providers[name] = models.AIProviderConfig{
@@ -101,15 +101,15 @@ func (es *EmbeddingService) loadDatabaseConfig() {
 				Enabled:  provider.Enabled,
 			}
 		}
-		
+
 		es.dbConfig = &aiConfig
-		
+
 		// Update default provider from database config
 		if aiConfig.EmbeddingConfig.DefaultProvider != "" {
 			es.defaultProvider = aiConfig.EmbeddingConfig.DefaultProvider
 			log.Printf("Set embedding default provider to: %s", es.defaultProvider)
 		}
-		
+
 		// Log available providers (without API keys)
 		providerNames := make([]string, 0, len(aiConfig.Providers))
 		for name, provider := range aiConfig.Providers {
@@ -127,15 +127,15 @@ func (es *EmbeddingService) loadDatabaseConfig() {
 func (es *EmbeddingService) initializeProviders() {
 	// Initialize OpenAI provider
 	es.initializeOpenAIProvider()
-	
-	// Initialize Gemini provider  
+
+	// Initialize Gemini provider
 	es.initializeGeminiProvider()
 }
 
 // initializeOpenAIProvider sets up OpenAI provider
 func (es *EmbeddingService) initializeOpenAIProvider() {
 	var apiKey, model string
-	
+
 	// Try database config first
 	if es.dbConfig != nil {
 		if provider, exists := es.dbConfig.Providers["openai"]; exists && provider.Enabled && provider.APIKey != "" {
@@ -143,13 +143,13 @@ func (es *EmbeddingService) initializeOpenAIProvider() {
 			model = provider.Model
 		}
 	}
-	
+
 	// Fall back to environment variables
 	if apiKey == "" {
 		apiKey = os.Getenv("OPENAI_API_KEY")
 		model = getEnvOrDefault("OPENAI_EMBEDDING_MODEL", "text-embedding-ada-002")
 	}
-	
+
 	if apiKey != "" {
 		openaiProvider := &OpenAIEmbeddingProvider{
 			APIKey: apiKey,
@@ -163,7 +163,7 @@ func (es *EmbeddingService) initializeOpenAIProvider() {
 // initializeGeminiProvider sets up Gemini provider
 func (es *EmbeddingService) initializeGeminiProvider() {
 	var apiKey, model string
-	
+
 	// Try database config first
 	if es.dbConfig != nil {
 		if provider, exists := es.dbConfig.Providers["gemini"]; exists && provider.Enabled && provider.APIKey != "" {
@@ -175,13 +175,13 @@ func (es *EmbeddingService) initializeGeminiProvider() {
 			}
 		}
 	}
-	
+
 	// Fall back to environment variables
 	if apiKey == "" {
 		apiKey = os.Getenv("GEMINI_API_KEY")
 		model = getEnvOrDefault("GEMINI_EMBEDDING_MODEL", "text-embedding-004")
 	}
-	
+
 	if apiKey != "" {
 		geminiProvider := &GeminiEmbeddingProvider{
 			APIKey: apiKey,
@@ -432,9 +432,9 @@ func (es *EmbeddingService) GenerateEmbeddingWithProvider(text, providerName str
 		return nil, 0, fmt.Errorf("provider %s failed: %v", providerName, err)
 	}
 
-	log.Printf("Generated embedding with %d dimensions, %d tokens for text length: %d using %s", 
+	log.Printf("Generated embedding with %d dimensions, %d tokens for text length: %d using %s",
 		len(embedding), tokenCount, len(text), providerName)
-	
+
 	return embedding, tokenCount, nil
 }
 
@@ -452,7 +452,7 @@ func (es *EmbeddingService) GetAvailableProviders() []string {
 // GetProviderStatus returns the status of all providers
 func (es *EmbeddingService) GetProviderStatus() map[string]map[string]interface{} {
 	status := make(map[string]map[string]interface{})
-	
+
 	for name, provider := range es.providers {
 		status[name] = map[string]interface{}{
 			"configured": provider.IsConfigured(),
@@ -460,7 +460,7 @@ func (es *EmbeddingService) GetProviderStatus() map[string]map[string]interface{
 			"dimensions": provider.GetDimensions(),
 		}
 	}
-	
+
 	return status
 }
 
@@ -469,11 +469,11 @@ func (es *EmbeddingService) SetDefaultProvider(providerName string) error {
 	if _, exists := es.providers[providerName]; !exists {
 		return fmt.Errorf("provider %s not available", providerName)
 	}
-	
+
 	if !es.providers[providerName].IsConfigured() {
 		return fmt.Errorf("provider %s not configured", providerName)
 	}
-	
+
 	es.defaultProvider = providerName
 	return nil
 }
@@ -482,16 +482,16 @@ func (es *EmbeddingService) SetDefaultProvider(providerName string) error {
 func (es *EmbeddingService) ReloadConfig() error {
 	// Clear existing providers
 	es.providers = make(map[string]EmbeddingProvider)
-	
+
 	// Reset default provider to initial value
 	es.defaultProvider = "openai"
-	
+
 	// Reload database config (this may update defaultProvider)
 	es.loadDatabaseConfig()
-	
+
 	// Reinitialize providers
 	es.initializeProviders()
-	
+
 	// If the configured default provider is not available, try to use the first available provider
 	if _, exists := es.providers[es.defaultProvider]; !exists && len(es.providers) > 0 {
 		for providerName := range es.providers {
@@ -500,7 +500,7 @@ func (es *EmbeddingService) ReloadConfig() error {
 			break
 		}
 	}
-	
+
 	log.Printf("Reloaded AI configuration, default provider: %s, available providers: %v", es.defaultProvider, es.GetAvailableProviders())
 	return nil
 }
@@ -588,9 +588,9 @@ func (es *EmbeddingService) generateAndStoreEmbedding(articleID uint, contentTyp
 
 	// Check if embedding already exists for this content
 	var existingEmbedding models.ArticleEmbedding
-	result := database.DB.Where("article_id = ? AND content_type = ? AND language = ? AND content_hash = ?", 
+	result := database.DB.Where("article_id = ? AND content_type = ? AND language = ? AND content_hash = ?",
 		articleID, contentType, language, contentHash).First(&existingEmbedding)
-	
+
 	if result.Error == nil {
 		log.Printf("Embedding already exists for article %d, content_type: %s, language: %s", articleID, contentType, language)
 		return nil
@@ -652,13 +652,13 @@ func (es *EmbeddingService) generateAndStoreEmbedding(articleID uint, contentTyp
 		Success:       true,
 		ArticleID:     &articleID,
 	}
-	
+
 	if err := es.usageTracker.TrackUsage(usageMetrics); err != nil {
 		log.Printf("Failed to track embedding usage: %v", err)
 		// Don't fail the operation if usage tracking fails
 	}
 
-	log.Printf("Generated and stored embedding for article %d, content_type: %s, language: %s (tokens: %d, cost: $%.6f)", 
+	log.Printf("Generated and stored embedding for article %d, content_type: %s, language: %s (tokens: %d, cost: $%.6f)",
 		articleID, contentType, language, tokenCount, cost)
 	return nil
 }
@@ -666,16 +666,16 @@ func (es *EmbeddingService) generateAndStoreEmbedding(articleID uint, contentTyp
 // SearchSimilarArticles performs semantic search using vector similarity
 func (es *EmbeddingService) SearchSimilarArticles(query string, language string, limit int, threshold float64) ([]models.EmbeddingSearchResult, error) {
 	// Check cache first for frequently used queries
-	cacheKey := fmt.Sprintf("search_%s_%s_%d_%.2f", 
+	cacheKey := fmt.Sprintf("search_%s_%s_%d_%.2f",
 		fmt.Sprintf("%x", sha256.Sum256([]byte(query))), language, limit, threshold)
-	
+
 	if cached, exists := GetGlobalCache().Get(cacheKey); exists {
 		if results, ok := cached.([]models.EmbeddingSearchResult); ok {
 			log.Printf("🔄 Using cached search results for query (no API call needed)")
 			return results, nil
 		}
 	}
-	
+
 	// Generate embedding for search query
 	queryEmbedding, tokenCount, err := es.GenerateEmbedding(query)
 	if err != nil {
@@ -700,7 +700,7 @@ func (es *EmbeddingService) SearchSimilarArticles(query string, language string,
 		ResponseTime:  0,
 		Success:       true,
 	}
-	
+
 	if err := es.usageTracker.TrackUsage(usageMetrics); err != nil {
 		log.Printf("Failed to track search embedding usage: %v", err)
 	}
@@ -751,7 +751,7 @@ func (es *EmbeddingService) SearchSimilarArticles(query string, language string,
 	var results []models.EmbeddingSearchResult
 	for _, sim := range similarities {
 		var article models.Article
-		
+
 		// Get article with category
 		if err := database.DB.Preload("Category").First(&article, sim.ArticleID).Error; err != nil {
 			log.Printf("Failed to fetch article %d: %v", sim.ArticleID, err)
@@ -790,33 +790,33 @@ func (es *EmbeddingService) SearchSimilarArticles(query string, language string,
 // SearchSimilarByArticleID finds similar articles using existing embeddings for a specific article
 func (es *EmbeddingService) SearchSimilarByArticleID(articleID uint, language string, limit int, threshold float64) ([]models.EmbeddingSearchResult, error) {
 	log.Printf("🔍 Searching similar articles for article ID %d (using cached embeddings)", articleID)
-	
+
 	// Get the embedding for the source article
 	var sourceEmbedding models.ArticleEmbedding
 	result := database.DB.Where("article_id = ? AND language = ? AND content_type = ?", articleID, language, "combined").First(&sourceEmbedding)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to find embedding for article %d: %v", articleID, result.Error)
 	}
-	
+
 	// Parse source article embedding
 	var sourceVector []float64
 	if err := json.Unmarshal([]byte(sourceEmbedding.Embedding), &sourceVector); err != nil {
 		return nil, fmt.Errorf("failed to parse source embedding: %v", err)
 	}
-	
+
 	// Get all other embeddings for the specified language (excluding the source article)
 	var embeddings []models.ArticleEmbedding
 	result = database.DB.Where("language = ? AND content_type = ? AND article_id != ?", language, "combined", articleID).Find(&embeddings)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to fetch target embeddings: %v", result.Error)
 	}
-	
+
 	// Calculate similarities
 	type similarityResult struct {
 		ArticleID  uint
 		Similarity float64
 	}
-	
+
 	var similarities []similarityResult
 	for _, embedding := range embeddings {
 		// Parse stored embedding
@@ -825,7 +825,7 @@ func (es *EmbeddingService) SearchSimilarByArticleID(articleID uint, language st
 			log.Printf("Failed to parse embedding for article %d: %v", embedding.ArticleID, err)
 			continue
 		}
-		
+
 		// Calculate cosine similarity
 		similarity := cosineSimilarity(sourceVector, storedEmbedding)
 		if similarity >= threshold {
@@ -835,35 +835,35 @@ func (es *EmbeddingService) SearchSimilarByArticleID(articleID uint, language st
 			})
 		}
 	}
-	
+
 	// Sort by similarity (descending)
 	sort.Slice(similarities, func(i, j int) bool {
 		return similarities[i].Similarity > similarities[j].Similarity
 	})
-	
+
 	// Limit results
 	if limit > 0 && len(similarities) > limit {
 		similarities = similarities[:limit]
 	}
-	
+
 	// Fetch article details
 	if len(similarities) == 0 {
 		log.Printf("⚠️ No similar articles found for article %d (threshold: %.2f)", articleID, threshold)
 		return []models.EmbeddingSearchResult{}, nil
 	}
-	
+
 	var articleIDs []uint
 	similarityMap := make(map[uint]float64)
 	for _, sim := range similarities {
 		articleIDs = append(articleIDs, sim.ArticleID)
 		similarityMap[sim.ArticleID] = sim.Similarity
 	}
-	
+
 	var articles []models.Article
 	if err := database.DB.Preload("Category").Where("id IN ?", articleIDs).Find(&articles).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch article details: %v", err)
 	}
-	
+
 	// Build results maintaining similarity order
 	var results []models.EmbeddingSearchResult
 	for _, articleID := range articleIDs {
@@ -894,7 +894,7 @@ func (es *EmbeddingService) SearchSimilarByArticleID(articleID uint, language st
 			}
 		}
 	}
-	
+
 	log.Printf("✅ Found %d similar articles for article %d (no API calls needed)", len(results), articleID)
 	return results, nil
 }
@@ -907,7 +907,7 @@ func (es *EmbeddingService) BatchProcessAllArticles() error {
 	}
 
 	log.Printf("Processing embeddings for %d articles", len(articles))
-	
+
 	for _, article := range articles {
 		if err := es.ProcessArticleEmbeddings(article.ID); err != nil {
 			log.Printf("Failed to process embeddings for article %d: %v", article.ID, err)
@@ -916,7 +916,7 @@ func (es *EmbeddingService) BatchProcessAllArticles() error {
 
 	// Update search index
 	es.updateSearchIndex("embedding", "all")
-	
+
 	return nil
 }
 
@@ -927,7 +927,7 @@ func (es *EmbeddingService) updateSearchIndex(indexType, language string) {
 
 	var searchIndex models.SearchIndex
 	result := database.DB.Where("index_type = ? AND language = ?", indexType, language).First(&searchIndex)
-	
+
 	if result.Error != nil {
 		// Create new index record
 		searchIndex = models.SearchIndex{
@@ -1008,14 +1008,14 @@ func (es *EmbeddingService) GetEmbeddingStats() (map[string]interface{}, error) 
 
 // VectorData represents a 2D vector point for visualization
 type VectorData struct {
-	ID          uint     `json:"id"`
-	ArticleID   uint     `json:"article_id"`
-	Title       string   `json:"title"`
-	Language    string   `json:"language"`
-	ContentType string   `json:"content_type"`
-	X           float64  `json:"x"`
-	Y           float64  `json:"y"`
-	CreatedAt   string   `json:"created_at"`
+	ID          uint    `json:"id"`
+	ArticleID   uint    `json:"article_id"`
+	Title       string  `json:"title"`
+	Language    string  `json:"language"`
+	ContentType string  `json:"content_type"`
+	X           float64 `json:"x"`
+	Y           float64 `json:"y"`
+	CreatedAt   string  `json:"created_at"`
 }
 
 // GraphNode represents a node in the similarity graph
@@ -1043,12 +1043,12 @@ type SimilarityGraph struct {
 
 // QualityMetrics represents embedding quality analysis
 type QualityMetrics struct {
-	TotalVectors      int                    `json:"total_vectors"`
-	AverageNorm       float64                `json:"average_norm"`
-	VectorDistribution map[string]int        `json:"vector_distribution"`
-	SimilarityStats   map[string]float64     `json:"similarity_stats"`
-	Outliers          []VectorData           `json:"outliers"`
-	ClusterStats      map[string]interface{} `json:"cluster_stats"`
+	TotalVectors       int                    `json:"total_vectors"`
+	AverageNorm        float64                `json:"average_norm"`
+	VectorDistribution map[string]int         `json:"vector_distribution"`
+	SimilarityStats    map[string]float64     `json:"similarity_stats"`
+	Outliers           []VectorData           `json:"outliers"`
+	ClusterStats       map[string]interface{} `json:"cluster_stats"`
 }
 
 // RAGProcessStep represents a step in the RAG process
@@ -1061,10 +1061,10 @@ type RAGProcessStep struct {
 
 // RAGProcessVisualization represents the complete RAG process data
 type RAGProcessVisualization struct {
-	QueryVector    []float64        `json:"query_vector"`
-	Steps          []RAGProcessStep `json:"steps"`
-	RetrievedDocs  []VectorData     `json:"retrieved_docs"`
-	SimilarityMap  map[uint]float64 `json:"similarity_map"`
+	QueryVector   []float64        `json:"query_vector"`
+	Steps         []RAGProcessStep `json:"steps"`
+	RetrievedDocs []VectorData     `json:"retrieved_docs"`
+	SimilarityMap map[uint]float64 `json:"similarity_map"`
 }
 
 // GetReducedVectors returns vectors reduced to 2D for visualization
@@ -1083,7 +1083,7 @@ func (es *EmbeddingService) GetReducedVectors(method string, dimensions int, lim
 	// Extract vectors and metadata
 	vectors := make([][]float64, len(embeddings))
 	vectorData := make([]VectorData, len(embeddings))
-	
+
 	for i, emb := range embeddings {
 		if err := json.Unmarshal([]byte(emb.Embedding), &vectors[i]); err != nil {
 			log.Printf("Failed to unmarshal vector for embedding %d: %v", emb.ID, err)
@@ -1141,7 +1141,7 @@ func (es *EmbeddingService) simplePCA(vectors [][]float64, targetDim int) ([][]f
 
 	n := len(vectors)
 	dim := len(vectors[0])
-	
+
 	// Center the data
 	means := make([]float64, dim)
 	for i := 0; i < dim; i++ {
@@ -1260,15 +1260,15 @@ func (es *EmbeddingService) GetQualityMetrics() (*QualityMetrics, error) {
 	// Parse vectors and calculate metrics
 	vectors := make([][]float64, 0, len(embeddings))
 	norms := make([]float64, 0, len(embeddings))
-	
+
 	for _, emb := range embeddings {
 		var vector []float64
 		if err := json.Unmarshal([]byte(emb.Embedding), &vector); err != nil {
 			continue
 		}
-		
+
 		vectors = append(vectors, vector)
-		
+
 		// Calculate vector norm
 		norm := 0.0
 		for _, val := range vector {
@@ -1303,7 +1303,7 @@ func (es *EmbeddingService) GetQualityMetrics() (*QualityMetrics, error) {
 		simStats["min"] = similarities[0]
 		simStats["max"] = similarities[len(similarities)-1]
 		simStats["median"] = similarities[len(similarities)/2]
-		
+
 		sum := 0.0
 		for _, sim := range similarities {
 			sum += sim
@@ -1348,7 +1348,7 @@ func (es *EmbeddingService) GetRAGProcessVisualization(query string, language st
 	// Convert results to VectorData format
 	retrievedDocs := make([]VectorData, len(results))
 	similarityMap := make(map[uint]float64)
-	
+
 	for i, result := range results {
 		retrievedDocs[i] = VectorData{
 			ID:          0, // No embedding ID in search result
@@ -1367,8 +1367,8 @@ func (es *EmbeddingService) GetRAGProcessVisualization(query string, language st
 			Description: "Convert query text to vector embedding",
 			Duration:    step1Duration,
 			Data: map[string]interface{}{
-				"query":        query,
-				"vector_size":  len(queryVector),
+				"query":       query,
+				"vector_size": len(queryVector),
 			},
 		},
 		{
@@ -1402,7 +1402,7 @@ func (es *EmbeddingService) GetRAGProcessVisualization(query string, language st
 func (es *EmbeddingService) calculateEmbeddingCost(provider string, tokens int) float64 {
 	// Cost per 1K tokens for different providers (as of 2024)
 	var costPer1K float64
-	
+
 	switch provider {
 	case "openai":
 		// OpenAI text-embedding-ada-002: $0.0001 per 1K tokens
@@ -1414,7 +1414,7 @@ func (es *EmbeddingService) calculateEmbeddingCost(provider string, tokens int) 
 		// Default fallback cost
 		costPer1K = 0.0001
 	}
-	
+
 	// Calculate cost: (tokens / 1000) * cost_per_1k
 	return (float64(tokens) / 1000.0) * costPer1K
 }

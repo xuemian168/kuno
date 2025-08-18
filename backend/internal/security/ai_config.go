@@ -9,9 +9,9 @@ import (
 
 // SecureAIConfig represents AI configuration with secure key handling
 type SecureAIConfig struct {
-	DefaultProvider   string                       `json:"default_provider"`
-	Providers         map[string]SecureProviderConfig `json:"providers"`
-	EmbeddingConfig   SecureEmbeddingConfig        `json:"embedding_config"`
+	DefaultProvider string                          `json:"default_provider"`
+	Providers       map[string]SecureProviderConfig `json:"providers"`
+	EmbeddingConfig SecureEmbeddingConfig           `json:"embedding_config"`
 }
 
 // SecureProviderConfig represents a provider configuration with encrypted API key
@@ -30,15 +30,15 @@ type SecureEmbeddingConfig struct {
 
 // ClientAIConfig represents AI configuration sent to client (with masked keys)
 type ClientAIConfig struct {
-	DefaultProvider   string                         `json:"default_provider"`
-	Providers         map[string]ClientProviderConfig `json:"providers"`
-	EmbeddingConfig   ClientEmbeddingConfig          `json:"embedding_config"`
+	DefaultProvider string                          `json:"default_provider"`
+	Providers       map[string]ClientProviderConfig `json:"providers"`
+	EmbeddingConfig ClientEmbeddingConfig           `json:"embedding_config"`
 }
 
 // ClientProviderConfig represents provider config for client (masked key)
 type ClientProviderConfig struct {
 	Provider     string `json:"provider"`
-	APIKey       string `json:"api_key"`       // Masked version
+	APIKey       string `json:"api_key"` // Masked version
 	Model        string `json:"model"`
 	Enabled      bool   `json:"enabled"`
 	IsConfigured bool   `json:"is_configured"` // Whether a real key is configured
@@ -52,15 +52,15 @@ type ClientEmbeddingConfig struct {
 
 // InputAIConfig represents AI configuration from client input
 type InputAIConfig struct {
-	DefaultProvider   string                        `json:"default_provider"`
-	Providers         map[string]InputProviderConfig `json:"providers"`
-	EmbeddingConfig   InputEmbeddingConfig          `json:"embedding_config"`
+	DefaultProvider string                         `json:"default_provider"`
+	Providers       map[string]InputProviderConfig `json:"providers"`
+	EmbeddingConfig InputEmbeddingConfig           `json:"embedding_config"`
 }
 
 // InputProviderConfig represents provider config from client input
 type InputProviderConfig struct {
 	Provider string `json:"provider"`
-	APIKey   string `json:"api_key"`   // Could be new key or placeholder
+	APIKey   string `json:"api_key"` // Could be new key or placeholder
 	Model    string `json:"model"`
 	Enabled  bool   `json:"enabled"`
 }
@@ -209,7 +209,7 @@ func (acs *AIConfigService) MergeWithExisting(input *InputAIConfig, existing *Se
 	log.Printf("[AI Config Merge] Starting merge process...")
 	log.Printf("[AI Config Merge] Input providers: %v", getProviderNames(input.Providers))
 	log.Printf("[AI Config Merge] Existing providers: %v", getProviderNames(existing.Providers))
-	
+
 	merged := &SecureAIConfig{
 		DefaultProvider: input.DefaultProvider,
 		Providers:       make(map[string]SecureProviderConfig),
@@ -226,7 +226,7 @@ func (acs *AIConfigService) MergeWithExisting(input *InputAIConfig, existing *Se
 		log.Printf("[AI Config Merge] Processing provider '%s':", name)
 		log.Printf("  - Input key: '%s'", inputProvider.APIKey)
 		log.Printf("  - Is placeholder: %v", acs.isPlaceholder(inputProvider.APIKey))
-		
+
 		existingProvider, exists := existing.Providers[name]
 		if exists {
 			log.Printf("  - Has existing encrypted key: %v", existingProvider.EncryptedAPIKey != "")
@@ -257,7 +257,7 @@ func (acs *AIConfigService) MergeWithExisting(input *InputAIConfig, existing *Se
 			Model:           inputProvider.Model,
 			Enabled:         inputProvider.Enabled,
 		}
-		
+
 		log.Printf("  ✓ Final encrypted key length: %d", len(encryptedKey))
 	}
 
@@ -269,12 +269,12 @@ func (acs *AIConfigService) isPlaceholder(key string) bool {
 	if key == "" {
 		return true
 	}
-	
+
 	// Check if it contains asterisks anywhere in the string (masked key)
 	if strings.Contains(key, "*") {
 		return true
 	}
-	
+
 	// Check for common masking patterns with prefixes
 	if strings.HasPrefix(key, "sk-") && strings.Contains(key, "*") {
 		return true // OpenAI masked key like "sk-****1234"
@@ -285,12 +285,12 @@ func (acs *AIConfigService) isPlaceholder(key string) bool {
 	if strings.HasPrefix(key, "gsk_") && strings.Contains(key, "*") {
 		return true // Gemini alternative prefix
 	}
-	
+
 	// Check for keys that are obviously masked by length and content
 	if len(key) > 6 && strings.Count(key, "*") > 3 {
 		return true // Any key with multiple asterisks
 	}
-	
+
 	// Common placeholder patterns
 	placeholders := []string{
 		"****",
@@ -302,13 +302,13 @@ func (acs *AIConfigService) isPlaceholder(key string) bool {
 		"MASKED",
 		"HIDDEN",
 	}
-	
+
 	for _, placeholder := range placeholders {
 		if key == placeholder {
 			return true
 		}
 	}
-	
+
 	return false
 }
 

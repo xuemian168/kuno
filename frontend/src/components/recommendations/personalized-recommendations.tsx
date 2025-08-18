@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, Eye, Clock, Sparkles, TrendingUp, Users } from 'lucide-react'
 import { apiClient, RecommendationResult } from '@/lib/api'
 import { getDeviceInfo } from '@/lib/device-utils'
+import { useClientLocale } from '@/hooks/useClientLocale'
 
 interface PersonalizedRecommendationsProps {
   language?: string
@@ -19,7 +20,7 @@ interface PersonalizedRecommendationsProps {
 }
 
 const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = ({
-  language = 'zh',
+  language,
   userId,
   maxRecommendations = 5,
   showReason = true,
@@ -27,6 +28,8 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
   excludeArticleId,
   title
 }) => {
+  const { currentLocale } = useClientLocale()
+  const effectiveLanguage = language || currentLocale || 'en'
   const [recommendations, setRecommendations] = useState<RecommendationResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -71,7 +74,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
       
       const response = await apiClient.getPersonalizedRecommendations({
         user_id: sessionUserId,
-        language,
+        language: effectiveLanguage,
         limit: excludeArticleId ? maxRecommendations + 1 : maxRecommendations, // Request one extra to filter out current article
         exclude_read: true,
         include_reason: showReason,
@@ -89,12 +92,12 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
       
       setRecommendations(filteredRecommendations)
     } catch (err) {
-      setError(language === 'zh' ? '加载推荐内容失败' : 'Failed to load recommendations')
+      setError(effectiveLanguage === 'zh' ? '加载推荐内容失败' : 'Failed to load recommendations')
       console.error('Failed to load recommendations:', err)
     } finally {
       setLoading(false)
     }
-  }, [language, maxRecommendations, showReason, getSessionUserId, excludeArticleId, isMounted, ragAvailable])
+  }, [effectiveLanguage, maxRecommendations, showReason, getSessionUserId, excludeArticleId, isMounted, ragAvailable])
 
   // Track user behavior when viewing an article
   const trackClick = async (articleId: number, recommendationType: string) => {
@@ -115,7 +118,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
           screen_size: deviceInfo.screenSize,
           user_agent: deviceInfo.userAgent
         },
-        language
+        language: effectiveLanguage
       })
     } catch (err) {
       console.error('Failed to track behavior:', err)
@@ -142,6 +145,13 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
         serendipity: '探索发现',
         default: '智能推荐'
       },
+      ja: {
+        content_based: '類似コンテンツ',
+        collaborative: 'コラボ推奨',
+        trending: 'トレンド',
+        serendipity: '発見',
+        default: 'スマート推奨'
+      },
       en: {
         content_based: 'Similar Content',
         collaborative: 'Collaborative',
@@ -150,15 +160,22 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
         default: 'Smart Recommendation'
       }
     }
-    const langLabels = labels[language as keyof typeof labels] || labels.zh
+    const langLabels = labels[effectiveLanguage as keyof typeof labels] || labels.en
     return langLabels[type as keyof typeof langLabels] || langLabels.default
   }
 
   const formatReadingTime = (content: string): string => {
-    const wordsPerMinute = 200 // Average reading speed
+    const wordsPerMinute = effectiveLanguage === 'zh' ? 300 : effectiveLanguage === 'ja' ? 400 : 200 // Adjust for language
     const wordCount = content.split(/\s+/).length
     const minutes = Math.ceil(wordCount / wordsPerMinute)
-    return language === 'zh' ? `${minutes} 分钟阅读` : `${minutes} min read`
+    
+    if (effectiveLanguage === 'zh') {
+      return `${minutes} 分钟阅读`
+    } else if (effectiveLanguage === 'ja') {
+      return `${minutes} 分読み取り`
+    } else {
+      return `${minutes} min read`
+    }
   }
 
   const getTexts = () => {
@@ -168,23 +185,33 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
         loading: '正在为您智能推荐...',
         error: '加载推荐内容失败',
         retry: '重试',
-        noContent: '暂无推荐内容',
+        noContent: '暂无中文推荐内容',
         refresh: '刷新推荐',
         reasonPrefix: '推荐理由：',
         match: '匹配'
+      },
+      ja: {
+        title: title || 'おすすめ',
+        loading: 'スマート推奨を読み込み中...',
+        error: '推奨コンテンツの読み込みに失敗しました',
+        retry: '再試行',
+        noContent: '日本語の推奨コンテンツがありません',
+        refresh: '推奨を更新',
+        reasonPrefix: '推奨理由：',
+        match: 'マッチ'
       },
       en: {
         title: title || 'Recommended for You',
         loading: 'Loading smart recommendations...',
         error: 'Failed to load recommendations',
         retry: 'Retry',
-        noContent: 'No recommendations available',
+        noContent: 'No English content available for recommendations',
         refresh: 'Refresh Recommendations',
         reasonPrefix: 'Reason: ',
         match: 'match'
       }
     }
-    return texts[language as keyof typeof texts] || texts.zh
+    return texts[effectiveLanguage as keyof typeof texts] || texts.en
   }
 
   // Mount effect
@@ -219,7 +246,11 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
         <CardContent>
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin mr-2" />
-            <span>{language === 'zh' ? '正在检查服务状态...' : 'Checking service availability...'}</span>
+            <span>{
+              effectiveLanguage === 'zh' ? '正在检查服务状态...' :
+              effectiveLanguage === 'ja' ? 'サービス可用性を確認中...' :
+              'Checking service availability...'
+            }</span>
           </div>
         </CardContent>
       </Card>
@@ -300,7 +331,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
             onClick={() => {
               if (recommendation?.article?.id) {
                 trackClick(recommendation.article.id, recommendation.recommendation_type)
-                window.location.href = `/${language}/article/${recommendation.article.id}`
+                window.location.href = `/${effectiveLanguage}/article/${recommendation.article.id}`
               }
             }}
           >

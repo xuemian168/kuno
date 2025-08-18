@@ -4,11 +4,11 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"github.com/golang-jwt/jwt/v5"
 	"log"
 	"os"
 	"sync"
 	"time"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type Claims struct {

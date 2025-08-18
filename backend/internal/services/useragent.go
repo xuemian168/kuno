@@ -34,10 +34,10 @@ func ParseUserAgent(userAgent string) UserAgentInfo {
 
 	// Parse Browser information
 	info.Browser, info.BrowserVersion = parseBrowser(userAgent, userAgentLower)
-	
+
 	// Parse Operating System information
 	info.OS, info.OSVersion, info.Platform = parseOS(userAgent, userAgentLower)
-	
+
 	// Determine device type
 	info.DeviceType = parseDeviceType(userAgent, userAgentLower)
 
@@ -194,17 +194,17 @@ func parseOS(userAgent, userAgentLower string) (string, string, string) {
 
 func parseDeviceType(userAgent, userAgentLower string) string {
 	// Mobile devices
-	if strings.Contains(userAgentLower, "mobile") || 
-	   strings.Contains(userAgentLower, "iphone") || 
-	   strings.Contains(userAgentLower, "ipod") ||
-	   strings.Contains(userAgentLower, "android") && strings.Contains(userAgentLower, "mobile") {
+	if strings.Contains(userAgentLower, "mobile") ||
+		strings.Contains(userAgentLower, "iphone") ||
+		strings.Contains(userAgentLower, "ipod") ||
+		strings.Contains(userAgentLower, "android") && strings.Contains(userAgentLower, "mobile") {
 		return "mobile"
 	}
 
 	// Tablets
-	if strings.Contains(userAgentLower, "tablet") || 
-	   strings.Contains(userAgentLower, "ipad") ||
-	   strings.Contains(userAgentLower, "android") && !strings.Contains(userAgentLower, "mobile") {
+	if strings.Contains(userAgentLower, "tablet") ||
+		strings.Contains(userAgentLower, "ipad") ||
+		strings.Contains(userAgentLower, "android") && !strings.Contains(userAgentLower, "mobile") {
 		return "tablet"
 	}
 

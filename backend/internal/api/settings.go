@@ -16,7 +16,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-
 // Helper function to get the site's default language
 func getDefaultLanguage() string {
 	var settings models.SiteSettings
@@ -95,27 +94,27 @@ func UpdateSettings(c *gin.Context) {
 	}
 
 	var input struct {
-		SiteTitle          string                           `json:"site_title"`
-		SiteSubtitle       string                           `json:"site_subtitle"`
-		FooterText         string                           `json:"footer_text"`
-		ICPFiling          string                           `json:"icp_filing"`
-		PSBFiling          string                           `json:"psb_filing"`
-		ShowViewCount      *bool                            `json:"show_view_count"`
-		ShowSiteTitle      *bool                            `json:"show_site_title"`
-		EnableSoundEffects *bool                            `json:"enable_sound_effects"`
-		DefaultLanguage    string                           `json:"default_language"`
-		LogoURL            string                           `json:"logo_url"`
-		FaviconURL         string                           `json:"favicon_url"`
-		CustomCSS          string                           `json:"custom_css"`
-		CustomJS           string                           `json:"custom_js"`
-		ThemeConfig        string                           `json:"theme_config"`
-		ActiveTheme        string                           `json:"active_theme"`
+		SiteTitle          string `json:"site_title"`
+		SiteSubtitle       string `json:"site_subtitle"`
+		FooterText         string `json:"footer_text"`
+		ICPFiling          string `json:"icp_filing"`
+		PSBFiling          string `json:"psb_filing"`
+		ShowViewCount      *bool  `json:"show_view_count"`
+		ShowSiteTitle      *bool  `json:"show_site_title"`
+		EnableSoundEffects *bool  `json:"enable_sound_effects"`
+		DefaultLanguage    string `json:"default_language"`
+		LogoURL            string `json:"logo_url"`
+		FaviconURL         string `json:"favicon_url"`
+		CustomCSS          string `json:"custom_css"`
+		CustomJS           string `json:"custom_js"`
+		ThemeConfig        string `json:"theme_config"`
+		ActiveTheme        string `json:"active_theme"`
 		// Background Settings
 		BackgroundType     string   `json:"background_type"`
 		BackgroundColor    string   `json:"background_color"`
 		BackgroundImageURL string   `json:"background_image_url"`
 		BackgroundOpacity  *float64 `json:"background_opacity"`
-		AIConfig           string                           `json:"ai_config"`
+		AIConfig           string   `json:"ai_config"`
 		// Privacy and Indexing Control
 		BlockSearchEngines *bool                            `json:"block_search_engines"`
 		BlockAITraining    *bool                            `json:"block_ai_training"`
@@ -151,7 +150,7 @@ func UpdateSettings(c *gin.Context) {
 	settings.CustomJS = input.CustomJS
 	settings.ThemeConfig = input.ThemeConfig
 	settings.ActiveTheme = input.ActiveTheme
-	
+
 	// Update background settings
 	if input.BackgroundType != "" {
 		settings.BackgroundType = input.BackgroundType
@@ -161,7 +160,7 @@ func UpdateSettings(c *gin.Context) {
 	if input.BackgroundOpacity != nil {
 		settings.BackgroundOpacity = *input.BackgroundOpacity
 	}
-	
+
 	// Update privacy and indexing control settings
 	if input.BlockSearchEngines != nil {
 		settings.BlockSearchEngines = *input.BlockSearchEngines
@@ -169,18 +168,18 @@ func UpdateSettings(c *gin.Context) {
 	if input.BlockAITraining != nil {
 		settings.BlockAITraining = *input.BlockAITraining
 	}
-	
+
 	// Update AI configuration with encryption
 	if input.AIConfig != "" {
 		aiConfigService := security.GetGlobalAIConfigService()
-		
+
 		// Parse the input AI config
 		var inputAIConfig security.InputAIConfig
 		if err := json.Unmarshal([]byte(input.AIConfig), &inputAIConfig); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid AI configuration format: " + err.Error()})
 			return
 		}
-		
+
 		// Get existing secure config for merging
 		var existingSecureConfig *security.SecureAIConfig
 		if settings.AIConfig != "" {
@@ -189,29 +188,29 @@ func UpdateSettings(c *gin.Context) {
 				existingSecureConfig = &existing
 			}
 		}
-		
+
 		// Merge with existing to preserve unchanged keys
 		var secureConfig *security.SecureAIConfig
 		var err error
-		
+
 		if existingSecureConfig != nil {
 			secureConfig, err = aiConfigService.MergeWithExisting(&inputAIConfig, existingSecureConfig)
 		} else {
 			secureConfig, err = aiConfigService.EncryptAIConfig(&inputAIConfig)
 		}
-		
+
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process AI configuration: " + err.Error()})
 			return
 		}
-		
+
 		// Convert secure config to JSON for storage
 		secureJSON, err := json.Marshal(secureConfig)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to serialize AI configuration: " + err.Error()})
 			return
 		}
-		
+
 		settings.AIConfig = string(secureJSON)
 	} else {
 		// Allow empty to clear configuration
@@ -236,7 +235,7 @@ func UpdateSettings(c *gin.Context) {
 
 	// Reload with translations
 	database.DB.Preload("Translations").First(&settings)
-	
+
 	// Always reload embedding service when settings are updated
 	// This ensures AI configuration changes are applied immediately
 	if err := GetGlobalEmbeddingService().ReloadConfig(); err != nil {
@@ -244,7 +243,7 @@ func UpdateSettings(c *gin.Context) {
 	} else {
 		log.Printf("Successfully reloaded embedding service configuration")
 	}
-	
+
 	// Convert AI config to client-safe format before returning
 	if settings.AIConfig != "" {
 		aiConfigService := security.GetGlobalAIConfigService()
@@ -257,7 +256,7 @@ func UpdateSettings(c *gin.Context) {
 			settings.AIConfig = clientConfig
 		}
 	}
-	
+
 	c.JSON(http.StatusOK, settings)
 }
 
@@ -292,7 +291,7 @@ func RemoveBackgroundImage(c *gin.Context) {
 		} else {
 			fileName = strings.TrimPrefix(settings.BackgroundImageURL, "/uploads/backgrounds/")
 		}
-		
+
 		if fileName != "" {
 			uploadDir := filepath.Join(UploadDir, "backgrounds")
 			filePath := filepath.Join(uploadDir, fileName)
@@ -457,7 +456,7 @@ func GetLanguageConfig(c *gin.Context) {
 		log.Printf("Failed to get settings for language config: %v", err)
 		// Return fallback configuration
 		c.JSON(http.StatusOK, LanguageConfig{
-			DefaultLanguage: "zh",
+			DefaultLanguage:  "zh",
 			EnabledLanguages: []string{"zh", "en", "ja", "ko", "es", "fr", "de", "ru", "ar"},
 			SupportedLanguages: map[string]string{
 				"zh": "中文 (Chinese)",
@@ -485,7 +484,7 @@ func GetLanguageConfig(c *gin.Context) {
 	// Define all supported languages
 	supportedLanguages := map[string]string{
 		"zh": "中文 (Chinese)",
-		"en": "English", 
+		"en": "English",
 		"ja": "日本語 (Japanese)",
 		"ko": "한국어 (Korean)",
 		"es": "Español (Spanish)",

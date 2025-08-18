@@ -48,19 +48,19 @@ type SEOKeywordsRequest struct {
 // AnalyzeTopicGaps analyzes content gaps in the knowledge base
 func (cac *ContentAssistantController) AnalyzeTopicGaps(c *gin.Context) {
 	language := c.DefaultQuery("language", "en")
-	
+
 	analysis, err := cac.contentAssistant.AnalyzeTopicGaps(language)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to analyze topic gaps",
+			"error":   "Failed to analyze topic gaps",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"analysis": analysis,
-		"message": "Topic gap analysis completed successfully",
+		"message":  "Topic gap analysis completed successfully",
 	})
 }
 
@@ -69,7 +69,7 @@ func (cac *ContentAssistantController) GetWritingInspiration(c *gin.Context) {
 	category := c.DefaultQuery("category", "")
 	language := c.DefaultQuery("language", "en")
 	limitStr := c.DefaultQuery("limit", "5")
-	
+
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
 		limit = 5
@@ -77,19 +77,19 @@ func (cac *ContentAssistantController) GetWritingInspiration(c *gin.Context) {
 	if limit > 20 {
 		limit = 20 // Cap at 20 ideas
 	}
-	
+
 	ideas, err := cac.contentAssistant.GetWritingInspiration(category, language, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to generate writing inspiration",
+			"error":   "Failed to generate writing inspiration",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
-		"ideas": ideas,
-		"count": len(ideas),
+		"ideas":   ideas,
+		"count":   len(ideas),
 		"message": "Writing inspiration generated successfully",
 	})
 }
@@ -99,28 +99,28 @@ func (cac *ContentAssistantController) GenerateSmartTags(c *gin.Context) {
 	var req SmartTagsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request",
+			"error":   "Invalid request",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	if req.Language == "" {
 		req.Language = "en"
 	}
-	
+
 	tags, err := cac.contentAssistant.GenerateSmartTags(req.Content, req.Language)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to generate smart tags",
+			"error":   "Failed to generate smart tags",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
-		"tags": tags,
-		"count": len(tags),
+		"tags":    tags,
+		"count":   len(tags),
 		"message": "Smart tags generated successfully",
 	})
 }
@@ -130,29 +130,29 @@ func (cac *ContentAssistantController) RecommendSEOKeywords(c *gin.Context) {
 	var req SEOKeywordsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request",
+			"error":   "Invalid request",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	if req.Language == "" {
 		req.Language = "en"
 	}
-	
+
 	keywords, err := cac.contentAssistant.RecommendSEOKeywords(req.Content, req.Language, req.PrimaryKeyword)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to recommend SEO keywords",
+			"error":   "Failed to recommend SEO keywords",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"keywords": keywords,
-		"count": len(keywords),
-		"message": "SEO keywords recommended successfully",
+		"count":    len(keywords),
+		"message":  "SEO keywords recommended successfully",
 	})
 }
 
@@ -160,13 +160,13 @@ func (cac *ContentAssistantController) RecommendSEOKeywords(c *gin.Context) {
 func (cac *ContentAssistantController) GetContentAssistantStats(c *gin.Context) {
 	// This would typically aggregate usage statistics
 	// For now, return basic stats
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"stats": gin.H{
-			"total_analyses_performed": 0, // Would be tracked in database
-			"total_ideas_generated": 0,    // Would be tracked in database
-			"total_tags_generated": 0,     // Would be tracked in database
-			"cache_hit_rate": 0.0,         // From cache statistics
+			"total_analyses_performed": 0,   // Would be tracked in database
+			"total_ideas_generated":    0,   // Would be tracked in database
+			"total_tags_generated":     0,   // Would be tracked in database
+			"cache_hit_rate":           0.0, // From cache statistics
 		},
 		"message": "Content assistant statistics retrieved successfully",
 	})
@@ -175,27 +175,27 @@ func (cac *ContentAssistantController) GetContentAssistantStats(c *gin.Context) 
 // GetTopicTrends returns trending topics analysis
 func (cac *ContentAssistantController) GetTopicTrends(c *gin.Context) {
 	language := c.DefaultQuery("language", "en")
-	
+
 	// Get topic gap analysis which includes trend information
 	analysis, err := cac.contentAssistant.AnalyzeTopicGaps(language)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to analyze topic trends",
+			"error":   "Failed to analyze topic trends",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	// Extract trending information
 	trends := gin.H{
-		"top_clusters": analysis.TopicClusters,
-		"coverage_score": analysis.CoverageScore,
+		"top_clusters":          analysis.TopicClusters,
+		"coverage_score":        analysis.CoverageScore,
 		"language_distribution": analysis.LanguageDistribution,
-		"generated_at": analysis.GeneratedAt,
+		"generated_at":          analysis.GeneratedAt,
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
-		"trends": trends,
+		"trends":  trends,
 		"message": "Topic trends analyzed successfully",
 	})
 }
@@ -207,40 +207,40 @@ func (cac *ContentAssistantController) ValidateContentIdea(c *gin.Context) {
 		Language string `json:"language"`
 		Category string `json:"category"`
 	}
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request",
+			"error":   "Invalid request",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	if req.Language == "" {
 		req.Language = "en"
 	}
-	
+
 	// Generate tags for the title to analyze the idea
 	tags, err := cac.contentAssistant.GenerateSmartTags(req.Title, req.Language)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to validate content idea",
+			"error":   "Failed to validate content idea",
 			"details": err.Error(),
 		})
 		return
 	}
-	
+
 	// Analyze the validation results
 	validation := gin.H{
-		"is_viable": len(tags) > 0,
-		"confidence": calculateIdeaConfidence(tags),
-		"suggested_tags": tags,
+		"is_viable":       len(tags) > 0,
+		"confidence":      calculateIdeaConfidence(tags),
+		"suggested_tags":  tags,
 		"recommendations": generateIdeaRecommendations(req.Title, tags, req.Language),
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"validation": validation,
-		"message": "Content idea validated successfully",
+		"message":    "Content idea validated successfully",
 	})
 }
 
@@ -251,19 +251,19 @@ func calculateIdeaConfidence(tags []services.SmartTag) float64 {
 	if len(tags) == 0 {
 		return 0.0
 	}
-	
+
 	totalConfidence := 0.0
 	for _, tag := range tags {
 		totalConfidence += tag.Confidence
 	}
-	
+
 	return totalConfidence / float64(len(tags))
 }
 
 // generateIdeaRecommendations generates recommendations for improving a content idea
 func generateIdeaRecommendations(title string, tags []services.SmartTag, language string) []string {
 	var recommendations []string
-	
+
 	if len(tags) < 3 {
 		if language == "zh" {
 			recommendations = append(recommendations, "建议明确主题焦点，增加关键词")
@@ -271,7 +271,7 @@ func generateIdeaRecommendations(title string, tags []services.SmartTag, languag
 			recommendations = append(recommendations, "Consider focusing the topic more clearly with additional keywords")
 		}
 	}
-	
+
 	hasHighConfidenceTags := false
 	for _, tag := range tags {
 		if tag.Confidence > 0.8 {
@@ -279,7 +279,7 @@ func generateIdeaRecommendations(title string, tags []services.SmartTag, languag
 			break
 		}
 	}
-	
+
 	if !hasHighConfidenceTags {
 		if language == "zh" {
 			recommendations = append(recommendations, "建议使用更具体的技术术语或概念")
@@ -287,7 +287,7 @@ func generateIdeaRecommendations(title string, tags []services.SmartTag, languag
 			recommendations = append(recommendations, "Consider using more specific technical terms or concepts")
 		}
 	}
-	
+
 	if len(recommendations) == 0 {
 		if language == "zh" {
 			recommendations = append(recommendations, "这是一个很好的内容想法！")
@@ -295,6 +295,6 @@ func generateIdeaRecommendations(title string, tags []services.SmartTag, languag
 			recommendations = append(recommendations, "This is a great content idea!")
 		}
 	}
-	
+
 	return recommendations
 }

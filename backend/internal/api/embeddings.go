@@ -42,16 +42,16 @@ func (ec *EmbeddingController) isRAGAvailable() bool {
 	if ec.embeddingService == nil {
 		return false
 	}
-	
+
 	providers := ec.embeddingService.GetAvailableProviders()
 	if len(providers) == 0 {
 		return false
 	}
-	
+
 	// Check if there are embeddings in the database
 	var embeddingCount int64
 	database.DB.Model(&models.ArticleEmbedding{}).Count(&embeddingCount)
-	
+
 	// RAG is available if we have embeddings and services are configured
 	return embeddingCount > 0
 }
@@ -67,9 +67,9 @@ type SemanticSearchRequest struct {
 // SemanticSearchResponse represents the response for semantic search
 type SemanticSearchResponse struct {
 	Results []models.EmbeddingSearchResult `json:"results"`
-	Count   int                           `json:"count"`
-	Query   string                        `json:"query"`
-	Message string                        `json:"message,omitempty"`
+	Count   int                            `json:"count"`
+	Query   string                         `json:"query"`
+	Message string                         `json:"message,omitempty"`
 }
 
 // ProcessArticleEmbeddings processes embeddings for a specific article
@@ -188,10 +188,10 @@ func (ec *EmbeddingController) GetSimilarArticles(c *gin.Context) {
 	// Check if RAG services are available
 	if !ec.isRAGAvailable() {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": "Similar articles service temporarily unavailable",
+			"error":   "Similar articles service temporarily unavailable",
 			"details": "RAG (Retrieval-Augmented Generation) services are not configured or available",
 			"results": []interface{}{},
-			"count": 0,
+			"count":   0,
 		})
 		return
 	}
@@ -287,9 +287,9 @@ func (ec *EmbeddingController) DeleteArticleEmbeddings(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":         "Embeddings deleted successfully",
-		"article_id":      articleID,
-		"deleted_count":   result.RowsAffected,
+		"message":       "Embeddings deleted successfully",
+		"article_id":    articleID,
+		"deleted_count": result.RowsAffected,
 	})
 }
 
@@ -317,7 +317,7 @@ func (ec *EmbeddingController) RebuildEmbeddings(c *gin.Context) {
 func (ec *EmbeddingController) GetProviderStatus(c *gin.Context) {
 	status := ec.embeddingService.GetProviderStatus()
 	availableProviders := ec.embeddingService.GetAvailableProviders()
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"providers": status,
 		"available": availableProviders,
@@ -329,20 +329,20 @@ func (ec *EmbeddingController) SetDefaultProvider(c *gin.Context) {
 	var req struct {
 		Provider string `json:"provider" binding:"required"`
 	}
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	err := ec.embeddingService.SetDefaultProvider(req.Provider)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Default provider updated successfully",
+		"message":  "Default provider updated successfully",
 		"provider": req.Provider,
 	})
 }
@@ -355,14 +355,14 @@ func (ec *EmbeddingController) GetEmbeddingTrends(c *gin.Context) {
 			days = parsedDays
 		}
 	}
-	
+
 	// Query embedding creation trends
 	var trends []struct {
-		Date  string `json:"date"`
-		Count int    `json:"count"`
+		Date     string `json:"date"`
+		Count    int    `json:"count"`
 		Provider string `json:"provider"`
 	}
-	
+
 	query := `
 		SELECT 
 			DATE(created_at) as date, 
@@ -373,41 +373,41 @@ func (ec *EmbeddingController) GetEmbeddingTrends(c *gin.Context) {
 		GROUP BY DATE(created_at), provider
 		ORDER BY date DESC
 	`
-	
+
 	if err := database.DB.Raw(query, days).Scan(&trends).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch trends"})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"trends": trends,
-		"days": days,
+		"days":   days,
 	})
 }
 
 // GetEmbeddingVectors returns reduced-dimension vectors for visualization
 func (ec *EmbeddingController) GetEmbeddingVectors(c *gin.Context) {
 	method := c.DefaultQuery("method", "pca") // pca, tsne, umap
-	dimensions := 2 // Fixed to 2D for now
-	limit := 200    // Limit for performance
-	
+	dimensions := 2                           // Fixed to 2D for now
+	limit := 200                              // Limit for performance
+
 	if limitStr := c.Query("limit"); limitStr != "" {
 		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 && parsedLimit <= 1000 {
 			limit = parsedLimit
 		}
 	}
-	
+
 	vectors, err := ec.embeddingService.GetReducedVectors(method, dimensions, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
-		"vectors": vectors,
-		"method": method,
+		"vectors":    vectors,
+		"method":     method,
 		"dimensions": dimensions,
-		"count": len(vectors),
+		"count":      len(vectors),
 	})
 }
 
@@ -415,27 +415,27 @@ func (ec *EmbeddingController) GetEmbeddingVectors(c *gin.Context) {
 func (ec *EmbeddingController) GetSimilarityGraph(c *gin.Context) {
 	threshold := 0.7 // Default similarity threshold
 	maxNodes := 100  // Limit number of nodes for performance
-	
+
 	if thresholdStr := c.Query("threshold"); thresholdStr != "" {
 		if parsedThreshold, err := strconv.ParseFloat(thresholdStr, 64); err == nil && parsedThreshold >= 0 && parsedThreshold <= 1 {
 			threshold = parsedThreshold
 		}
 	}
-	
+
 	if maxNodesStr := c.Query("max_nodes"); maxNodesStr != "" {
 		if parsedMaxNodes, err := strconv.Atoi(maxNodesStr); err == nil && parsedMaxNodes > 0 && parsedMaxNodes <= 500 {
 			maxNodes = parsedMaxNodes
 		}
 	}
-	
+
 	graph, err := ec.embeddingService.GetSimilarityGraph(threshold, maxNodes)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
-		"graph": graph,
+		"graph":     graph,
 		"threshold": threshold,
 		"max_nodes": maxNodes,
 	})
@@ -448,7 +448,7 @@ func (ec *EmbeddingController) GetQualityMetrics(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"metrics": metrics,
 	})
@@ -461,7 +461,7 @@ func (ec *EmbeddingController) GetRAGProcessVisualization(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Query parameter is required"})
 		return
 	}
-	
+
 	language := c.DefaultQuery("language", "en")
 	limit := 10
 	if limitStr := c.Query("limit"); limitStr != "" {
@@ -469,16 +469,16 @@ func (ec *EmbeddingController) GetRAGProcessVisualization(c *gin.Context) {
 			limit = parsedLimit
 		}
 	}
-	
+
 	processData, err := ec.embeddingService.GetRAGProcessVisualization(query, language, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
-		"process": processData,
-		"query": query,
+		"process":  processData,
+		"query":    query,
 		"language": language,
 	})
 }
@@ -489,7 +489,7 @@ func (ec *EmbeddingController) GetRAGServiceStatus(c *gin.Context) {
 	isEmbeddingAvailable := false
 	embeddingProviders := []string{}
 	var embeddingError string
-	
+
 	if ec.embeddingService != nil {
 		providers := ec.embeddingService.GetAvailableProviders()
 		if len(providers) > 0 {
@@ -501,37 +501,37 @@ func (ec *EmbeddingController) GetRAGServiceStatus(c *gin.Context) {
 	} else {
 		embeddingError = "Embedding service not initialized"
 	}
-	
+
 	// Check if there are any embeddings in the database
 	var embeddingCount int64
 	database.DB.Model(&models.ArticleEmbedding{}).Count(&embeddingCount)
-	
+
 	// Check recommendation engine availability
 	isRecommendationAvailable := false
 	var recommendationError string
-	
+
 	recommendationEngine := services.GetGlobalRecommendationEngine()
 	if recommendationEngine != nil {
 		isRecommendationAvailable = true
 	} else {
 		recommendationError = "Recommendation engine not initialized"
 	}
-	
+
 	// Overall RAG status
 	isRAGEnabled := isEmbeddingAvailable && embeddingCount > 0
-	
+
 	status := gin.H{
 		"rag_enabled": isRAGEnabled,
 		"services": gin.H{
 			"embedding": gin.H{
-				"available": isEmbeddingAvailable,
-				"providers": embeddingProviders,
+				"available":       isEmbeddingAvailable,
+				"providers":       embeddingProviders,
 				"embedding_count": embeddingCount,
-				"error": embeddingError,
+				"error":           embeddingError,
 			},
 			"recommendation": gin.H{
 				"available": isRecommendationAvailable,
-				"error": recommendationError,
+				"error":     recommendationError,
 			},
 		},
 		"message": func() string {
@@ -546,7 +546,7 @@ func (ec *EmbeddingController) GetRAGServiceStatus(c *gin.Context) {
 			}
 		}(),
 	}
-	
+
 	c.JSON(http.StatusOK, status)
 }
 

@@ -16,11 +16,11 @@ type SetupStatusResponse struct {
 }
 
 type SetupRequest struct {
-	SiteTitle      string `json:"site_title" binding:"required,min=1,max=255"`
-	SiteSubtitle   string `json:"site_subtitle" binding:"max=500"`
+	SiteTitle       string `json:"site_title" binding:"required,min=1,max=255"`
+	SiteSubtitle    string `json:"site_subtitle" binding:"max=500"`
 	DefaultLanguage string `json:"default_language" binding:"required,oneof=zh en ja"`
-	AdminUsername  string `json:"admin_username" binding:"required,min=3,max=50"`
-	AdminPassword  string `json:"admin_password" binding:"required,min=6"`
+	AdminUsername   string `json:"admin_username" binding:"required,min=3,max=50"`
+	AdminPassword   string `json:"admin_password" binding:"required,min=6"`
 }
 
 type SetupResponse struct {
@@ -48,7 +48,7 @@ func GetSetupStatus(c *gin.Context) {
 // InitializeSetup completes the initial setup process
 func InitializeSetup(c *gin.Context) {
 	log.Printf("🔧 Setup initialization request received from %s", c.ClientIP())
-	
+
 	// Check if setup is already completed
 	var existingSettings models.SiteSettings
 	if err := database.DB.First(&existingSettings).Error; err == nil && existingSettings.SetupCompleted {
@@ -69,8 +69,8 @@ func InitializeSetup(c *gin.Context) {
 		})
 		return
 	}
-	
-	log.Printf("📝 Setup request parsed: title=%s, language=%s, username=%s", 
+
+	log.Printf("📝 Setup request parsed: title=%s, language=%s, username=%s",
 		req.SiteTitle, req.DefaultLanguage, req.AdminUsername)
 
 	// Validate language

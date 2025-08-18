@@ -27,12 +27,12 @@ type BehaviorTracker struct {
 
 // ReadingSession represents a user's reading session
 type ReadingSession struct {
-	UserID       string                        `json:"user_id"`
-	SessionID    string                        `json:"session_id"`
-	StartTime    time.Time                     `json:"start_time"`
-	LastActivity time.Time                     `json:"last_activity"`
-	Behaviors    []models.UserReadingBehavior  `json:"behaviors"`
-	DeviceInfo   DeviceInfo                    `json:"device_info"`
+	UserID       string                       `json:"user_id"`
+	SessionID    string                       `json:"session_id"`
+	StartTime    time.Time                    `json:"start_time"`
+	LastActivity time.Time                    `json:"last_activity"`
+	Behaviors    []models.UserReadingBehavior `json:"behaviors"`
+	DeviceInfo   DeviceInfo                   `json:"device_info"`
 }
 
 // DeviceInfo contains device and browser information
@@ -61,10 +61,10 @@ type UserInteraction struct {
 
 // UserInterests represents user's aggregated interests
 type UserInterests struct {
-	Topics     map[string]float64 `json:"topics"`      // topic -> interest score
-	Categories map[string]float64 `json:"categories"`  // category -> interest score
-	Keywords   map[string]float64 `json:"keywords"`    // keyword -> interest score
-	Languages  map[string]float64 `json:"languages"`   // language -> preference score
+	Topics     map[string]float64 `json:"topics"`     // topic -> interest score
+	Categories map[string]float64 `json:"categories"` // category -> interest score
+	Keywords   map[string]float64 `json:"keywords"`   // keyword -> interest score
+	Languages  map[string]float64 `json:"languages"`  // language -> preference score
 }
 
 // NewBehaviorTracker creates a new behavior tracker
@@ -76,11 +76,11 @@ func NewBehaviorTracker() *BehaviorTracker {
 		behaviorQueue: make(chan models.UserReadingBehavior, 1000),
 		stopChan:      make(chan struct{}),
 	}
-	
+
 	// Start background processors
 	go bt.processBehaviorQueue()
 	go bt.periodicProfileUpdate()
-	
+
 	return bt
 }
 
@@ -90,7 +90,7 @@ func (bt *BehaviorTracker) TrackInteraction(interaction UserInteraction) error {
 	if interaction.UserID == "" {
 		interaction.UserID = bt.generateUserID(interaction.SessionID, interaction.DeviceInfo)
 	}
-	
+
 	// Create behavior record
 	behavior := models.UserReadingBehavior{
 		UserID:          interaction.UserID,
@@ -107,7 +107,7 @@ func (bt *BehaviorTracker) TrackInteraction(interaction UserInteraction) error {
 		UTMCampaign:     interaction.UTMParams["utm_campaign"],
 		CreatedAt:       interaction.Timestamp,
 	}
-	
+
 	// Queue for batch processing
 	select {
 	case bt.behaviorQueue <- behavior:
@@ -116,10 +116,10 @@ func (bt *BehaviorTracker) TrackInteraction(interaction UserInteraction) error {
 		// Queue is full, process immediately
 		return bt.storeBehavior(behavior)
 	}
-	
+
 	// Update user profile asynchronously
 	go bt.updateUserProfile(interaction.UserID)
-	
+
 	return nil
 }
 
@@ -131,26 +131,26 @@ func (bt *BehaviorTracker) GetUserProfile(userID string) (*models.UserProfile, e
 			return profile, nil
 		}
 	}
-	
+
 	// Check database
 	var profile models.UserProfile
 	result := database.DB.Where("user_id = ?", userID).First(&profile)
-	
+
 	if result.Error != nil {
 		// Create new profile if not found
 		if result.Error.Error() == "record not found" {
 			profile = models.UserProfile{
-				UserID:           userID,
-				Language:         "en",
-				PreferredTopics:  "[]",
-				ReadingSpeed:     200, // Default reading speed
-				ActiveHours:      "[]",
-				InterestVector:   "[]",
-				LastActive:       time.Now(),
-				CreatedAt:        time.Now(),
-				UpdatedAt:        time.Now(),
+				UserID:          userID,
+				Language:        "en",
+				PreferredTopics: "[]",
+				ReadingSpeed:    200, // Default reading speed
+				ActiveHours:     "[]",
+				InterestVector:  "[]",
+				LastActive:      time.Now(),
+				CreatedAt:       time.Now(),
+				UpdatedAt:       time.Now(),
 			}
-			
+
 			if err := database.DB.Create(&profile).Error; err != nil {
 				return nil, fmt.Errorf("failed to create user profile: %v", err)
 			}
@@ -158,33 +158,33 @@ func (bt *BehaviorTracker) GetUserProfile(userID string) (*models.UserProfile, e
 			return nil, fmt.Errorf("failed to fetch user profile: %v", result.Error)
 		}
 	}
-	
+
 	// Cache the profile
 	bt.profileCache.Store(userID, &profile)
-	
+
 	return &profile, nil
 }
 
 // GetUserInterests calculates user interests based on reading behavior
 func (bt *BehaviorTracker) GetUserInterests(userID string) (*UserInterests, error) {
 	cacheKey := fmt.Sprintf("user_interests_%s", userID)
-	
+
 	// Check cache first
 	if cached, exists := bt.cache.Get(cacheKey); exists {
 		if interests, ok := cached.(*UserInterests); ok {
 			return interests, nil
 		}
 	}
-	
+
 	// Calculate interests from behavior
 	interests, err := bt.calculateUserInterests(userID)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Cache the result
 	bt.cache.Set(cacheKey, interests)
-	
+
 	return interests, nil
 }
 
@@ -194,37 +194,37 @@ func (bt *BehaviorTracker) GetSimilarUsers(userID string, limit int) ([]string, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Parse user's interest vector
 	var userVector []float64
 	if err := json.Unmarshal([]byte(userProfile.InterestVector), &userVector); err != nil {
 		return nil, fmt.Errorf("failed to parse user interest vector: %v", err)
 	}
-	
+
 	if len(userVector) == 0 {
 		return []string{}, nil // No interests yet
 	}
-	
+
 	// Get other user profiles
 	var profiles []models.UserProfile
 	if err := database.DB.Where("user_id != ? AND interest_vector != '[]'", userID).
 		Find(&profiles).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch user profiles: %v", err)
 	}
-	
+
 	// Calculate similarities
 	type userSimilarity struct {
 		userID     string
 		similarity float64
 	}
-	
+
 	var similarities []userSimilarity
 	for _, profile := range profiles {
 		var otherVector []float64
 		if err := json.Unmarshal([]byte(profile.InterestVector), &otherVector); err != nil {
 			continue
 		}
-		
+
 		// Calculate cosine similarity
 		similarity := bt.cosineSimilarity(userVector, otherVector)
 		if similarity > 0.1 { // Only consider users with some similarity
@@ -234,12 +234,12 @@ func (bt *BehaviorTracker) GetSimilarUsers(userID string, limit int) ([]string, 
 			})
 		}
 	}
-	
+
 	// Sort by similarity
 	sort.Slice(similarities, func(i, j int) bool {
 		return similarities[i].similarity > similarities[j].similarity
 	})
-	
+
 	// Return top similar users
 	var result []string
 	for i, sim := range similarities {
@@ -248,7 +248,7 @@ func (bt *BehaviorTracker) GetSimilarUsers(userID string, limit int) ([]string, 
 		}
 		result = append(result, sim.userID)
 	}
-	
+
 	return result, nil
 }
 
@@ -257,9 +257,9 @@ func (bt *BehaviorTracker) GetReadingPatterns(userID string, days int) (*Reading
 	if days <= 0 {
 		days = 30
 	}
-	
+
 	since := time.Now().AddDate(0, 0, -days)
-	
+
 	var behaviors []models.UserReadingBehavior
 	if err := database.DB.Preload("Article").
 		Where("user_id = ? AND created_at >= ?", userID, since).
@@ -267,21 +267,21 @@ func (bt *BehaviorTracker) GetReadingPatterns(userID string, days int) (*Reading
 		Find(&behaviors).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch reading behaviors: %v", err)
 	}
-	
+
 	return bt.analyzeReadingPatterns(behaviors), nil
 }
 
 // ReadingPatterns represents analyzed reading patterns
 type ReadingPatterns struct {
-	TotalReadingTime   int                    `json:"total_reading_time"`
-	AverageReadingTime int                    `json:"average_reading_time"`
-	AverageScrollDepth float64               `json:"average_scroll_depth"`
-	ReadingSpeed       float64               `json:"reading_speed"`
-	PreferredHours     []int                 `json:"preferred_hours"`
-	DeviceDistribution map[string]int        `json:"device_distribution"`
-	TopicInterests     map[string]float64    `json:"topic_interests"`
-	CategoryInterests  map[string]float64    `json:"category_interests"`
-	ReadingFrequency   map[string]int        `json:"reading_frequency"` // day of week -> count
+	TotalReadingTime   int                `json:"total_reading_time"`
+	AverageReadingTime int                `json:"average_reading_time"`
+	AverageScrollDepth float64            `json:"average_scroll_depth"`
+	ReadingSpeed       float64            `json:"reading_speed"`
+	PreferredHours     []int              `json:"preferred_hours"`
+	DeviceDistribution map[string]int     `json:"device_distribution"`
+	TopicInterests     map[string]float64 `json:"topic_interests"`
+	CategoryInterests  map[string]float64 `json:"category_interests"`
+	ReadingFrequency   map[string]int     `json:"reading_frequency"` // day of week -> count
 }
 
 // Helper methods
@@ -302,25 +302,25 @@ func (bt *BehaviorTracker) storeBehavior(behavior models.UserReadingBehavior) er
 func (bt *BehaviorTracker) processBehaviorQueue() {
 	ticker := time.NewTicker(bt.flushInterval)
 	defer ticker.Stop()
-	
+
 	behaviors := make([]models.UserReadingBehavior, 0, bt.batchSize)
-	
+
 	for {
 		select {
 		case behavior := <-bt.behaviorQueue:
 			behaviors = append(behaviors, behavior)
-			
+
 			if len(behaviors) >= bt.batchSize {
 				bt.flushBehaviors(behaviors)
 				behaviors = behaviors[:0] // Reset slice
 			}
-			
+
 		case <-ticker.C:
 			if len(behaviors) > 0 {
 				bt.flushBehaviors(behaviors)
 				behaviors = behaviors[:0] // Reset slice
 			}
-			
+
 		case <-bt.stopChan:
 			// Flush remaining behaviors before stopping
 			if len(behaviors) > 0 {
@@ -336,7 +336,7 @@ func (bt *BehaviorTracker) flushBehaviors(behaviors []models.UserReadingBehavior
 	if len(behaviors) == 0 {
 		return
 	}
-	
+
 	if err := database.DB.CreateInBatches(behaviors, bt.batchSize).Error; err != nil {
 		log.Printf("Failed to flush behaviors: %v", err)
 	}
@@ -349,7 +349,7 @@ func (bt *BehaviorTracker) updateUserProfile(userID string) {
 		log.Printf("Failed to get user profile for update: %v", err)
 		return
 	}
-	
+
 	// Calculate updated statistics
 	var behaviors []models.UserReadingBehavior
 	if err := database.DB.Where("user_id = ?", userID).
@@ -357,32 +357,32 @@ func (bt *BehaviorTracker) updateUserProfile(userID string) {
 		log.Printf("Failed to fetch behaviors for profile update: %v", err)
 		return
 	}
-	
+
 	if len(behaviors) == 0 {
 		return
 	}
-	
+
 	// Update aggregated statistics
 	totalTime := 0
 	totalScrollDepth := 0.0
 	deviceCount := make(map[string]int)
 	hourCount := make(map[int]int)
-	
+
 	for _, behavior := range behaviors {
 		totalTime += behavior.ReadingTime
 		totalScrollDepth += behavior.ScrollDepth
 		deviceCount[behavior.DeviceType]++
-		
+
 		hour := behavior.CreatedAt.Hour()
 		hourCount[hour]++
 	}
-	
+
 	profile.AvgReadingTime = totalTime / len(behaviors)
 	profile.AvgScrollDepth = totalScrollDepth / float64(len(behaviors))
 	profile.TotalReadingTime = totalTime
 	profile.ArticleCount = len(behaviors)
 	profile.LastActive = time.Now()
-	
+
 	// Find most used device
 	maxCount := 0
 	for device, count := range deviceCount {
@@ -391,22 +391,22 @@ func (bt *BehaviorTracker) updateUserProfile(userID string) {
 			profile.DevicePreference = device
 		}
 	}
-	
+
 	// Find most active hours
 	type hourFreq struct {
 		hour  int
 		count int
 	}
-	
+
 	var hourFreqs []hourFreq
 	for hour, count := range hourCount {
 		hourFreqs = append(hourFreqs, hourFreq{hour, count})
 	}
-	
+
 	sort.Slice(hourFreqs, func(i, j int) bool {
 		return hourFreqs[i].count > hourFreqs[j].count
 	})
-	
+
 	// Store top 3 active hours
 	var activeHours []int
 	for i, hf := range hourFreqs {
@@ -415,10 +415,10 @@ func (bt *BehaviorTracker) updateUserProfile(userID string) {
 		}
 		activeHours = append(activeHours, hf.hour)
 	}
-	
+
 	activeHoursJSON, _ := json.Marshal(activeHours)
 	profile.ActiveHours = string(activeHoursJSON)
-	
+
 	// Calculate interest vector (simplified)
 	interests, err := bt.calculateUserInterests(userID)
 	if err == nil {
@@ -427,13 +427,13 @@ func (bt *BehaviorTracker) updateUserProfile(userID string) {
 		vectorJSON, _ := json.Marshal(vector)
 		profile.InterestVector = string(vectorJSON)
 	}
-	
+
 	// Update in database
 	if err := database.DB.Save(profile).Error; err != nil {
 		log.Printf("Failed to update user profile: %v", err)
 		return
 	}
-	
+
 	// Update cache
 	bt.profileCache.Store(userID, profile)
 }
@@ -446,42 +446,42 @@ func (bt *BehaviorTracker) calculateUserInterests(userID string) (*UserInterests
 		Find(&behaviors).Error; err != nil {
 		return nil, err
 	}
-	
+
 	interests := &UserInterests{
 		Topics:     make(map[string]float64),
 		Categories: make(map[string]float64),
 		Keywords:   make(map[string]float64),
 		Languages:  make(map[string]float64),
 	}
-	
+
 	for _, behavior := range behaviors {
 		if behavior.Article.ID == 0 {
 			continue
 		}
-		
+
 		article := behavior.Article
-		
+
 		// Weight based on reading time and scroll depth
 		weight := bt.calculateInterestWeight(behavior.ReadingTime, behavior.ScrollDepth)
-		
+
 		// Category interests
 		if article.Category.Name != "" {
 			interests.Categories[article.Category.Name] += weight
 		}
-		
+
 		// Language preferences
 		interests.Languages[behavior.Language] += weight
-		
+
 		// Extract keywords from title and summary
 		keywords := bt.extractKeywordsFromText(article.Title + " " + article.Summary)
 		for _, keyword := range keywords {
 			interests.Keywords[keyword] += weight * 0.5 // Lower weight for keywords
 		}
 	}
-	
+
 	// Normalize scores
 	bt.normalizeInterests(interests)
-	
+
 	return interests, nil
 }
 
@@ -489,7 +489,7 @@ func (bt *BehaviorTracker) calculateUserInterests(userID string) (*UserInterests
 func (bt *BehaviorTracker) calculateInterestWeight(readingTime int, scrollDepth float64) float64 {
 	// Base weight
 	weight := 1.0
-	
+
 	// Increase weight for longer reading time
 	if readingTime > 60 {
 		weight += 0.5
@@ -497,17 +497,17 @@ func (bt *BehaviorTracker) calculateInterestWeight(readingTime int, scrollDepth 
 	if readingTime > 300 {
 		weight += 0.5
 	}
-	
+
 	// Increase weight for higher scroll depth
 	weight += scrollDepth
-	
+
 	return weight
 }
 
 // extractKeywordsFromText extracts keywords from text (simplified)
 func (bt *BehaviorTracker) extractKeywordsFromText(text string) []string {
 	words := strings.Fields(strings.ToLower(text))
-	
+
 	// Filter out common stop words and short words
 	stopWords := map[string]bool{
 		"the": true, "and": true, "or": true, "but": true, "in": true, "on": true, "at": true,
@@ -515,14 +515,14 @@ func (bt *BehaviorTracker) extractKeywordsFromText(text string) []string {
 		"was": true, "were": true, "be": true, "been": true, "have": true, "has": true, "had": true,
 		"一个": true, "这个": true, "那个": true, "我们": true, "它们": true, "可以": true, "应该": true,
 	}
-	
+
 	var keywords []string
 	for _, word := range words {
 		if len(word) > 2 && !stopWords[word] {
 			keywords = append(keywords, word)
 		}
 	}
-	
+
 	return keywords
 }
 
@@ -540,7 +540,7 @@ func (bt *BehaviorTracker) normalizeMap(m map[string]float64) {
 	if len(m) == 0 {
 		return
 	}
-	
+
 	// Find max value
 	max := 0.0
 	for _, value := range m {
@@ -548,11 +548,11 @@ func (bt *BehaviorTracker) normalizeMap(m map[string]float64) {
 			max = value
 		}
 	}
-	
+
 	if max == 0 {
 		return
 	}
-	
+
 	// Normalize to 0-1 range
 	for key, value := range m {
 		m[key] = value / max
@@ -563,9 +563,9 @@ func (bt *BehaviorTracker) normalizeMap(m map[string]float64) {
 func (bt *BehaviorTracker) interestsToVector(interests *UserInterests) []float64 {
 	// Simplified: create a vector based on top interests
 	vector := make([]float64, 50) // Fixed size vector
-	
+
 	index := 0
-	
+
 	// Add category interests
 	for _, score := range interests.Categories {
 		if index >= len(vector) {
@@ -574,7 +574,7 @@ func (bt *BehaviorTracker) interestsToVector(interests *UserInterests) []float64
 		vector[index] = score
 		index++
 	}
-	
+
 	// Add language preferences
 	for _, score := range interests.Languages {
 		if index >= len(vector) {
@@ -583,7 +583,7 @@ func (bt *BehaviorTracker) interestsToVector(interests *UserInterests) []float64
 		vector[index] = score
 		index++
 	}
-	
+
 	// Fill remaining with keyword interests
 	for _, score := range interests.Keywords {
 		if index >= len(vector) {
@@ -592,7 +592,7 @@ func (bt *BehaviorTracker) interestsToVector(interests *UserInterests) []float64
 		vector[index] = score * 0.5 // Lower weight for keywords
 		index++
 	}
-	
+
 	return vector
 }
 
@@ -601,18 +601,18 @@ func (bt *BehaviorTracker) cosineSimilarity(a, b []float64) float64 {
 	if len(a) != len(b) {
 		return 0.0
 	}
-	
+
 	var dotProduct, normA, normB float64
 	for i := 0; i < len(a); i++ {
 		dotProduct += a[i] * b[i]
 		normA += a[i] * a[i]
 		normB += b[i] * b[i]
 	}
-	
+
 	if normA == 0.0 || normB == 0.0 {
 		return 0.0
 	}
-	
+
 	return dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
 }
 
@@ -621,68 +621,68 @@ func (bt *BehaviorTracker) analyzeReadingPatterns(behaviors []models.UserReading
 	if len(behaviors) == 0 {
 		return &ReadingPatterns{}
 	}
-	
+
 	patterns := &ReadingPatterns{
 		DeviceDistribution: make(map[string]int),
 		TopicInterests:     make(map[string]float64),
 		CategoryInterests:  make(map[string]float64),
 		ReadingFrequency:   make(map[string]int),
 	}
-	
+
 	totalTime := 0
 	totalScrollDepth := 0.0
 	hourCount := make(map[int]int)
-	
+
 	for _, behavior := range behaviors {
 		totalTime += behavior.ReadingTime
 		totalScrollDepth += behavior.ScrollDepth
 		patterns.DeviceDistribution[behavior.DeviceType]++
-		
+
 		hour := behavior.CreatedAt.Hour()
 		hourCount[hour]++
-		
+
 		weekday := behavior.CreatedAt.Weekday().String()
 		patterns.ReadingFrequency[weekday]++
-		
+
 		// Add category interest
 		if behavior.Article.Category.Name != "" {
 			weight := bt.calculateInterestWeight(behavior.ReadingTime, behavior.ScrollDepth)
 			patterns.CategoryInterests[behavior.Article.Category.Name] += weight
 		}
 	}
-	
+
 	patterns.TotalReadingTime = totalTime
 	patterns.AverageReadingTime = totalTime / len(behaviors)
 	patterns.AverageScrollDepth = totalScrollDepth / float64(len(behaviors))
-	
+
 	// Calculate reading speed (words per minute)
 	// Simplified: assume 200 words per minute as baseline
 	if patterns.AverageReadingTime > 0 {
 		patterns.ReadingSpeed = 200.0 * (60.0 / float64(patterns.AverageReadingTime))
 	}
-	
+
 	// Find top 3 preferred hours
 	type hourFreq struct {
 		hour  int
 		count int
 	}
-	
+
 	var hourFreqs []hourFreq
 	for hour, count := range hourCount {
 		hourFreqs = append(hourFreqs, hourFreq{hour, count})
 	}
-	
+
 	sort.Slice(hourFreqs, func(i, j int) bool {
 		return hourFreqs[i].count > hourFreqs[j].count
 	})
-	
+
 	for i, hf := range hourFreqs {
 		if i >= 3 {
 			break
 		}
 		patterns.PreferredHours = append(patterns.PreferredHours, hf.hour)
 	}
-	
+
 	return patterns
 }
 
@@ -690,7 +690,7 @@ func (bt *BehaviorTracker) analyzeReadingPatterns(behaviors []models.UserReading
 func (bt *BehaviorTracker) periodicProfileUpdate() {
 	ticker := time.NewTicker(time.Hour) // Update profiles every hour
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -705,7 +705,7 @@ func (bt *BehaviorTracker) periodicProfileUpdate() {
 func (bt *BehaviorTracker) updateAllActiveProfiles() {
 	// Get users active in the last 24 hours
 	since := time.Now().Add(-24 * time.Hour)
-	
+
 	var userIDs []string
 	if err := database.DB.Model(&models.UserReadingBehavior{}).
 		Where("created_at >= ?", since).
@@ -714,7 +714,7 @@ func (bt *BehaviorTracker) updateAllActiveProfiles() {
 		log.Printf("Failed to get active users: %v", err)
 		return
 	}
-	
+
 	// Update profiles in background
 	for _, userID := range userIDs {
 		go bt.updateUserProfile(userID)
@@ -735,7 +735,7 @@ type RecentUser struct {
 // GetRecentUsers returns a list of recently active users with summary information
 func (bt *BehaviorTracker) GetRecentUsers(limit, offset, days int) ([]RecentUser, error) {
 	since := time.Now().AddDate(0, 0, -days)
-	
+
 	// Query to get recent users with aggregated data
 	var results []struct {
 		UserID           string  `gorm:"column:user_id"`
@@ -745,7 +745,7 @@ func (bt *BehaviorTracker) GetRecentUsers(limit, offset, days int) ([]RecentUser
 		Language         string  `gorm:"column:language"`
 		AvgScrollDepth   float64 `gorm:"column:avg_scroll_depth"`
 	}
-	
+
 	// Get aggregated user data from reading behaviors
 	err := database.DB.Table("user_reading_behaviors").
 		Select(`
@@ -766,11 +766,11 @@ func (bt *BehaviorTracker) GetRecentUsers(limit, offset, days int) ([]RecentUser
 		Limit(limit).
 		Offset(offset).
 		Find(&results).Error
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get recent users: %w", err)
 	}
-	
+
 	// Convert results to RecentUser structs and enrich with profile data
 	var recentUsers []RecentUser
 	for _, result := range results {
@@ -783,7 +783,7 @@ func (bt *BehaviorTracker) GetRecentUsers(limit, offset, days int) ([]RecentUser
 				lastActive = time.Now()
 			}
 		}
-		
+
 		// Normalize scroll depth to ensure it's between 0 and 1
 		scrollDepth := result.AvgScrollDepth
 		if scrollDepth > 1.0 {
@@ -793,7 +793,7 @@ func (bt *BehaviorTracker) GetRecentUsers(limit, offset, days int) ([]RecentUser
 		if scrollDepth > 1.0 {
 			scrollDepth = 1.0
 		}
-		
+
 		user := RecentUser{
 			UserID:           result.UserID,
 			LastActive:       lastActive,
@@ -802,7 +802,7 @@ func (bt *BehaviorTracker) GetRecentUsers(limit, offset, days int) ([]RecentUser
 			Language:         result.Language,
 			AvgScrollDepth:   scrollDepth,
 		}
-		
+
 		// Try to get device preference from user profile
 		if profile, err := bt.GetUserProfile(result.UserID); err == nil && profile != nil {
 			user.DevicePreference = profile.DevicePreference
@@ -815,7 +815,7 @@ func (bt *BehaviorTracker) GetRecentUsers(limit, offset, days int) ([]RecentUser
 				Order("created_at DESC").
 				Limit(1).
 				Pluck("device_info", &deviceInfo)
-			
+
 			if deviceInfo != "" {
 				var device DeviceInfo
 				if err := json.Unmarshal([]byte(deviceInfo), &device); err == nil {
@@ -823,10 +823,10 @@ func (bt *BehaviorTracker) GetRecentUsers(limit, offset, days int) ([]RecentUser
 				}
 			}
 		}
-		
+
 		recentUsers = append(recentUsers, user)
 	}
-	
+
 	return recentUsers, nil
 }
 

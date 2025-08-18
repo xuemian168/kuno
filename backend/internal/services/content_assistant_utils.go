@@ -12,7 +12,7 @@ import (
 // generateKeywordVariations generates keyword variations
 func (ca *ContentAssistant) generateKeywordVariations(primaryKeyword string, language string) []string {
 	var variations []string
-	
+
 	if language == "zh" {
 		// Chinese keyword variations
 		variations = append(variations, primaryKeyword+"教程")
@@ -45,7 +45,7 @@ func (ca *ContentAssistant) generateKeywordVariations(primaryKeyword string, lan
 		variations = append(variations, "best "+primaryKeyword)
 		variations = append(variations, primaryKeyword+" examples")
 	}
-	
+
 	return variations
 }
 
@@ -53,7 +53,7 @@ func (ca *ContentAssistant) generateKeywordVariations(primaryKeyword string, lan
 func (ca *ContentAssistant) estimateSearchVolume(keyword string, language string) int {
 	// Simplified estimation based on keyword characteristics
 	baseVolume := 100
-	
+
 	// Adjust based on keyword length
 	words := strings.Fields(keyword)
 	if len(words) == 1 {
@@ -61,14 +61,14 @@ func (ca *ContentAssistant) estimateSearchVolume(keyword string, language string
 	} else if len(words) > 3 {
 		baseVolume = 50 // Long-tail keywords have lower volume
 	}
-	
+
 	// Adjust based on language
 	if language == "zh" {
 		baseVolume = int(float64(baseVolume) * 0.3) // Smaller Chinese market estimation
 	} else if language == "ja" {
 		baseVolume = int(float64(baseVolume) * 0.2) // Japanese market estimation
 	}
-	
+
 	// Add some randomness
 	variation := rand.Intn(baseVolume)
 	return baseVolume + variation
@@ -78,7 +78,7 @@ func (ca *ContentAssistant) estimateSearchVolume(keyword string, language string
 func (ca *ContentAssistant) estimateKeywordDifficulty(keyword string, language string) float64 {
 	// Simplified difficulty estimation
 	difficulty := 0.5 // Base difficulty
-	
+
 	// Single words are typically more competitive
 	words := strings.Fields(keyword)
 	if len(words) == 1 {
@@ -86,18 +86,18 @@ func (ca *ContentAssistant) estimateKeywordDifficulty(keyword string, language s
 	} else if len(words) > 3 {
 		difficulty = 0.3 // Long-tail keywords are easier
 	}
-	
+
 	// Add some randomness
 	variation := (rand.Float64() - 0.5) * 0.2
 	difficulty += variation
-	
+
 	if difficulty < 0.1 {
 		difficulty = 0.1
 	}
 	if difficulty > 0.9 {
 		difficulty = 0.9
 	}
-	
+
 	return difficulty
 }
 
@@ -106,41 +106,41 @@ func (ca *ContentAssistant) categorizeKeyword(keyword string, primaryKeyword str
 	if primaryKeyword == "" {
 		return "secondary"
 	}
-	
+
 	if strings.Contains(keyword, primaryKeyword) || strings.Contains(primaryKeyword, keyword) {
 		return "primary"
 	}
-	
+
 	words := strings.Fields(keyword)
 	if len(words) > 3 {
 		return "long-tail"
 	}
-	
+
 	return "secondary"
 }
 
 // generateKeywordSuggestions generates usage suggestions for a keyword
 func (ca *ContentAssistant) generateKeywordSuggestions(keyword string, content string) []string {
 	var suggestions []string
-	
+
 	keywordLower := strings.ToLower(keyword)
 	contentLower := strings.ToLower(content)
-	
+
 	if !strings.Contains(contentLower, keywordLower) {
 		suggestions = append(suggestions, "Include this keyword in your content")
 	}
-	
+
 	suggestions = append(suggestions, "Use in headings for better SEO")
 	suggestions = append(suggestions, "Include in meta description")
 	suggestions = append(suggestions, "Add to alt text for images")
-	
+
 	return suggestions
 }
 
 // generateBridgeTitles generates titles that bridge two topic clusters
 func (ca *ContentAssistant) generateBridgeTitles(cluster1, cluster2 TopicCluster, language string) []string {
 	var titles []string
-	
+
 	if language == "zh" {
 		titles = append(titles, fmt.Sprintf("%s与%s的关联", cluster1.Name, cluster2.Name))
 		titles = append(titles, fmt.Sprintf("从%s到%s的转换", cluster1.Name, cluster2.Name))
@@ -154,14 +154,14 @@ func (ca *ContentAssistant) generateBridgeTitles(cluster1, cluster2 TopicCluster
 		titles = append(titles, fmt.Sprintf("From %s to %s: A Transition Guide", cluster1.Name, cluster2.Name))
 		titles = append(titles, fmt.Sprintf("Best Practices: Combining %s and %s", cluster1.Name, cluster2.Name))
 	}
-	
+
 	return titles
 }
 
 // generateExpansionTitles generates titles for expanding underrepresented topics
 func (ca *ContentAssistant) generateExpansionTitles(cluster TopicCluster, language string) []string {
 	var titles []string
-	
+
 	if language == "zh" {
 		titles = append(titles, fmt.Sprintf("%s深度解析", cluster.Name))
 		titles = append(titles, fmt.Sprintf("%s实战案例研究", cluster.Name))
@@ -178,7 +178,7 @@ func (ca *ContentAssistant) generateExpansionTitles(cluster TopicCluster, langua
 		titles = append(titles, fmt.Sprintf("%s FAQ: Common Questions Answered", cluster.Name))
 		titles = append(titles, fmt.Sprintf("Advanced %s Techniques", cluster.Name))
 	}
-	
+
 	return titles
 }
 
@@ -186,56 +186,56 @@ func (ca *ContentAssistant) generateExpansionTitles(cluster TopicCluster, langua
 func (ca *ContentAssistant) mergeAndDeduplicateKeywords(keywords1, keywords2 []string) []string {
 	seen := make(map[string]bool)
 	var result []string
-	
+
 	for _, keyword := range keywords1 {
 		if !seen[keyword] {
 			seen[keyword] = true
 			result = append(result, keyword)
 		}
 	}
-	
+
 	for _, keyword := range keywords2 {
 		if !seen[keyword] {
 			seen[keyword] = true
 			result = append(result, keyword)
 		}
 	}
-	
+
 	return result
 }
 
 // generateTrendingIdeas generates ideas based on trending topics
 func (ca *ContentAssistant) generateTrendingIdeas(clusters []TopicCluster, language string) []WritingIdea {
 	var ideas []WritingIdea
-	
+
 	// Find clusters with recent activity (if we had timestamp data)
 	for _, cluster := range clusters {
 		if cluster.Size >= 2 { // Clusters with reasonable activity
 			idea := WritingIdea{
-				Title:          ca.generateTrendingTitle(cluster, language),
-				Description:    ca.generateTrendingDescription(cluster, language),
-				Category:       cluster.Name,
-				Keywords:       cluster.Keywords,
+				Title:           ca.generateTrendingTitle(cluster, language),
+				Description:     ca.generateTrendingDescription(cluster, language),
+				Category:        cluster.Name,
+				Keywords:        cluster.Keywords,
 				DifficultyLevel: "intermediate",
 				EstimatedLength: 800,
-				Inspiration:    "Based on trending topic analysis",
-				Language:       language,
-				RelevanceScore: 0.6,
+				Inspiration:     "Based on trending topic analysis",
+				Language:        language,
+				RelevanceScore:  0.6,
 			}
 			ideas = append(ideas, idea)
 		}
 	}
-	
+
 	return ideas
 }
 
 // generateSeasonalIdeas generates seasonal content ideas
 func (ca *ContentAssistant) generateSeasonalIdeas(language string) []WritingIdea {
 	var ideas []WritingIdea
-	
+
 	now := time.Now()
 	month := now.Month()
-	
+
 	var seasonalTopics []string
 	if language == "zh" {
 		switch month {
@@ -277,22 +277,22 @@ func (ca *ContentAssistant) generateSeasonalIdeas(language string) []WritingIdea
 			seasonalTopics = []string{"Year End Review", "Next Year Planning", "Tech Outlook"}
 		}
 	}
-	
+
 	for _, topic := range seasonalTopics {
 		idea := WritingIdea{
-			Title:          topic,
-			Description:    fmt.Sprintf("Seasonal content about %s", topic),
-			Category:       "Seasonal",
-			Keywords:       []string{topic},
+			Title:           topic,
+			Description:     fmt.Sprintf("Seasonal content about %s", topic),
+			Category:        "Seasonal",
+			Keywords:        []string{topic},
 			DifficultyLevel: "beginner",
 			EstimatedLength: 600,
-			Inspiration:    "Seasonal content opportunity",
-			Language:       language,
-			RelevanceScore: 0.4,
+			Inspiration:     "Seasonal content opportunity",
+			Language:        language,
+			RelevanceScore:  0.4,
 		}
 		ideas = append(ideas, idea)
 	}
-	
+
 	return ideas
 }
 
@@ -323,32 +323,32 @@ func (ca *ContentAssistant) inferCategory(keywords []string) string {
 	if len(keywords) == 0 {
 		return "General"
 	}
-	
+
 	// Simple category inference based on keywords
 	techKeywords := []string{"code", "programming", "development", "技术", "编程", "开发", "プログラミング", "開発", "技術", "コード"}
 	businessKeywords := []string{"business", "strategy", "management", "商业", "策略", "管理", "ビジネス", "戦略", "管理", "経営"}
 	designKeywords := []string{"design", "ui", "ux", "设计", "界面", "用户", "デザイン", "UI", "UX", "インターフェース", "ユーザー"}
-	
+
 	keywordString := strings.ToLower(strings.Join(keywords, " "))
-	
+
 	for _, keyword := range techKeywords {
 		if strings.Contains(keywordString, keyword) {
 			return "Technology"
 		}
 	}
-	
+
 	for _, keyword := range businessKeywords {
 		if strings.Contains(keywordString, keyword) {
 			return "Business"
 		}
 	}
-	
+
 	for _, keyword := range designKeywords {
 		if strings.Contains(keywordString, keyword) {
 			return "Design"
 		}
 	}
-	
+
 	return "General"
 }
 
@@ -356,31 +356,31 @@ func (ca *ContentAssistant) inferCategory(keywords []string) string {
 func (ca *ContentAssistant) inferDifficulty(keywords []string) string {
 	advancedKeywords := []string{"advanced", "expert", "complex", "architecture", "高级", "专家", "复杂", "架构", "上級", "エキスパート", "複雑", "アーキテクチャ"}
 	beginnerKeywords := []string{"beginner", "intro", "basic", "simple", "初学", "入门", "基础", "简单", "初心者", "入門", "基本", "シンプル"}
-	
+
 	keywordString := strings.ToLower(strings.Join(keywords, " "))
-	
+
 	for _, keyword := range advancedKeywords {
 		if strings.Contains(keywordString, keyword) {
 			return "advanced"
 		}
 	}
-	
+
 	for _, keyword := range beginnerKeywords {
 		if strings.Contains(keywordString, keyword) {
 			return "beginner"
 		}
 	}
-	
+
 	return "intermediate"
 }
 
 // estimateLengthFromKeywords estimates article length from keywords
 func (ca *ContentAssistant) estimateLengthFromKeywords(keywords []string) int {
 	baseLength := 500
-	
+
 	// More keywords suggest more complex topics
 	baseLength += len(keywords) * 50
-	
+
 	// Add some variation
 	variation := rand.Intn(200)
 	return baseLength + variation
@@ -419,21 +419,21 @@ func (ca *ContentAssistant) getStopWords(language string) map[string]bool {
 func (ca *ContentAssistant) getTopicCategories(language string) map[string][]string {
 	if language == "zh" {
 		return map[string][]string{
-			"技术":   {"技术", "开发", "编程", "代码", "软件", "硬件", "算法", "数据"},
-			"设计":   {"设计", "UI", "UX", "界面", "用户体验", "视觉", "交互"},
-			"商业":   {"商业", "管理", "营销", "策略", "商务", "企业", "创业"},
-			"教育":   {"教育", "学习", "培训", "教学", "知识", "技能"},
-			"生活":   {"生活", "健康", "旅游", "美食", "时尚", "娱乐"},
-			"科学":   {"科学", "研究", "实验", "理论", "发现", "创新"},
+			"技术": {"技术", "开发", "编程", "代码", "软件", "硬件", "算法", "数据"},
+			"设计": {"设计", "UI", "UX", "界面", "用户体验", "视觉", "交互"},
+			"商业": {"商业", "管理", "营销", "策略", "商务", "企业", "创业"},
+			"教育": {"教育", "学习", "培训", "教学", "知识", "技能"},
+			"生活": {"生活", "健康", "旅游", "美食", "时尚", "娱乐"},
+			"科学": {"科学", "研究", "实验", "理论", "发现", "创新"},
 		}
 	} else if language == "ja" {
 		return map[string][]string{
-			"技術":   {"技術", "開発", "プログラミング", "コード", "ソフトウェア", "ハードウェア", "アルゴリズム", "データ"},
-			"デザイン": {"デザイン", "UI", "UX", "インターフェース", "ユーザーエクスペリエンス", "ビジュアル", "インタラクション"},
-			"ビジネス": {"ビジネス", "管理", "マーケティング", "戦略", "企業", "スタートアップ"},
-			"教育":   {"教育", "学習", "トレーニング", "教授", "知識", "スキル"},
+			"技術":      {"技術", "開発", "プログラミング", "コード", "ソフトウェア", "ハードウェア", "アルゴリズム", "データ"},
+			"デザイン":    {"デザイン", "UI", "UX", "インターフェース", "ユーザーエクスペリエンス", "ビジュアル", "インタラクション"},
+			"ビジネス":    {"ビジネス", "管理", "マーケティング", "戦略", "企業", "スタートアップ"},
+			"教育":      {"教育", "学習", "トレーニング", "教授", "知識", "スキル"},
 			"ライフスタイル": {"ライフスタイル", "健康", "旅行", "食べ物", "ファッション", "エンターテイメント"},
-			"科学":   {"科学", "研究", "実験", "理論", "発見", "イノベーション"},
+			"科学":      {"科学", "研究", "実験", "理論", "発見", "イノベーション"},
 		}
 	} else {
 		return map[string][]string{

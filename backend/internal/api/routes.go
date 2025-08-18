@@ -1,12 +1,12 @@
 package api
 
 import (
+	"blog-backend/internal/auth"
 	"fmt"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
-	"blog-backend/internal/auth"
-	"github.com/gin-gonic/gin"
-	"github.com/gin-contrib/cors"
 )
 
 func SetupRoutes() *gin.Engine {
@@ -52,14 +52,14 @@ func SetupRoutes() *gin.Engine {
 		// Public routes
 		api.POST("/login", Login)
 		api.GET("/recovery-status", GetRecoveryStatus)
-		
+
 		// Setup routes - public access for initial setup
 		setup := api.Group("/setup")
 		{
 			setup.GET("/status", GetSetupStatus)
 			setup.POST("/initialize", InitializeSetup)
 		}
-		
+
 		// Public read-only routes
 		articles := api.Group("/articles")
 		{
@@ -274,7 +274,7 @@ func SetupRoutes() *gin.Engine {
 					adminRecommendations.GET("/users/:user_id/similar", recommendationsController.GetSimilarUsers)
 					adminRecommendations.GET("/users/:user_id/analytics", recommendationsController.GetRecommendationAnalytics)
 					adminRecommendations.PUT("/users/:user_id/recommendations/:recommendation_id/click", recommendationsController.MarkRecommendationClicked)
-					
+
 					// Debug and testing endpoints
 					adminRecommendations.GET("/users/:user_id/status", recommendationsController.GetUserDataStatus)
 					adminRecommendations.POST("/users/:user_id/force-generate", recommendationsController.ForceGenerateRecommendations)
@@ -289,13 +289,13 @@ func SetupRoutes() *gin.Engine {
 					adminSEO.GET("/health", seoController.GetSEOHealth)
 					adminSEO.POST("/health/check", seoController.RunSEOHealthCheck)
 					adminSEO.GET("/health/history", seoController.GetSEOHealthHistory)
-					
+
 					// Article SEO endpoints
 					adminSEO.GET("/articles/:id", seoController.GetArticleSEO)
 					adminSEO.PUT("/articles/:id", seoController.UpdateArticleSEO)
 					adminSEO.POST("/articles/:id/analyze", seoController.AnalyzeArticleSEO)
 					adminSEO.POST("/articles/:id/generate", seoController.GenerateArticleSEO)
-					
+
 					// Keyword management endpoints
 					adminSEO.GET("/keywords", seoController.GetKeywords)
 					adminSEO.POST("/keywords", seoController.CreateKeyword)
@@ -308,7 +308,7 @@ func SetupRoutes() *gin.Engine {
 					adminSEO.GET("/keywords/groups", seoController.GetKeywordGroups)
 					adminSEO.POST("/keywords/groups", seoController.CreateKeywordGroup)
 					adminSEO.GET("/keywords/by-group", seoController.GetKeywordsByGroup)
-					
+
 					// Metrics and automation
 					adminSEO.GET("/metrics", seoController.GetSEOMetrics)
 					adminSEO.GET("/automation/rules", seoController.GetAutomationRules)

@@ -106,9 +106,9 @@ func (controller *AIUsageController) GetUsageStats(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"stats": stats,
 		"period": gin.H{
-			"days": days,
+			"days":         days,
 			"service_type": serviceType,
-			"provider": provider,
+			"provider":     provider,
 		},
 	})
 }
@@ -130,8 +130,8 @@ func (controller *AIUsageController) GetTotalCost(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"total_cost": totalCost,
-		"currency": "USD",
+		"total_cost":  totalCost,
+		"currency":    "USD",
 		"period_days": days,
 	})
 }
@@ -158,7 +158,7 @@ func (controller *AIUsageController) GetRecentUsage(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"records": records,
-		"count": len(records),
+		"count":   len(records),
 	})
 }
 
@@ -179,8 +179,8 @@ func (controller *AIUsageController) GetUsageByArticle(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"article_id": articleID,
-		"records": records,
-		"count": len(records),
+		"records":    records,
+		"count":      len(records),
 	})
 }
 
@@ -229,8 +229,8 @@ func (controller *AIUsageController) CleanupOldRecords(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Cleanup completed",
+		"message":         "Cleanup completed",
 		"deleted_records": deletedCount,
-		"cutoff_days": days,
+		"cutoff_days":     days,
 	})
 }

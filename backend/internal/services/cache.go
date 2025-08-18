@@ -18,19 +18,19 @@ import (
 
 // CacheItem represents a cached item with TTL
 type CacheItem struct {
-	Value     interface{}
-	ExpiresAt time.Time
+	Value       interface{}
+	ExpiresAt   time.Time
 	AccessCount int64
-	CreatedAt time.Time
+	CreatedAt   time.Time
 }
 
 // MemoryCache represents thread-safe in-memory cache
 type MemoryCache struct {
-	mu       sync.RWMutex
-	items    map[string]*CacheItem
-	maxSize  int
-	ttl      time.Duration
-	hitCount int64
+	mu        sync.RWMutex
+	items     map[string]*CacheItem
+	maxSize   int
+	ttl       time.Duration
+	hitCount  int64
 	missCount int64
 }
 
@@ -41,10 +41,10 @@ func NewMemoryCache(maxSize int, ttl time.Duration) *MemoryCache {
 		maxSize: maxSize,
 		ttl:     ttl,
 	}
-	
+
 	// Start cleanup goroutine
 	go cache.cleanup()
-	
+
 	return cache
 }
 
@@ -52,20 +52,20 @@ func NewMemoryCache(maxSize int, ttl time.Duration) *MemoryCache {
 func (mc *MemoryCache) Get(key string) (interface{}, bool) {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	
+
 	item, exists := mc.items[key]
 	if !exists {
 		mc.missCount++
 		return nil, false
 	}
-	
+
 	// Check if expired
 	if time.Now().After(item.ExpiresAt) {
 		delete(mc.items, key)
 		mc.missCount++
 		return nil, false
 	}
-	
+
 	item.AccessCount++
 	mc.hitCount++
 	return item.Value, true
@@ -75,17 +75,17 @@ func (mc *MemoryCache) Get(key string) (interface{}, bool) {
 func (mc *MemoryCache) Set(key string, value interface{}) {
 	mc.mu.Lock()
 	defer mc.mu.Unlock()
-	
+
 	// Check if cache is full and evict LRU if necessary
 	if len(mc.items) >= mc.maxSize {
 		mc.evictLRU()
 	}
-	
+
 	mc.items[key] = &CacheItem{
-		Value:     value,
-		ExpiresAt: time.Now().Add(mc.ttl),
+		Value:       value,
+		ExpiresAt:   time.Now().Add(mc.ttl),
 		AccessCount: 1,
-		CreatedAt: time.Now(),
+		CreatedAt:   time.Now(),
 	}
 }
 
@@ -107,13 +107,13 @@ func (mc *MemoryCache) Clear() {
 func (mc *MemoryCache) Stats() map[string]interface{} {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	
+
 	totalRequests := mc.hitCount + mc.missCount
 	hitRate := float64(0)
 	if totalRequests > 0 {
 		hitRate = float64(mc.hitCount) / float64(totalRequests)
 	}
-	
+
 	return map[string]interface{}{
 		"size":       len(mc.items),
 		"max_size":   mc.maxSize,
@@ -128,20 +128,20 @@ func (mc *MemoryCache) evictLRU() {
 	if len(mc.items) == 0 {
 		return
 	}
-	
+
 	var lruKey string
 	var minAccessCount int64 = -1
 	var oldestTime time.Time
-	
+
 	for key, item := range mc.items {
-		if minAccessCount == -1 || item.AccessCount < minAccessCount || 
-		   (item.AccessCount == minAccessCount && item.CreatedAt.Before(oldestTime)) {
+		if minAccessCount == -1 || item.AccessCount < minAccessCount ||
+			(item.AccessCount == minAccessCount && item.CreatedAt.Before(oldestTime)) {
 			minAccessCount = item.AccessCount
 			oldestTime = item.CreatedAt
 			lruKey = key
 		}
 	}
-	
+
 	if lruKey != "" {
 		delete(mc.items, lruKey)
 	}
@@ -151,27 +151,27 @@ func (mc *MemoryCache) evictLRU() {
 func (mc *MemoryCache) cleanup() {
 	ticker := time.NewTicker(time.Minute * 5)
 	defer ticker.Stop()
-	
+
 	for range ticker.C {
 		mc.mu.Lock()
 		now := time.Now()
 		expiredKeys := make([]string, 0)
-		
+
 		for key, item := range mc.items {
 			if now.After(item.ExpiresAt) {
 				expiredKeys = append(expiredKeys, key)
 			}
 		}
-		
+
 		for _, key := range expiredKeys {
 			delete(mc.items, key)
 		}
-		
+
 		// Force GC if memory usage is high
 		if len(expiredKeys) > 100 {
 			runtime.GC()
 		}
-		
+
 		mc.mu.Unlock()
 	}
 }
@@ -191,23 +191,23 @@ func NewSQLiteCache() *SQLiteCache {
 // Get retrieves a value from SQLite cache
 func (sc *SQLiteCache) Get(key string) (interface{}, bool) {
 	var cache models.SearchCache
-	result := sc.db.Where("cache_key = ? AND (expires_at IS NULL OR expires_at > ?)", 
+	result := sc.db.Where("cache_key = ? AND (expires_at IS NULL OR expires_at > ?)",
 		key, time.Now()).First(&cache)
-	
+
 	if result.Error != nil {
 		return nil, false
 	}
-	
+
 	// Update access count
 	sc.db.Model(&cache).UpdateColumn("access_count", gorm.Expr("access_count + 1"))
-	
+
 	// Parse JSON value
 	var value interface{}
 	if err := json.Unmarshal([]byte(cache.CacheValue), &value); err != nil {
 		log.Printf("Failed to unmarshal cache value: %v", err)
 		return nil, false
 	}
-	
+
 	return value, true
 }
 
@@ -217,17 +217,17 @@ func (sc *SQLiteCache) Set(key string, value interface{}, ttl *time.Duration) er
 	if err != nil {
 		return fmt.Errorf("failed to marshal cache value: %v", err)
 	}
-	
+
 	var expiresAt *time.Time
 	if ttl != nil {
 		expires := time.Now().Add(*ttl)
 		expiresAt = &expires
 	}
-	
+
 	// First try to find existing record
 	var existingCache models.SearchCache
 	err = sc.db.Where("cache_key = ?", key).First(&existingCache).Error
-	
+
 	if err == nil {
 		// Record exists, update it
 		existingCache.CacheValue = string(valueJSON)
@@ -262,18 +262,18 @@ func (sc *SQLiteCache) Cleanup(maxItems int) error {
 		Delete(&models.SearchCache{}).Error; err != nil {
 		return err
 	}
-	
+
 	// Check if we need to remove excess items
 	var count int64
 	sc.db.Model(&models.SearchCache{}).Count(&count)
-	
+
 	if int(count) > maxItems {
 		excess := int(count) - maxItems
 		// Remove least accessed items
 		var itemsToDelete []models.SearchCache
 		sc.db.Order("access_count ASC, created_at ASC").
 			Limit(excess).Find(&itemsToDelete)
-		
+
 		if len(itemsToDelete) > 0 {
 			ids := make([]uint, len(itemsToDelete))
 			for i, item := range itemsToDelete {
@@ -282,7 +282,7 @@ func (sc *SQLiteCache) Cleanup(maxItems int) error {
 			sc.db.Where("id IN ?", ids).Delete(&models.SearchCache{})
 		}
 	}
-	
+
 	return nil
 }
 
@@ -324,10 +324,10 @@ func NewSmartCache(config CacheConfig) *SmartCache {
 		precomputeCache: NewPrecomputeCache(),
 		config:          config,
 	}
-	
+
 	// Start background cleanup
 	go cache.backgroundCleanup()
-	
+
 	return cache
 }
 
@@ -337,14 +337,14 @@ func (sc *SmartCache) Get(key string) (interface{}, bool) {
 	if value, exists := sc.memoryCache.Get(key); exists {
 		return value, true
 	}
-	
+
 	// 2. Try SQLite cache
 	if value, exists := sc.sqliteCache.Get(key); exists {
 		// Promote to memory cache
 		sc.memoryCache.Set(key, value)
 		return value, true
 	}
-	
+
 	// 3. Try precompute cache
 	if value, exists := sc.precomputeCache.Get(key); exists {
 		// Store in both caches
@@ -352,7 +352,7 @@ func (sc *SmartCache) Get(key string) (interface{}, bool) {
 		sc.sqliteCache.Set(key, value, &sc.config.SQLiteTTL)
 		return value, true
 	}
-	
+
 	return nil, false
 }
 
@@ -360,7 +360,7 @@ func (sc *SmartCache) Get(key string) (interface{}, bool) {
 func (sc *SmartCache) Set(key string, value interface{}) {
 	// Store in memory cache
 	sc.memoryCache.Set(key, value)
-	
+
 	// Store in SQLite cache
 	sc.sqliteCache.Set(key, value, &sc.config.SQLiteTTL)
 }
@@ -389,10 +389,10 @@ func (sc *SmartCache) InvalidatePattern(pattern string) {
 // Stats returns comprehensive cache statistics
 func (sc *SmartCache) Stats() map[string]interface{} {
 	memStats := sc.memoryCache.Stats()
-	
+
 	var sqliteCount int64
 	sc.sqliteCache.db.Model(&models.SearchCache{}).Count(&sqliteCount)
-	
+
 	return map[string]interface{}{
 		"memory_cache": memStats,
 		"sqlite_cache": map[string]interface{}{
@@ -400,7 +400,7 @@ func (sc *SmartCache) Stats() map[string]interface{} {
 			"max_size": sc.config.MaxSQLiteItems,
 		},
 		"precompute_cache": sc.precomputeCache.Stats(),
-		"config": sc.config,
+		"config":           sc.config,
 	}
 }
 
@@ -408,16 +408,16 @@ func (sc *SmartCache) Stats() map[string]interface{} {
 func (sc *SmartCache) backgroundCleanup() {
 	ticker := time.NewTicker(sc.config.CleanupInterval)
 	defer ticker.Stop()
-	
+
 	for range ticker.C {
 		// Cleanup SQLite cache
 		if err := sc.sqliteCache.Cleanup(sc.config.MaxSQLiteItems); err != nil {
 			log.Printf("SQLite cache cleanup failed: %v", err)
 		}
-		
+
 		// Cleanup precompute cache
 		sc.precomputeCache.Cleanup()
-		
+
 		// Force garbage collection if needed
 		runtime.GC()
 	}
@@ -447,12 +447,12 @@ func NewPrecomputeCache() *PrecomputeCache {
 func (pc *PrecomputeCache) Get(key string) (interface{}, bool) {
 	pc.mu.RLock()
 	defer pc.mu.RUnlock()
-	
+
 	item, exists := pc.items[key]
 	if !exists {
 		return nil, false
 	}
-	
+
 	item.AccessCount++
 	pc.items[key] = item
 	return item.Value, true
@@ -462,7 +462,7 @@ func (pc *PrecomputeCache) Get(key string) (interface{}, bool) {
 func (pc *PrecomputeCache) Set(key string, value interface{}) {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
-	
+
 	pc.items[key] = PrecomputeItem{
 		Value:       value,
 		ComputedAt:  time.Now(),
@@ -481,7 +481,7 @@ func (pc *PrecomputeCache) Delete(key string) {
 func (pc *PrecomputeCache) Cleanup() {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
-	
+
 	// Remove items older than 24 hours with low access count
 	cutoff := time.Now().Add(-24 * time.Hour)
 	for key, item := range pc.items {
@@ -495,12 +495,12 @@ func (pc *PrecomputeCache) Cleanup() {
 func (pc *PrecomputeCache) Stats() map[string]interface{} {
 	pc.mu.RLock()
 	defer pc.mu.RUnlock()
-	
+
 	totalAccess := int64(0)
 	for _, item := range pc.items {
 		totalAccess += item.AccessCount
 	}
-	
+
 	return map[string]interface{}{
 		"size":         len(pc.items),
 		"total_access": totalAccess,

@@ -36,7 +36,7 @@ func getMasterKey() []byte {
 
 	// Try to get from a more secure location or generate one
 	// In production, this should be stored securely (e.g., vault, key management service)
-	
+
 	// For now, generate a deterministic key based on a secret phrase
 	// This ensures the same key is generated across app restarts
 	secret := os.Getenv("BLOG_SECRET_PHRASE")
@@ -44,7 +44,7 @@ func getMasterKey() []byte {
 		// Fallback secret - should be changed in production
 		secret = "blog-ai-key-encryption-secret-change-in-production"
 	}
-	
+
 	// Generate a 32-byte key using SHA256
 	hash := sha256.Sum256([]byte(secret))
 	return hash[:]
@@ -134,7 +134,7 @@ func (cs *CryptoService) MaskAPIKey(apiKey string) string {
 	key = strings.TrimPrefix(key, "AIza")
 
 	keyLen := len(key)
-	
+
 	if keyLen <= 8 {
 		// Very short keys - mask all but first 2 chars
 		if keyLen <= 2 {
@@ -157,7 +157,7 @@ func (cs *CryptoService) GetMaskedDisplayKey(apiKey string) string {
 	}
 
 	masked := cs.MaskAPIKey(apiKey)
-	
+
 	// Add back appropriate prefix based on original key format
 	if strings.HasPrefix(apiKey, "sk-") {
 		return "sk-" + masked
@@ -166,7 +166,7 @@ func (cs *CryptoService) GetMaskedDisplayKey(apiKey string) string {
 	} else if strings.HasPrefix(apiKey, "AIza") {
 		return "AIza" + masked
 	}
-	
+
 	return masked
 }
 
@@ -175,12 +175,12 @@ func (cs *CryptoService) IsKeyConfigured(apiKey string) bool {
 	if apiKey == "" {
 		return false
 	}
-	
+
 	// Check if it's a masked key (contains asterisks)
 	if strings.Contains(apiKey, "*") {
 		return true // Masked key means it's configured
 	}
-	
+
 	// Check minimum key length
 	return len(apiKey) >= 10
 }

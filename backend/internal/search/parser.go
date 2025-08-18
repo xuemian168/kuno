@@ -10,41 +10,41 @@ import (
 
 // SearchFilter represents a parsed search filter
 type SearchFilter struct {
-	Field     string      `json:"field"`     // title, content, category, author, date, views
-	Operator  string      `json:"operator"`  // equals, contains, gt, lt, gte, lte, between
-	Value     interface{} `json:"value"`     // search value
-	Exclude   bool        `json:"exclude"`   // whether this is an exclusion filter
+	Field    string      `json:"field"`    // title, content, category, author, date, views
+	Operator string      `json:"operator"` // equals, contains, gt, lt, gte, lte, between
+	Value    interface{} `json:"value"`    // search value
+	Exclude  bool        `json:"exclude"`  // whether this is an exclusion filter
 }
 
 // ParsedQuery represents the complete parsed search query
 type ParsedQuery struct {
-	Filters     []SearchFilter `json:"filters"`
-	FreeText    []string       `json:"free_text"`    // general search terms
-	Logic       string         `json:"logic"`        // AND, OR
-	SortBy      string         `json:"sort_by"`      // created_at, views, relevance
-	SortOrder   string         `json:"sort_order"`   // ASC, DESC
+	Filters   []SearchFilter `json:"filters"`
+	FreeText  []string       `json:"free_text"`  // general search terms
+	Logic     string         `json:"logic"`      // AND, OR
+	SortBy    string         `json:"sort_by"`    // created_at, views, relevance
+	SortOrder string         `json:"sort_order"` // ASC, DESC
 }
 
 // Advanced search syntax patterns
 var (
 	// Field-specific search: field:"value" or field:value
 	fieldPattern = regexp.MustCompile(`(\w+):"([^"]+)"|(\w+):(\S+)`)
-	
+
 	// Quoted phrases: "exact phrase"
 	quotedPattern = regexp.MustCompile(`"([^"]+)"`)
-	
+
 	// Date range: date:2024-01-01..2024-12-31 or date:>2024-01-01 or date:<2024-12-31
 	datePattern = regexp.MustCompile(`date:([\d-]+)\.\.([\d-]+)|date:([><]=?)([\d-]+)`)
-	
+
 	// Numeric comparisons: views:>100, views:<=50
 	numericPattern = regexp.MustCompile(`(views|view_count):([><]=?)(\d+)`)
-	
+
 	// Exclusion: -term
 	exclusionPattern = regexp.MustCompile(`-(\S+)`)
-	
+
 	// Logic operators: AND, OR
 	logicPattern = regexp.MustCompile(`\b(AND|OR)\b`)
-	
+
 	// Sort directive: sort:field:order
 	sortPattern = regexp.MustCompile(`sort:(\w+):(asc|desc)`)
 )
@@ -58,15 +58,15 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 		SortBy:    "created_at",
 		SortOrder: "DESC",
 	}
-	
+
 	// Normalize the query
 	query = strings.TrimSpace(query)
 	if query == "" {
 		return parsed, nil
 	}
-	
+
 	remaining := query
-	
+
 	// 1. Extract sort directives
 	if sortMatches := sortPattern.FindAllStringSubmatch(query, -1); len(sortMatches) > 0 {
 		for _, match := range sortMatches {
@@ -76,7 +76,7 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 			remaining = strings.ReplaceAll(remaining, match[0], "")
 		}
 	}
-	
+
 	// 2. Extract field-specific searches
 	if fieldMatches := fieldPattern.FindAllStringSubmatch(remaining, -1); len(fieldMatches) > 0 {
 		for _, match := range fieldMatches {
@@ -86,14 +86,14 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 			} else { // unquoted version: field:value
 				field, value = match[3], match[4]
 			}
-			
+
 			filter := SearchFilter{
 				Field:    field,
 				Operator: "contains",
 				Value:    value,
 				Exclude:  false,
 			}
-			
+
 			// Handle special field types
 			switch field {
 			case "category", "author":
@@ -101,18 +101,18 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 			case "title", "content", "summary":
 				filter.Operator = "contains"
 			}
-			
+
 			parsed.Filters = append(parsed.Filters, filter)
 			// Remove from remaining query
 			remaining = strings.ReplaceAll(remaining, match[0], "")
 		}
 	}
-	
+
 	// 3. Extract date range searches
 	if dateMatches := datePattern.FindAllStringSubmatch(remaining, -1); len(dateMatches) > 0 {
 		for _, match := range dateMatches {
 			var filter SearchFilter
-			
+
 			if match[1] != "" && match[2] != "" { // Range format: date:start..end
 				startDate, err1 := time.Parse("2006-01-02", match[1])
 				endDate, err2 := time.Parse("2006-01-02", match[2])
@@ -138,7 +138,7 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 					case "<=":
 						operator = "lte"
 					}
-					
+
 					filter = SearchFilter{
 						Field:    "date",
 						Operator: operator,
@@ -147,7 +147,7 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 					}
 				}
 			}
-			
+
 			if filter.Field != "" {
 				parsed.Filters = append(parsed.Filters, filter)
 				// Remove from remaining query
@@ -155,7 +155,7 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 			}
 		}
 	}
-	
+
 	// 4. Extract numeric comparisons (views)
 	if numMatches := numericPattern.FindAllStringSubmatch(remaining, -1); len(numMatches) > 0 {
 		for _, match := range numMatches {
@@ -163,7 +163,7 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 			if field == "view_count" {
 				field = "views" // normalize field name
 			}
-			
+
 			operator := match[2]
 			switch operator {
 			case ">":
@@ -175,7 +175,7 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 			case "<=":
 				operator = "lte"
 			}
-			
+
 			value, err := strconv.Atoi(match[3])
 			if err == nil {
 				filter := SearchFilter{
@@ -190,7 +190,7 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 			}
 		}
 	}
-	
+
 	// 5. Extract quoted phrases
 	quotedTerms := quotedPattern.FindAllStringSubmatch(remaining, -1)
 	for _, match := range quotedTerms {
@@ -205,7 +205,7 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 		// Remove from remaining query
 		remaining = strings.ReplaceAll(remaining, match[0], "")
 	}
-	
+
 	// 6. Extract exclusions
 	if exMatches := exclusionPattern.FindAllStringSubmatch(remaining, -1); len(exMatches) > 0 {
 		for _, match := range exMatches {
@@ -221,7 +221,7 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 			remaining = strings.ReplaceAll(remaining, match[0], "")
 		}
 	}
-	
+
 	// 7. Extract logic operators
 	if logicMatches := logicPattern.FindAllString(remaining, -1); len(logicMatches) > 0 {
 		// Use the last found logic operator
@@ -231,7 +231,7 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 			remaining = strings.ReplaceAll(remaining, op, "")
 		}
 	}
-	
+
 	// 8. Extract remaining free text terms
 	remaining = strings.TrimSpace(remaining)
 	if remaining != "" {
@@ -243,7 +243,7 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 			}
 		}
 	}
-	
+
 	return parsed, nil
 }
 
@@ -251,7 +251,7 @@ func ParseSearchQuery(query string) (*ParsedQuery, error) {
 func (pq *ParsedQuery) BuildSQLQuery() (string, []interface{}) {
 	var conditions []string
 	var params []interface{}
-	
+
 	// Handle field-specific filters
 	for _, filter := range pq.Filters {
 		condition, filterParams := buildFilterCondition(filter)
@@ -260,17 +260,17 @@ func (pq *ParsedQuery) BuildSQLQuery() (string, []interface{}) {
 			params = append(params, filterParams...)
 		}
 	}
-	
+
 	// Handle free text search
 	if len(pq.FreeText) > 0 {
 		freeTextConditions := []string{}
 		for _, term := range pq.FreeText {
-			freeTextConditions = append(freeTextConditions, 
+			freeTextConditions = append(freeTextConditions,
 				"(title LIKE ? OR content LIKE ? OR summary LIKE ? OR seo_title LIKE ? OR seo_description LIKE ? OR seo_keywords LIKE ?)")
 			pattern := "%" + term + "%"
 			params = append(params, pattern, pattern, pattern, pattern, pattern, pattern)
 		}
-		
+
 		if len(freeTextConditions) > 0 {
 			var freeTextSQL string
 			if pq.Logic == "OR" {
@@ -281,7 +281,7 @@ func (pq *ParsedQuery) BuildSQLQuery() (string, []interface{}) {
 			conditions = append(conditions, "("+freeTextSQL+")")
 		}
 	}
-	
+
 	// Combine all conditions
 	var finalSQL string
 	if len(conditions) > 0 {
@@ -291,7 +291,7 @@ func (pq *ParsedQuery) BuildSQLQuery() (string, []interface{}) {
 			finalSQL = strings.Join(conditions, " AND ")
 		}
 	}
-	
+
 	return finalSQL, params
 }
 
@@ -299,7 +299,7 @@ func (pq *ParsedQuery) BuildSQLQuery() (string, []interface{}) {
 func buildFilterCondition(filter SearchFilter) (string, []interface{}) {
 	var condition string
 	var params []interface{}
-	
+
 	switch filter.Field {
 	case "title":
 		switch filter.Operator {
@@ -313,7 +313,7 @@ func buildFilterCondition(filter SearchFilter) (string, []interface{}) {
 			condition = "title = ?"
 			params = append(params, filter.Value.(string))
 		}
-	
+
 	case "content":
 		switch filter.Operator {
 		case "contains":
@@ -323,12 +323,12 @@ func buildFilterCondition(filter SearchFilter) (string, []interface{}) {
 			condition = "content LIKE ?"
 			params = append(params, "%"+filter.Value.(string)+"%")
 		}
-	
+
 	case "category":
 		// Need to join with categories table
 		condition = "category_id IN (SELECT id FROM categories WHERE name LIKE ?)"
 		params = append(params, "%"+filter.Value.(string)+"%")
-	
+
 	case "date":
 		switch filter.Operator {
 		case "gt":
@@ -350,7 +350,7 @@ func buildFilterCondition(filter SearchFilter) (string, []interface{}) {
 				params = append(params, dates[0], dates[1])
 			}
 		}
-	
+
 	case "views":
 		switch filter.Operator {
 		case "gt":
@@ -367,12 +367,12 @@ func buildFilterCondition(filter SearchFilter) (string, []interface{}) {
 			params = append(params, filter.Value.(int))
 		}
 	}
-	
+
 	// Handle exclusion
 	if filter.Exclude && condition != "" {
 		condition = "NOT (" + condition + ")"
 	}
-	
+
 	return condition, params
 }
 
@@ -401,20 +401,20 @@ func (pq *ParsedQuery) ValidateQuery() error {
 		"title":      true,
 		"relevance":  true,
 	}
-	
+
 	if !validSortFields[pq.SortBy] {
 		return fmt.Errorf("invalid sort field: %s", pq.SortBy)
 	}
-	
+
 	// Validate sort order
 	if pq.SortOrder != "ASC" && pq.SortOrder != "DESC" {
 		return fmt.Errorf("invalid sort order: %s", pq.SortOrder)
 	}
-	
+
 	// Validate logic operator
 	if pq.Logic != "AND" && pq.Logic != "OR" {
 		return fmt.Errorf("invalid logic operator: %s", pq.Logic)
 	}
-	
+
 	return nil
 }

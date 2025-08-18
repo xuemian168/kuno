@@ -43,7 +43,7 @@ func GetGeoIP(ipAddress string) GeoIPInfo {
 
 	// Call IPinfo.io API (free tier allows 50k requests/month)
 	url := fmt.Sprintf("https://ipinfo.io/%s/json", ipAddress)
-	
+
 	client := &http.Client{
 		Timeout: 5 * time.Second,
 	}
@@ -183,7 +183,7 @@ func GetGeoIPWithCache(ipAddress string) GeoIPInfo {
 
 	// Get fresh data
 	info := GetGeoIP(ipAddress)
-	
+
 	// Cache the result
 	geoCache[ipAddress] = info
 	cacheTimestamp[ipAddress] = time.Now()

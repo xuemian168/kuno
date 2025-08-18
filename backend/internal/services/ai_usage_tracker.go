@@ -65,7 +65,7 @@ func (tracker *AIUsageTracker) TrackUsage(metrics UsageMetrics) error {
 // GetUsageStats retrieves aggregated usage statistics
 func (tracker *AIUsageTracker) GetUsageStats(serviceType, provider string, days int) ([]models.AIUsageStats, error) {
 	var stats []models.AIUsageStats
-	
+
 	query := database.DB.Model(&models.AIUsageRecord{}).
 		Select(`
 			service_type,
@@ -97,7 +97,7 @@ func (tracker *AIUsageTracker) GetUsageStats(serviceType, provider string, days 
 // GetTotalCost calculates total cost for a time period
 func (tracker *AIUsageTracker) GetTotalCost(days int) (float64, error) {
 	var totalCost *float64
-	
+
 	query := database.DB.Model(&models.AIUsageRecord{}).
 		Select("SUM(estimated_cost)")
 
@@ -109,19 +109,19 @@ func (tracker *AIUsageTracker) GetTotalCost(days int) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	
+
 	// If no records exist, SUM returns NULL
 	if totalCost == nil {
 		return 0, nil
 	}
-	
+
 	return *totalCost, nil
 }
 
 // GetRecentUsage retrieves recent usage records
 func (tracker *AIUsageTracker) GetRecentUsage(limit int) ([]models.AIUsageRecord, error) {
 	var records []models.AIUsageRecord
-	
+
 	return records, database.DB.
 		Order("created_at DESC").
 		Limit(limit).
@@ -131,7 +131,7 @@ func (tracker *AIUsageTracker) GetRecentUsage(limit int) ([]models.AIUsageRecord
 // GetUsageByArticle retrieves usage records for a specific article
 func (tracker *AIUsageTracker) GetUsageByArticle(articleID uint) ([]models.AIUsageRecord, error) {
 	var records []models.AIUsageRecord
-	
+
 	return records, database.DB.
 		Where("article_id = ?", articleID).
 		Order("created_at DESC").
@@ -185,7 +185,7 @@ func (tracker *AIUsageTracker) GetDailyUsage(days int) (map[string]models.AIUsag
 // CleanupOldRecords removes records older than specified days (for data retention)
 func (tracker *AIUsageTracker) CleanupOldRecords(days int) (int64, error) {
 	cutoffDate := time.Now().AddDate(0, 0, -days)
-	
+
 	result := database.DB.Where("created_at < ?", cutoffDate).Delete(&models.AIUsageRecord{})
 	return result.RowsAffected, result.Error
 }
