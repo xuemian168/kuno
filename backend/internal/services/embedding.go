@@ -48,6 +48,13 @@ func NewEmbeddingService() *EmbeddingService {
 
 	// Initialize providers
 	service.initializeProviders()
+	
+	// Start precomputation scheduler to reduce AI API costs
+	service.SchedulePrecomputation()
+	
+	// Start embedding optimization scheduler
+	service.OptimizeEmbeddingProcessing()
+	
 	return service
 }
 
@@ -671,7 +678,7 @@ func (es *EmbeddingService) SearchSimilarArticles(query string, language string,
 
 	if cached, exists := GetGlobalCache().Get(cacheKey); exists {
 		if results, ok := cached.([]models.EmbeddingSearchResult); ok {
-			log.Printf("🔄 Using cached search results for query (no API call needed)")
+			log.Printf("🔄 Using cached search results for query (no API call needed) - saving ~$%.6f", 0.00002)
 			return results, nil
 		}
 	}
@@ -684,6 +691,8 @@ func (es *EmbeddingService) SearchSimilarArticles(query string, language string,
 
 	// Track search query usage
 	cost := es.calculateEmbeddingCost(es.defaultProvider, tokenCount)
+	log.Printf("💰 AI API call cost: $%.6f (provider: %s, tokens: %d)", cost, es.defaultProvider, tokenCount)
+	
 	usageMetrics := UsageMetrics{
 		ServiceType:   "embedding",
 		Provider:      es.defaultProvider,
@@ -781,8 +790,9 @@ func (es *EmbeddingService) SearchSimilarArticles(query string, language string,
 		results = append(results, result)
 	}
 
-	// Cache the results for future use
-	GetGlobalCache().Set(cacheKey, results)
+	// Cache the results for future use with extended TTL to reduce AI API calls
+	es.setSearchCache(cacheKey, results)
+	log.Printf("💾 Cached search results for future queries - reducing AI API costs")
 
 	return results, nil
 }
@@ -1417,6 +1427,157 @@ func (es *EmbeddingService) calculateEmbeddingCost(provider string, tokens int) 
 
 	// Calculate cost: (tokens / 1000) * cost_per_1k
 	return (float64(tokens) / 1000.0) * costPer1K
+}
+
+// setSearchCache stores search results with extended TTL to reduce AI API costs
+func (es *EmbeddingService) setSearchCache(key string, results []models.EmbeddingSearchResult) {
+	// Use global cache with extended TTL for search results to minimize AI API calls
+	cache := GetGlobalCache()
+	
+	// Set in memory cache for immediate access
+	cache.Set(key, results)
+	
+	// Also set in SQLite cache with 4-hour TTL for search results
+	extendedTTL := time.Hour * 4
+	if err := cache.sqliteCache.Set(key, results, &extendedTTL); err != nil {
+		log.Printf("Failed to cache search results with extended TTL: %v", err)
+	}
+}
+
+// PrecomputePopularQueries precomputes embeddings for popular search queries to reduce AI API costs
+func (es *EmbeddingService) PrecomputePopularQueries() error {
+	log.Printf("🔄 Starting precomputation of popular queries to reduce AI API costs...")
+	
+	// Get popular queries from database
+	var popularQueries []models.PopularQuery
+	if err := database.DB.Where("hit_count > ?", 5).Order("hit_count DESC").Limit(50).Find(&popularQueries).Error; err != nil {
+		return fmt.Errorf("failed to fetch popular queries: %v", err)
+	}
+	
+	log.Printf("📊 Found %d popular queries to precompute", len(popularQueries))
+	
+	successCount := 0
+	for _, query := range popularQueries {
+		// Check if already cached
+		cacheKey := fmt.Sprintf("search_%s_%s_5_0.60",
+			fmt.Sprintf("%x", sha256.Sum256([]byte(query.QueryText))), query.Language)
+		
+		if _, exists := GetGlobalCache().Get(cacheKey); exists {
+			log.Printf("⏭️ Skipping already cached query: %s", query.QueryText[:min(50, len(query.QueryText))])
+			continue
+		}
+		
+		// Precompute search results for popular queries
+		results, err := es.SearchSimilarArticles(query.QueryText, query.Language, 5, 0.6)
+		if err != nil {
+			log.Printf("❌ Failed to precompute query '%s': %v", query.QueryText, err)
+			continue
+		}
+		
+		log.Printf("✅ Precomputed query '%s' (%s) - %d results", 
+			query.QueryText[:min(30, len(query.QueryText))], query.Language, len(results))
+		successCount++
+		
+		// Small delay to avoid overwhelming the API
+		time.Sleep(100 * time.Millisecond)
+	}
+	
+	log.Printf("🎉 Precomputation complete: %d/%d queries processed successfully", successCount, len(popularQueries))
+	return nil
+}
+
+// SchedulePrecomputation starts a background routine to precompute popular queries
+func (es *EmbeddingService) SchedulePrecomputation() {
+	go func() {
+		// Initial precomputation after 1 minute
+		time.Sleep(time.Minute)
+		if err := es.PrecomputePopularQueries(); err != nil {
+			log.Printf("Initial precomputation failed: %v", err)
+		}
+		
+		// Then every 6 hours
+		ticker := time.NewTicker(6 * time.Hour)
+		defer ticker.Stop()
+		
+		for range ticker.C {
+			if err := es.PrecomputePopularQueries(); err != nil {
+				log.Printf("Scheduled precomputation failed: %v", err)
+			}
+		}
+	}()
+	
+	log.Printf("📅 Scheduled precomputation service started (every 6 hours)")
+}
+
+// BatchProcessMissingEmbeddings processes articles without embeddings in batches to reduce API costs
+func (es *EmbeddingService) BatchProcessMissingEmbeddings(batchSize int) error {
+	log.Printf("🔄 Starting batch processing of missing embeddings (batch size: %d)", batchSize)
+	
+	// Get articles without embeddings
+	var articles []models.Article
+	if err := database.DB.Preload("Category").Preload("Translations").
+		Where("id NOT IN (SELECT DISTINCT article_id FROM article_embeddings)").
+		Limit(batchSize).Find(&articles).Error; err != nil {
+		return fmt.Errorf("failed to fetch articles without embeddings: %v", err)
+	}
+	
+	if len(articles) == 0 {
+		log.Printf("✅ All articles already have embeddings")
+		return nil
+	}
+	
+	log.Printf("📊 Found %d articles without embeddings to process", len(articles))
+	
+	successCount := 0
+	totalCost := 0.0
+	
+	for i, article := range articles {
+		log.Printf("🔄 Processing article %d/%d: %s", i+1, len(articles), article.Title)
+		
+		if err := es.ProcessArticleEmbeddings(article.ID); err != nil {
+			log.Printf("❌ Failed to process article %d: %v", article.ID, err)
+			continue
+		}
+		
+		successCount++
+		
+		// Estimate cost saved by batching
+		estimatedCost := 0.00005 // Rough estimate per article
+		totalCost += estimatedCost
+		
+		// Rate limiting to avoid overwhelming API
+		if i < len(articles)-1 {
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
+	
+	log.Printf("🎉 Batch processing complete: %d/%d articles processed successfully", successCount, len(articles))
+	log.Printf("💰 Estimated total cost: $%.6f", totalCost)
+	
+	return nil
+}
+
+// OptimizeEmbeddingProcessing provides intelligent embedding processing with cost optimization
+func (es *EmbeddingService) OptimizeEmbeddingProcessing() {
+	go func() {
+		// Wait a bit before starting optimization
+		time.Sleep(2 * time.Minute)
+		
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		
+		for {
+			select {
+			case <-ticker.C:
+				// Process missing embeddings in small batches
+				if err := es.BatchProcessMissingEmbeddings(5); err != nil {
+					log.Printf("Batch processing error: %v", err)
+				}
+			}
+		}
+	}()
+	
+	log.Printf("🤖 Embedding optimization scheduler started (processes 5 articles per hour)")
 }
 
 // getProviderModel returns the model name for a given provider

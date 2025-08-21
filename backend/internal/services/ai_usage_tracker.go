@@ -3,15 +3,23 @@ package services
 import (
 	"blog-backend/internal/database"
 	"blog-backend/internal/models"
+	"fmt"
+	"log"
 	"time"
 )
 
 // AIUsageTracker provides methods to track AI service usage
-type AIUsageTracker struct{}
+type AIUsageTracker struct{
+	dailyCostLimit   float64
+	monthlyCostLimit float64
+}
 
 // NewAIUsageTracker creates a new AI usage tracker instance
 func NewAIUsageTracker() *AIUsageTracker {
-	return &AIUsageTracker{}
+	return &AIUsageTracker{
+		dailyCostLimit:   1.0,  // $1 per day default limit
+		monthlyCostLimit: 20.0, // $20 per month default limit
+	}
 }
 
 // UsageMetrics contains metrics about an AI service call
@@ -36,8 +44,14 @@ type UsageMetrics struct {
 	IPAddress     string
 }
 
-// TrackUsage records AI service usage in the database
+// TrackUsage records AI service usage in the database with cost monitoring
 func (tracker *AIUsageTracker) TrackUsage(metrics UsageMetrics) error {
+	// Check cost limits before tracking
+	if err := tracker.checkCostLimits(metrics.EstimatedCost); err != nil {
+		log.Printf("⚠️ Cost limit warning: %v", err)
+		// Don't block the operation, just warn
+	}
+
 	record := models.AIUsageRecord{
 		ServiceType:   metrics.ServiceType,
 		Provider:      metrics.Provider,
@@ -188,4 +202,66 @@ func (tracker *AIUsageTracker) CleanupOldRecords(days int) (int64, error) {
 
 	result := database.DB.Where("created_at < ?", cutoffDate).Delete(&models.AIUsageRecord{})
 	return result.RowsAffected, result.Error
+}
+
+// checkCostLimits checks if adding this cost would exceed daily or monthly limits
+func (tracker *AIUsageTracker) checkCostLimits(newCost float64) error {
+	// Check daily cost
+	dailyCost, err := tracker.GetTotalCost(1)
+	if err != nil {
+		return fmt.Errorf("failed to get daily cost: %v", err)
+	}
+	
+	if dailyCost+newCost > tracker.dailyCostLimit {
+		return fmt.Errorf("daily cost limit exceeded: current=$%.6f, limit=$%.6f, new request would add=$%.6f", 
+			dailyCost, tracker.dailyCostLimit, newCost)
+	}
+	
+	// Check monthly cost
+	monthlyCost, err := tracker.GetTotalCost(30)
+	if err != nil {
+		return fmt.Errorf("failed to get monthly cost: %v", err)
+	}
+	
+	if monthlyCost+newCost > tracker.monthlyCostLimit {
+		return fmt.Errorf("monthly cost limit exceeded: current=$%.6f, limit=$%.6f, new request would add=$%.6f", 
+			monthlyCost, tracker.monthlyCostLimit, newCost)
+	}
+	
+	return nil
+}
+
+// GetCostSummary returns current cost summary and limits
+func (tracker *AIUsageTracker) GetCostSummary() (map[string]interface{}, error) {
+	dailyCost, err := tracker.GetTotalCost(1)
+	if err != nil {
+		return nil, err
+	}
+	
+	monthlyCost, err := tracker.GetTotalCost(30)
+	if err != nil {
+		return nil, err
+	}
+	
+	return map[string]interface{}{
+		"daily": map[string]interface{}{
+			"cost":       dailyCost,
+			"limit":      tracker.dailyCostLimit,
+			"percentage": (dailyCost / tracker.dailyCostLimit) * 100,
+			"remaining":  tracker.dailyCostLimit - dailyCost,
+		},
+		"monthly": map[string]interface{}{
+			"cost":       monthlyCost,
+			"limit":      tracker.monthlyCostLimit,
+			"percentage": (monthlyCost / tracker.monthlyCostLimit) * 100,
+			"remaining":  tracker.monthlyCostLimit - monthlyCost,
+		},
+	}, nil
+}
+
+// SetCostLimits updates the cost limits
+func (tracker *AIUsageTracker) SetCostLimits(dailyLimit, monthlyLimit float64) {
+	tracker.dailyCostLimit = dailyLimit
+	tracker.monthlyCostLimit = monthlyLimit
+	log.Printf("💰 Updated cost limits: daily=$%.2f, monthly=$%.2f", dailyLimit, monthlyLimit)
 }

@@ -216,6 +216,8 @@ func SetupRoutes() *gin.Engine {
 					adminAIUsage.GET("/daily", aiUsageController.GetDailyUsage)
 					adminAIUsage.GET("/article/:id", aiUsageController.GetUsageByArticle)
 					adminAIUsage.DELETE("/cleanup", aiUsageController.CleanupOldRecords)
+					adminAIUsage.GET("/cost-limits", aiUsageController.GetCostLimits)
+					adminAIUsage.PUT("/cost-limits", aiUsageController.SetCostLimits)
 				}
 
 				// LLMs.txt management

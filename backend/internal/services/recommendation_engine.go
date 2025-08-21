@@ -80,9 +80,10 @@ func (re *RecommendationEngine) GetPersonalizedRecommendations(options Recommend
 	// Generate language-specific cache key
 	cacheKey := fmt.Sprintf("recommendations_%s_%s_%d_%t", options.UserID, options.Language, options.Limit, options.Diversify)
 
-	// Check cache first
+	// Check cache first with extended TTL for recommendations
 	if cached, exists := re.cache.Get(cacheKey); exists {
 		if recommendations, ok := cached.([]RecommendationResult); ok {
+			log.Printf("🔄 Using cached recommendations for user %s (language: %s) - avoiding AI API calls", options.UserID, options.Language)
 			return recommendations, nil
 		}
 	}
@@ -139,11 +140,14 @@ func (re *RecommendationEngine) GetPersonalizedRecommendations(options Recommend
 	// Deduplicate and rank recommendations
 	recommendations := re.rankAndDeduplicateRecommendations(allRecommendations, options)
 
+	// Validate and filter out incomplete recommendations
+	recommendations = re.validateRecommendations(recommendations)
+
 	// Apply translations to recommended articles
 	recommendations = re.applyTranslationsToRecommendations(recommendations, options.Language)
 
-	// Cache the results
-	re.cache.Set(cacheKey, recommendations)
+	// Cache the results with extended TTL for recommendations (2 hours to reduce AI API calls)
+	re.setRecommendationCache(cacheKey, recommendations)
 
 	// Store recommendations in database for analytics
 	// Use both sync and async storage for reliability
@@ -1176,4 +1180,61 @@ func (re *RecommendationEngine) applyTranslationsToRecommendations(recommendatio
 		recommendations[i].Article.Category = re.applyTranslationToCategory(recommendations[i].Article.Category, targetLanguage)
 	}
 	return recommendations
+}
+
+// setRecommendationCache stores recommendations with extended TTL to reduce AI API costs
+func (re *RecommendationEngine) setRecommendationCache(key string, recommendations []RecommendationResult) {
+	// Use SQLite cache directly with 2-hour TTL for recommendations to minimize AI API calls
+	extendedTTL := time.Hour * 2
+	if err := re.cache.sqliteCache.Set(key, recommendations, &extendedTTL); err != nil {
+		log.Printf("Failed to cache recommendations with extended TTL: %v", err)
+	}
+	
+	// Also set in memory cache for faster access
+	re.cache.Set(key, recommendations)
+	
+	log.Printf("💾 Cached recommendations for key %s with 2-hour TTL to reduce AI API costs", key)
+}
+
+// validateRecommendations filters out incomplete or invalid recommendations
+func (re *RecommendationEngine) validateRecommendations(recommendations []RecommendationResult) []RecommendationResult {
+	var validRecommendations []RecommendationResult
+	
+	for _, rec := range recommendations {
+		// Check if recommendation has all required fields
+		if rec.Article.ID == 0 {
+			log.Printf("⚠️ Skipping recommendation with invalid article ID: %+v", rec)
+			continue
+		}
+		
+		if rec.Article.Title == "" {
+			log.Printf("⚠️ Skipping recommendation with empty article title for ID: %d", rec.Article.ID)
+			continue
+		}
+		
+		if rec.RecommendationType == "" {
+			log.Printf("⚠️ Setting default recommendation type for article ID: %d", rec.Article.ID)
+			rec.RecommendationType = "default"
+		}
+		
+		if rec.ReasonType == "" {
+			rec.ReasonType = "system"
+		}
+		
+		if rec.ReasonDetails == "" {
+			rec.ReasonDetails = "Recommended based on your preferences"
+		}
+		
+		// Ensure confidence is within valid range
+		if rec.Confidence < 0 {
+			rec.Confidence = 0
+		} else if rec.Confidence > 1 {
+			rec.Confidence = 1
+		}
+		
+		validRecommendations = append(validRecommendations, rec)
+	}
+	
+	log.Printf("✅ Validated recommendations: %d valid out of %d total", len(validRecommendations), len(recommendations))
+	return validRecommendations
 }

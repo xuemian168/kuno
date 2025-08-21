@@ -234,3 +234,47 @@ func (controller *AIUsageController) CleanupOldRecords(c *gin.Context) {
 		"cutoff_days":     days,
 	})
 }
+
+// GetCostLimits retrieves current cost limits
+func (controller *AIUsageController) GetCostLimits(c *gin.Context) {
+	summary, err := controller.tracker.GetCostSummary()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve cost summary"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"daily_limit":   summary["daily"].(map[string]interface{})["limit"],
+		"monthly_limit": summary["monthly"].(map[string]interface{})["limit"],
+		"summary":       summary,
+	})
+}
+
+// SetCostLimitsRequest represents the request body for setting cost limits
+type SetCostLimitsRequest struct {
+	DailyLimit   float64 `json:"daily_limit" binding:"required,min=0"`
+	MonthlyLimit float64 `json:"monthly_limit" binding:"required,min=0"`
+}
+
+// SetCostLimits updates the cost limits
+func (controller *AIUsageController) SetCostLimits(c *gin.Context) {
+	var req SetCostLimitsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validation: monthly limit should be >= daily limit
+	if req.MonthlyLimit < req.DailyLimit {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Monthly limit must be greater than or equal to daily limit"})
+		return
+	}
+
+	controller.tracker.SetCostLimits(req.DailyLimit, req.MonthlyLimit)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "Cost limits updated successfully",
+		"daily_limit":   req.DailyLimit,
+		"monthly_limit": req.MonthlyLimit,
+	})
+}

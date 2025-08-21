@@ -83,7 +83,10 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
       })
       
       // Filter out the current article if excludeArticleId is provided
-      let filteredRecommendations = response.recommendations || []
+      // Also filter out any null or invalid recommendations
+      let filteredRecommendations = (response.recommendations || [])
+        .filter(rec => rec && rec.article && rec.article.id && rec.article.title)
+      
       if (excludeArticleId && filteredRecommendations.length > 0) {
         filteredRecommendations = filteredRecommendations
           .filter(rec => rec.article.id !== excludeArticleId)
@@ -324,13 +327,15 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {recommendations && recommendations.length > 0 && recommendations.map((recommendation, index) => (
+        {recommendations && recommendations.length > 0 && recommendations
+          .filter(rec => rec && rec.article && rec.article.id && rec.article.title)
+          .map((recommendation, index) => (
           <div
-            key={recommendation?.article?.id || index}
+            key={recommendation.article.id || index}
             className="border rounded-lg p-4 hover:bg-accent transition-colors cursor-pointer"
             onClick={() => {
               if (recommendation?.article?.id) {
-                trackClick(recommendation.article.id, recommendation.recommendation_type)
+                trackClick(recommendation.article.id, recommendation.recommendation_type || 'unknown')
                 window.location.href = `/${effectiveLanguage}/article/${recommendation.article.id}`
               }
             }}
@@ -338,8 +343,8 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="text-xs">
-                  {getRecommendationIcon(recommendation.recommendation_type)}
-                  <span className="ml-1">{getRecommendationLabel(recommendation.recommendation_type)}</span>
+                  {getRecommendationIcon(recommendation.recommendation_type || 'default')}
+                  <span className="ml-1">{getRecommendationLabel(recommendation.recommendation_type || 'default')}</span>
                 </Badge>
                 <Badge variant="outline" className="text-xs">
                   {Math.round((recommendation?.confidence || 0) * 100)}% {texts.match}
@@ -349,7 +354,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
             </div>
             
             <h3 className="font-semibold text-lg mb-2 hover:text-blue-600 transition-colors">
-              {recommendation?.article?.title || ''}
+              {recommendation?.article?.title || 'Unknown Title'}
             </h3>
             
             <p className="text-gray-600 text-sm mb-3 line-clamp-2">
@@ -370,7 +375,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
               </div>
             </div>
             
-            {showReason && recommendation.reason_details && (
+            {showReason && recommendation?.reason_details && (
               <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs text-blue-700 dark:text-blue-300">
                 <strong>{texts.reasonPrefix}</strong>{recommendation.reason_details}
               </div>

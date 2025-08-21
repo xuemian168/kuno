@@ -200,9 +200,12 @@ func (rc *RecommendationsController) GetPersonalizedRecommendations(c *gin.Conte
 		return
 	}
 
+	// Final validation to ensure no null recommendations are returned
+	validatedRecommendations := rc.validateAPIRecommendations(recommendations)
+
 	c.JSON(http.StatusOK, gin.H{
-		"recommendations": recommendations,
-		"count":           len(recommendations),
+		"recommendations": validatedRecommendations,
+		"count":           len(validatedRecommendations),
 		"user_id":         userID,
 		"message":         "Personalized recommendations generated successfully",
 	})
@@ -671,4 +674,45 @@ func (rc *RecommendationsController) GetPopularContent(c *gin.Context) {
 		"days":            days,
 		"message":         "Popular content retrieved successfully",
 	})
+}
+
+// validateAPIRecommendations performs final validation on recommendations before API response
+func (rc *RecommendationsController) validateAPIRecommendations(recommendations []services.RecommendationResult) []services.RecommendationResult {
+	var validRecommendations []services.RecommendationResult
+	
+	for _, rec := range recommendations {
+		// Skip recommendations with invalid or missing data
+		if rec.Article.ID == 0 {
+			log.Printf("⚠️ API validation: Skipping recommendation with invalid article ID")
+			continue
+		}
+		
+		if rec.Article.Title == "" {
+			log.Printf("⚠️ API validation: Skipping recommendation with empty title for article ID: %d", rec.Article.ID)
+			continue
+		}
+		
+		// Ensure required fields have defaults
+		if rec.RecommendationType == "" {
+			rec.RecommendationType = "default"
+		}
+		
+		if rec.ReasonType == "" {
+			rec.ReasonType = "system"
+		}
+		
+		if rec.ReasonDetails == "" {
+			rec.ReasonDetails = "Recommended for you"
+		}
+		
+		// Ensure confidence is valid
+		if rec.Confidence < 0 || rec.Confidence > 1 {
+			rec.Confidence = 0.5 // Default confidence
+		}
+		
+		validRecommendations = append(validRecommendations, rec)
+	}
+	
+	log.Printf("✅ API validation complete: %d valid recommendations out of %d", len(validRecommendations), len(recommendations))
+	return validRecommendations
 }

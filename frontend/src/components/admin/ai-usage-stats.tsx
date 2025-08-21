@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { aiUsageTracker, AIUsageStats, DailyUsageStats } from "@/services/ai-usage-tracker"
+import { Progress } from "@/components/ui/progress"
+import { aiUsageTracker, AIUsageStats, DailyUsageStats, CostSummary } from "@/services/ai-usage-tracker"
 import { 
   Activity, 
   DollarSign, 
@@ -30,6 +31,7 @@ export function AIUsageStatsComponent({ className, showDetailed = false, locale 
   const [stats, setStats] = useState<AIUsageStats[]>([])
   const [totalCost, setTotalCost] = useState<{ totalCost: number; currency: string; periodDays: number } | null>(null)
   const [dailyStats, setDailyStats] = useState<Record<string, DailyUsageStats>>({})
+  const [costSummary, setCostSummary] = useState<CostSummary | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -39,15 +41,17 @@ export function AIUsageStatsComponent({ className, showDetailed = false, locale 
     setError(null)
     try {
       // Get usage stats for last 30 days
-      const [usageStats, costData, dailyData] = await Promise.all([
+      const [usageStats, costData, dailyData, costLimitsData] = await Promise.all([
         aiUsageTracker.getUsageStats(undefined, undefined, 30),
         aiUsageTracker.getTotalCost(30),
-        aiUsageTracker.getDailyUsage(30)
+        aiUsageTracker.getDailyUsage(30),
+        aiUsageTracker.getCostLimits().catch(() => null) // Don't fail if cost limits aren't available
       ])
       
       setStats(usageStats)
       setTotalCost(costData)
       setDailyStats(dailyData)
+      setCostSummary(costLimitsData)
     } catch (error) {
       console.error('Failed to fetch AI usage stats:', error)
       if (error instanceof Error) {
@@ -260,6 +264,73 @@ export function AIUsageStatsComponent({ className, showDetailed = false, locale 
           </div>
         </CardContent>
       </Card>
+
+      {/* Cost Limits Overview */}
+      {costSummary && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-green-500" />
+              {locale === 'zh' ? '费用限制概览' : 'Cost Limits Overview'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Daily Cost Limit */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">
+                    {locale === 'zh' ? '每日限制' : 'Daily Limit'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    ${costSummary.summary.daily.cost.toFixed(6)} / ${costSummary.summary.daily.limit.toFixed(2)}
+                  </span>
+                </div>
+                <Progress 
+                  value={Math.min(costSummary.summary.daily.percentage, 100)} 
+                  className="h-2"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{costSummary.summary.daily.percentage.toFixed(1)}% {locale === 'zh' ? '已用' : 'used'}</span>
+                  <span>{locale === 'zh' ? '剩余' : 'remaining'} ${costSummary.summary.daily.remaining.toFixed(6)}</span>
+                </div>
+              </div>
+
+              {/* Monthly Cost Limit */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">
+                    {locale === 'zh' ? '每月限制' : 'Monthly Limit'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    ${costSummary.summary.monthly.cost.toFixed(6)} / ${costSummary.summary.monthly.limit.toFixed(2)}
+                  </span>
+                </div>
+                <Progress 
+                  value={Math.min(costSummary.summary.monthly.percentage, 100)} 
+                  className="h-2"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{costSummary.summary.monthly.percentage.toFixed(1)}% {locale === 'zh' ? '已用' : 'used'}</span>
+                  <span>{locale === 'zh' ? '剩余' : 'remaining'} ${costSummary.summary.monthly.remaining.toFixed(6)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Warning indicators */}
+            {(costSummary.summary.daily.percentage > 80 || costSummary.summary.monthly.percentage > 80) && (
+              <div className="mt-3 pt-3 border-t">
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                  <TrendingUp className="h-4 w-4" />
+                  <span className="text-sm">
+                    {locale === 'zh' ? '接近费用限制，请注意使用量' : 'Approaching cost limits, please monitor usage'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Service Breakdown */}
       {stats && stats.length > 0 && (

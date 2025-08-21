@@ -28,6 +28,7 @@ import { NotificationDialog, useNotificationDialog } from "@/components/ui/notif
 import { AboutDialog } from "@/components/admin/about-dialog"
 import { UpdateChecker } from "@/components/admin/update-checker"
 import { AIUsageStatsComponent } from "./ai-usage-stats"
+import { aiUsageTracker } from "@/services/ai-usage-tracker"
 
 // Dynamic languages based on user configuration - will be set in component
 
@@ -1899,6 +1900,9 @@ export function SettingsForm({ locale }: SettingsFormProps) {
               </CardContent>
             </Card>
 
+            {/* AI Cost Limits Section */}
+            <AICostLimitsSection locale={locale} />
+
             {/* AI Summary Configuration Section */}
             <Card className="pt-0">
               <CardHeader className="pt-6 pb-4 px-6">
@@ -3006,5 +3010,191 @@ function AIConfigurationPanel({ aiConfig, setAIConfig, locale, originalMaskedKey
         </AlertDescription>
       </Alert>
     </div>
+  )
+}
+
+// AI Cost Limits Section Component
+function AICostLimitsSection({ locale }: { locale: string }) {
+  const [costLimits, setCostLimits] = useState({ dailyLimit: 1.0, monthlyLimit: 20.0 })
+  const [costSummary, setCostSummary] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadCostLimits = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await aiUsageTracker.getCostLimits()
+      setCostLimits({ dailyLimit: data.dailyLimit, monthlyLimit: data.monthlyLimit })
+      setCostSummary(data.summary)
+    } catch (error) {
+      console.error('Failed to load cost limits:', error)
+      setError(locale === 'zh' ? '加载费用限制失败' : 'Failed to load cost limits')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const saveCostLimits = async () => {
+    setSaving(true)
+    setError(null)
+    try {
+      await aiUsageTracker.setCostLimits(costLimits.dailyLimit, costLimits.monthlyLimit)
+      // Reload to get updated summary
+      await loadCostLimits()
+    } catch (error) {
+      console.error('Failed to save cost limits:', error)
+      setError(locale === 'zh' ? '保存费用限制失败' : 'Failed to save cost limits')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDailyLimitChange = (value: string) => {
+    const numValue = parseFloat(value) || 0
+    setCostLimits(prev => ({ ...prev, dailyLimit: numValue }))
+  }
+
+  const handleMonthlyLimitChange = (value: string) => {
+    const numValue = parseFloat(value) || 0
+    setCostLimits(prev => ({ ...prev, monthlyLimit: numValue }))
+  }
+
+  useEffect(() => {
+    loadCostLimits()
+  }, [])
+
+  return (
+    <Card>
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="h-5 w-5 text-amber-600" />
+          {locale === 'zh' ? 'AI费用控制' : 'AI Cost Control'}
+        </CardTitle>
+        <CardDescription>
+          {locale === 'zh' ? '设置每日和每月AI服务费用限制，防止意外超支' : 'Set daily and monthly AI service cost limits to prevent unexpected overspending'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {error && (
+          <Alert className="border-red-200 dark:border-red-800">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-600 dark:text-red-400">
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="daily-limit" className="text-sm font-medium">
+              {locale === 'zh' ? '每日费用限制 (USD)' : 'Daily Cost Limit (USD)'}
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">$</span>
+              <Input
+                id="daily-limit"
+                type="number"
+                step="0.01"
+                min="0"
+                value={costLimits.dailyLimit}
+                onChange={(e) => handleDailyLimitChange(e.target.value)}
+                className="pl-7"
+                placeholder="1.00"
+              />
+            </div>
+            {costSummary?.daily && (
+              <div className="text-xs text-muted-foreground space-y-1">
+                <div>
+                  {locale === 'zh' ? '今日已用: ' : 'Today used: '}
+                  <span className="font-mono">${costSummary.daily.cost.toFixed(6)}</span>
+                  <span className="ml-1 text-amber-600">
+                    ({costSummary.daily.percentage.toFixed(1)}%)
+                  </span>
+                </div>
+                <div>
+                  {locale === 'zh' ? '剩余: ' : 'Remaining: '}
+                  <span className="font-mono">${costSummary.daily.remaining.toFixed(6)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="monthly-limit" className="text-sm font-medium">
+              {locale === 'zh' ? '每月费用限制 (USD)' : 'Monthly Cost Limit (USD)'}
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">$</span>
+              <Input
+                id="monthly-limit"
+                type="number"
+                step="0.01"
+                min="0"
+                value={costLimits.monthlyLimit}
+                onChange={(e) => handleMonthlyLimitChange(e.target.value)}
+                className="pl-7"
+                placeholder="20.00"
+              />
+            </div>
+            {costSummary?.monthly && (
+              <div className="text-xs text-muted-foreground space-y-1">
+                <div>
+                  {locale === 'zh' ? '本月已用: ' : 'This month used: '}
+                  <span className="font-mono">${costSummary.monthly.cost.toFixed(6)}</span>
+                  <span className="ml-1 text-amber-600">
+                    ({costSummary.monthly.percentage.toFixed(1)}%)
+                  </span>
+                </div>
+                <div>
+                  {locale === 'zh' ? '剩余: ' : 'Remaining: '}
+                  <span className="font-mono">${costSummary.monthly.remaining.toFixed(6)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 pt-4 border-t">
+          <Button
+            onClick={saveCostLimits}
+            disabled={saving || loading}
+            className="gap-2"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            {locale === 'zh' ? '保存限制' : 'Save Limits'}
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={loadCostLimits}
+            disabled={loading}
+            className="gap-2"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            {locale === 'zh' ? '刷新' : 'Refresh'}
+          </Button>
+        </div>
+
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            {locale === 'zh' 
+              ? '费用限制设置后会立即生效。当达到限制时，系统会记录警告但不会阻止API调用。请定期检查使用情况。' 
+              : 'Cost limits take effect immediately. When limits are reached, the system logs warnings but does not block API calls. Please monitor usage regularly.'
+            }
+          </AlertDescription>
+        </Alert>
+      </CardContent>
+    </Card>
   )
 }

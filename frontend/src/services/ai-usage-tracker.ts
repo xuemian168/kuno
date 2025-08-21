@@ -39,6 +39,30 @@ export interface DailyUsageStats {
   avgResponseTime: number
 }
 
+export interface CostLimits {
+  dailyLimit: number
+  monthlyLimit: number
+}
+
+export interface CostSummary {
+  dailyLimit: number
+  monthlyLimit: number
+  summary: {
+    daily: {
+      cost: number
+      limit: number
+      percentage: number
+      remaining: number
+    }
+    monthly: {
+      cost: number
+      limit: number
+      percentage: number
+      remaining: number
+    }
+  }
+}
+
 export class AIUsageTracker {
   private static instance: AIUsageTracker
   private trackingEnabled: boolean = true
@@ -175,6 +199,53 @@ export class AIUsageTracker {
       return response.records
     } catch (error) {
       console.error('Failed to get article usage:', error)
+      throw error
+    }
+  }
+
+  async getCostLimits(): Promise<CostSummary> {
+    try {
+      const response = await apiClient.request<{
+        daily_limit: number
+        monthly_limit: number
+        summary: {
+          daily: {
+            cost: number
+            limit: number
+            percentage: number
+            remaining: number
+          }
+          monthly: {
+            cost: number
+            limit: number
+            percentage: number
+            remaining: number
+          }
+        }
+      }>('/ai-usage/cost-limits')
+      
+      return {
+        dailyLimit: response.daily_limit,
+        monthlyLimit: response.monthly_limit,
+        summary: response.summary
+      }
+    } catch (error) {
+      console.error('Failed to get cost limits:', error)
+      throw error
+    }
+  }
+
+  async setCostLimits(dailyLimit: number, monthlyLimit: number): Promise<void> {
+    try {
+      await apiClient.request('/ai-usage/cost-limits', {
+        method: 'PUT',
+        body: JSON.stringify({
+          daily_limit: dailyLimit,
+          monthly_limit: monthlyLimit
+        })
+      })
+    } catch (error) {
+      console.error('Failed to set cost limits:', error)
       throw error
     }
   }
