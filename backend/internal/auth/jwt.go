@@ -2,7 +2,6 @@ package auth
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
 	"log"
@@ -43,7 +42,6 @@ func getJWTSecret() []byte {
 				log.Fatal("Failed to generate JWT secret:", err)
 			}
 			jwtSecret = randomKey
-			log.Printf("Generated random JWT secret (base64): %s", base64.StdEncoding.EncodeToString(randomKey))
 			log.Println("WARNING: Using auto-generated JWT secret. Set JWT_SECRET environment variable for production use.")
 		} else {
 			jwtSecret = []byte(secret)
