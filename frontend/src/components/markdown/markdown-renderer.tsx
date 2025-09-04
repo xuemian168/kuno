@@ -8,6 +8,8 @@ import rehypeSlug from 'rehype-slug'
 import YouTubeEmbed from '@/components/youtube-embed'
 import BiliBiliEmbed from '@/components/bilibili-embed'
 import { CodeBlock } from '@/components/code-block'
+import { MermaidChart } from '@/components/mermaid-chart'
+import { MermaidErrorBoundary } from '@/components/mermaid-error-boundary'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 
 interface MarkdownRendererProps {
@@ -98,6 +100,18 @@ export function MarkdownRenderer({ content, className = "", includeStructuredDat
                 <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
                   {children}
                 </code>
+              )
+            }
+            
+            // Special handling for Mermaid diagrams
+            if (language === 'mermaid') {
+              const chartContent = String(children).replace(/\n$/, '')
+              return (
+                <div className="my-6">
+                  <MermaidErrorBoundary>
+                    <MermaidChart chart={chartContent} />
+                  </MermaidErrorBoundary>
+                </div>
               )
             }
             

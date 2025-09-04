@@ -2,3 +2,4 @@
 dev.sh
 blog.db
 .env
+!/docs/CHANGELOG.md

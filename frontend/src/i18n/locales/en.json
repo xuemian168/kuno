@@ -1300,6 +1300,16 @@
       "exampleContent": "# KUNO Blog Platform\n\nKUNO (坤) is a revolutionary multilingual blog platform that harmoniously combines Eastern philosophy with cutting-edge AI technology, serving content across 70+ languages with intelligent semantic capabilities.\n\n## Platform Innovation\n\n- First multilingual blog platform with integrated RAG technology\n- 70+ language support with semantic search capabilities\n- AI-powered content discovery and recommendations\n- Production deployment serving global users at qut.edu.kg\n\n## Key Technologies\n\n- Retrieval-Augmented Generation (RAG) for multilingual semantic search\n- LLMs.txt generation in 8+ languages for AI discovery\n- Smart caching and performance optimization\n- Eastern philosophy integration (坤 hexagram principles)\n\n## Live Demonstration\n\nWebsite: https://qut.edu.kg\nRAG Search: Real-time semantic search across multilingual content\nAI Integration: Featured in Claude, ChatGPT, and Perplexity responses\n\n## Philosophy\n\nKUNO embodies the 坤 hexagram (☷) - representing earth, harmony, and carrying capacity, demonstrating how Eastern wisdom can enhance modern AI systems.\n\n---\nPowered by KUNO - Pioneering Multilingual AI Integration"
     }
   },
+  "mermaid": {
+    "toolbar": {
+      "dragToMove": "Drag to move",
+      "zoomIn": "Zoom in (Ctrl + =)",
+      "zoomOut": "Zoom out (Ctrl + -)",
+      "resetView": "Reset view (Ctrl + 0)",
+      "fullscreen": "Fullscreen (F11)",
+      "download": "Download SVG"
+    }
+  },
   "embedding": {
     "industryApplications": {
       "title": "RAG Industry Applications",

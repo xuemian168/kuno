@@ -1576,5 +1576,15 @@
       "referencesDescription": "支撑KUNO技术创新的学术研究基础",
       "reference1": "Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., ... & Kiela, D. (2020). Retrieval-augmented generation for knowledge-intensive nlp tasks. *arXiv preprint arXiv:2005.11401*. https://arxiv.org/abs/2307.13106"
     }
+  },
+  "mermaid": {
+    "toolbar": {
+      "dragToMove": "拖拽移动",
+      "zoomIn": "放大 (Ctrl + =)",
+      "zoomOut": "缩小 (Ctrl + -)",
+      "resetView": "重置视图 (Ctrl + 0)",
+      "fullscreen": "全屏模式 (F11)",
+      "download": "下载 SVG"
+    }
   }
 }

@@ -671,6 +671,16 @@
     "shareWithFriends": "友達や同僚と共有しましょう！",
     "shareLabel": "共有："
   },
+  "mermaid": {
+    "toolbar": {
+      "dragToMove": "ドラッグして移動",
+      "zoomIn": "拡大 (Ctrl + =)",
+      "zoomOut": "縮小 (Ctrl + -)",
+      "resetView": "表示をリセット (Ctrl + 0)",
+      "fullscreen": "フルスクリーン (F11)",
+      "download": "SVGをダウンロード"
+    }
+  },
   "embed": {
     "title": "埋め込み",
     "embedArticle": "記事を埋め込む",
