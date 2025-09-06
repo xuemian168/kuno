@@ -31,6 +31,7 @@ A full-stack blog application with Go backend and Next.js frontend, containerize
 - 🔒 **Admin Panel**: Complete content management system
 - ⚙️ **Site Settings**: Customizable site title and subtitle
 - 🖋️ **Markdown Editor**: Rich text editing with live preview
+- 📊 **Mermaid Charts**: Interactive diagram support with multilingual toolbar
 - 🐳 **Docker Ready**: One-click deployment with Docker
 - 🔄 **Zero-Downtime Deployment**: Blue-green deployment with <2s downtime
 - 🏥 **Health Checks**: Automatic service health verification
@@ -769,6 +770,49 @@ docker-compose logs -f frontend
 - Update Nginx configuration for your domain
 - Set up backup for the SQLite database
 - Configure monitoring and logging
+
+## 📊 Mermaid Chart Support
+
+KUNO features comprehensive Mermaid.js integration, enabling you to create interactive diagrams and charts directly within your Markdown content with professional-grade visualization capabilities.
+
+### Features
+
+- **🎨 Complete Mermaid.js Integration**: Full support for all Mermaid chart types including flowcharts, sequence diagrams, Gantt charts, class diagrams, state diagrams, ER diagrams, and more
+- **🌍 Multilingual Interactive Toolbar**: Professional toolbar with zoom, pan, reset, fullscreen, and export controls supporting 70+ languages
+- **⚡ Real-time Rendering**: Live preview with automatic error handling and graceful fallbacks
+- **🖱️ Interactive Controls**: 
+  - **Zoom & Pan**: Mouse wheel zoom and drag-to-pan functionality
+  - **Fullscreen Mode**: F11 to enter/exit fullscreen viewing
+  - **Keyboard Shortcuts**: Ctrl + = (zoom in), Ctrl + - (zoom out), Ctrl + 0 (reset view)
+  - **SVG Export**: Download charts as high-quality SVG files
+- **🎯 Error Boundary**: Robust error handling prevents broken charts from crashing the page
+- **🌙 Theme Integration**: Automatically adapts to light/dark theme modes
+- **📱 Responsive Design**: Touch-friendly controls for mobile and tablet devices
+
+### Supported Chart Types
+
+| Chart Type | Syntax | Use Case |
+|------------|--------|----------|
+| **Flowchart** | `graph TD` | Process flows, decision trees |
+| **Sequence Diagram** | `sequenceDiagram` | API interactions, user flows |
+| **Gantt Chart** | `gantt` | Project timelines, schedules |
+| **Class Diagram** | `classDiagram` | Software architecture, UML |
+| **State Diagram** | `stateDiagram-v2` | System states, workflows |
+| **ER Diagram** | `erDiagram` | Database relationships |
+| **User Journey** | `journey` | User experience mapping |
+| **Git Graph** | `gitgraph` | Version control visualization |
+| **Pie Chart** | `pie` | Data distribution |
+| **Quadrant Chart** | `quadrantChart` | Strategic analysis |
+
+### Toolbar Controls
+
+The interactive toolbar provides these controls:
+
+- **Zoom In/Out**: Precise zoom controls with keyboard shortcuts
+- **Drag to Move**: Click and drag to pan around large diagrams  
+- **Reset View**: Instantly return to original size and position
+- **Fullscreen**: Expand diagrams for detailed viewing
+- **Export SVG**: Download publication-ready vector graphics
 
 ## 🤖 LLMs.txt Support
 
