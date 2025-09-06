@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from 'next-intl/server'
-import { getBaseUrl, getSiteUrl, getApiUrl } from '@/lib/config'
+import { getSiteUrl, getApiUrl } from '@/lib/config'
 import { generateIconsMetadata } from '@/lib/favicon-utils'
 import { routing } from '@/i18n/routing'
 
@@ -72,7 +72,7 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
   const finalTitle = customTitle ? `${customTitle} - ${siteTitle}` : siteTitle
   const finalDescription = customDescription || siteDescription
   
-  // Generate alternate language links
+  // Generate alternate language links including self-referential
   const languages: Record<string, string> = {}
   routing.locales.forEach(loc => {
     const path = canonical || '/'
@@ -82,19 +82,32 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
     languages[loc] = `${siteUrl}${langPath}`
   })
   
+  // Add self-referential alternate link (x-default)
+  const currentLangPath = locale === routing.defaultLocale 
+    ? (canonical || '/') 
+    : `/${locale}${canonical === '/' ? '' : canonical || ''}`
+  languages['x-default'] = `${siteUrl}${currentLangPath}`
+  
+  // Build canonical URL - full absolute URL is preferred for SEO
+  const canonicalPath = canonical || '/'
+  const fullCanonicalPath = locale === routing.defaultLocale 
+    ? canonicalPath 
+    : `/${locale}${canonicalPath === '/' ? '' : canonicalPath}`
+  const fullCanonicalUrl = `${siteUrl}${fullCanonicalPath}`
+
   // Build metadata object
   const metadata: Metadata = {
     title: finalTitle,
     description: finalDescription,
     metadataBase: new URL(siteUrl),
     alternates: {
-      canonical: canonical || (locale === routing.defaultLocale ? '/' : `/${locale}/`),
+      canonical: fullCanonicalUrl,
       languages,
     },
     openGraph: {
       title: finalTitle,
       description: finalDescription,
-      url: canonical ? `${siteUrl}${canonical}` : (locale === routing.defaultLocale ? `${siteUrl}/` : `${siteUrl}/${locale}/`),
+      url: fullCanonicalUrl,
       siteName: siteTitle,
       locale: locale,
       type: 'website',

@@ -14,8 +14,8 @@ import { CustomCSSInjector } from '@/components/custom-css-injector'
 import { CustomJSInjector } from '@/components/custom-js-injector'
 import { LayoutBackground } from '@/components/layout-background'
 import '../globals.css'
-import { getBaseUrl, getSiteUrl, getApiUrl } from '@/lib/config'
-import { apiClient } from '@/lib/api'
+import { getSiteUrl, getApiUrl } from '@/lib/config'
+import { generateFaviconUrl } from '@/lib/favicon-utils'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,19 +37,17 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params
   const t = await getTranslations({ locale })
   
-  const baseUrl = getBaseUrl() // For API calls
   const siteUrl = getSiteUrl() // For frontend URLs
   
   let siteTitle = t('site.title')
   let siteDescription = t('site.description')
-  let faviconUrl: string | undefined
+  let faviconConfig = generateFaviconUrl(undefined) // Default favicon config
   let blockSearchEngines = false
   let blockAITraining = false
   
   try {
     // Try to fetch site settings
     const apiUrl = getApiUrl()
-    const baseApiUrl = getBaseUrl()
     const response = await fetch(`${apiUrl}/settings?lang=${locale}`)
     if (response.ok) {
       const settings = await response.json()
@@ -58,49 +56,29 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       blockSearchEngines = settings.block_search_engines || false
       blockAITraining = settings.block_ai_training || false
       
-      // Handle favicon URL
-      if (settings.favicon_url) {
-        if (settings.favicon_url.startsWith('http')) {
-          // Absolute URL - use as-is
-          faviconUrl = settings.favicon_url
-        } else if (settings.favicon_url.startsWith('/api/')) {
-          // API relative path - use proper backend URL
-          if (process.env.NODE_ENV === 'development') {
-            faviconUrl = `http://localhost:8085${settings.favicon_url}`
-          } else {
-            faviconUrl = `${baseApiUrl}${settings.favicon_url}`
-          }
-        } else if (settings.favicon_url.startsWith('/')) {
-          // Frontend static path - use site URL
-          faviconUrl = `${siteUrl}${settings.favicon_url}`
-        } else {
-          // Relative path - assume it's an API upload
-          if (process.env.NODE_ENV === 'development') {
-            faviconUrl = `http://localhost:8085/api/uploads/${settings.favicon_url}`
-          } else {
-            faviconUrl = `${baseApiUrl}/api/uploads/${settings.favicon_url}`
-          }
-        }
-      }
+      // Generate favicon config using unified utility
+      faviconConfig = generateFaviconUrl(settings.favicon_url)
     }
   } catch (error) {
     console.error('Failed to fetch site settings:', error)
   }
   
-  // Generate alternate language links
+  // Generate alternate language links including self-referential (use relative paths)
   const languages: Record<string, string> = {}
   routing.locales.forEach(loc => {
     languages[loc] = loc === routing.defaultLocale 
-      ? `${siteUrl}/` 
-      : `${siteUrl}/${loc}/`
+      ? `/` 
+      : `/${loc}/`
   })
+  
+  // Add self-referential alternate link (x-default) - should point to default locale
+  languages['x-default'] = `/`
   
   const metadata: Metadata = {
     title: siteTitle,
     description: siteDescription,
-    metadataBase: new URL(siteUrl),
     alternates: {
-      canonical: locale === routing.defaultLocale ? '/' : `/${locale}/`,
+      canonical: locale === routing.defaultLocale ? `/` : `/${locale}/`,
       languages,
       types: {
         'application/rss+xml': [
@@ -143,48 +121,28 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     },
   }
 
-  // Add favicon with comprehensive icon definitions to prevent browser defaults
-  let finalFaviconUrl: string
-  let faviconType: string = 'image/png'
-  
-  if (faviconUrl) {
-    finalFaviconUrl = faviconUrl
-    
-    // Detect favicon type from extension
-    if (faviconUrl.toLowerCase().includes('.ico')) {
-      faviconType = 'image/x-icon'
-    } else if (faviconUrl.toLowerCase().includes('.svg')) {
-      faviconType = 'image/svg+xml'
-    } else if (faviconUrl.toLowerCase().includes('.jpg') || faviconUrl.toLowerCase().includes('.jpeg')) {
-      faviconType = 'image/jpeg'
-    }
-  } else {
-    // Fallback to default favicon - use relative path for better compatibility
-    finalFaviconUrl = '/kuno.png'
-  }
-  
-  // Comprehensive icon metadata to override all browser defaults
+  // Add favicon with comprehensive icon definitions using unified utility
   metadata.icons = {
     icon: [
-      { url: finalFaviconUrl, sizes: '16x16', type: faviconType },
-      { url: finalFaviconUrl, sizes: '32x32', type: faviconType },
-      { url: finalFaviconUrl, sizes: '48x48', type: faviconType },
-      { url: finalFaviconUrl, sizes: '64x64', type: faviconType },
+      { url: faviconConfig.url, sizes: '16x16', type: faviconConfig.type },
+      { url: faviconConfig.url, sizes: '32x32', type: faviconConfig.type },
+      { url: faviconConfig.url, sizes: '48x48', type: faviconConfig.type },
+      { url: faviconConfig.url, sizes: '64x64', type: faviconConfig.type },
     ],
-    shortcut: finalFaviconUrl,
+    shortcut: faviconConfig.url,
     apple: [
-      { url: finalFaviconUrl, sizes: '180x180', type: faviconType },
+      { url: faviconConfig.url, sizes: '180x180', type: faviconConfig.type },
     ],
     other: [
       {
         rel: 'icon',
-        url: finalFaviconUrl,
-        type: faviconType,
+        url: faviconConfig.url,
+        type: faviconConfig.type,
       },
       {
         rel: 'shortcut icon',
-        url: finalFaviconUrl,
-        type: faviconType,
+        url: faviconConfig.url,
+        type: faviconConfig.type,
       },
     ],
   }

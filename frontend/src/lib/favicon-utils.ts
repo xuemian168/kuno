@@ -2,7 +2,7 @@
  * Favicon utilities for consistent icon handling across the application
  */
 
-import { getBaseUrl, getSiteUrl, getMediaUrl } from './config'
+import { getMediaUrl } from './config'
 
 export interface FaviconConfig {
   url: string
@@ -28,8 +28,10 @@ function getMimeType(url: string): string {
 
 /**
  * Generate favicon URL from settings
+ * @param faviconUrl - The favicon URL from settings
+ * @param customOrigin - Optional custom origin to use instead of getMediaUrl logic
  */
-export function generateFaviconUrl(faviconUrl: string | null | undefined): FaviconConfig {
+export function generateFaviconUrl(faviconUrl: string | null | undefined, customOrigin?: string): FaviconConfig {
   // Default fallback - use relative path for better compatibility
   const defaultFavicon: FaviconConfig = {
     url: '/kuno.png',
@@ -47,26 +49,48 @@ export function generateFaviconUrl(faviconUrl: string | null | undefined): Favic
       url: faviconUrl,
       type: getMimeType(faviconUrl)
     }
-  } else if (faviconUrl.startsWith('/api/uploads/') || faviconUrl.startsWith('/uploads/') || faviconUrl.startsWith('uploads/')) {
-    // Backend media resource - use getMediaUrl for consistent handling
-    const mediaUrl = getMediaUrl(faviconUrl)
+  } else if (customOrigin) {
+    // Use custom origin for URL generation - prioritize over other conditions
+    let normalizedPath = faviconUrl.startsWith('/') ? faviconUrl : `/${faviconUrl}`
+    if (normalizedPath.startsWith('/uploads/')) {
+      normalizedPath = `/api${normalizedPath}`
+    } else if (!normalizedPath.startsWith('/api/') && normalizedPath.includes('uploads/')) {
+      normalizedPath = `/api/uploads/${faviconUrl}`
+    }
+    
     return {
-      url: mediaUrl,
-      type: getMimeType(mediaUrl)
+      url: `${customOrigin}${normalizedPath}`,
+      type: getMimeType(faviconUrl)
+    }
+  } else if (faviconUrl.startsWith('/api/uploads/') || faviconUrl.startsWith('/uploads/') || faviconUrl.startsWith('uploads/')) {
+    // Backend media resource - for favicon, use relative paths to avoid localhost issues
+    let normalizedPath = faviconUrl.startsWith('/') ? faviconUrl : `/${faviconUrl}`
+    if (normalizedPath.startsWith('/uploads/')) {
+      normalizedPath = `/api${normalizedPath}`
+    } else if (!normalizedPath.startsWith('/api/') && normalizedPath.includes('uploads/')) {
+      normalizedPath = `/api/uploads/${faviconUrl}`
+    }
+    
+    return {
+      url: normalizedPath, // Use relative path - browser will resolve with current domain
+      type: getMimeType(faviconUrl)
     }
   } else if (faviconUrl.startsWith('/')) {
-    // Frontend static resource - use site URL
-    const staticUrl = `${getSiteUrl()}${faviconUrl}`
+    // Frontend static resource - use as relative path
     return {
-      url: staticUrl,
-      type: getMimeType(staticUrl)
+      url: faviconUrl,
+      type: getMimeType(faviconUrl)
     }
   } else {
-    // Relative path - assume it's from uploads and use getMediaUrl
-    const mediaUrl = getMediaUrl(faviconUrl)
+    // Relative path - normalize to absolute path
+    let normalizedPath = `/${faviconUrl}`
+    if (!normalizedPath.startsWith('/api/') && normalizedPath.includes('uploads/')) {
+      normalizedPath = `/api/uploads/${faviconUrl}`
+    }
+    
     return {
-      url: mediaUrl,
-      type: getMimeType(mediaUrl)
+      url: normalizedPath, // Use relative path - browser will resolve with current domain
+      type: getMimeType(faviconUrl)
     }
   }
 }

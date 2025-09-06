@@ -13,13 +13,8 @@ export function getApiUrl(): string {
     return `${window.location.origin}/api`
   }
   
-  // 服务端环境
-  // 开发环境：直接连接到后端服务
-  if (process.env.NODE_ENV === 'development') {
-    return 'http://localhost:8085/api'
-  }
-  
-  // 生产环境服务端：使用 getBaseUrl 确保正确的域名
+  // 服务端环境：使用 getBaseUrl 确保正确的域名
+  // 无论开发还是生产环境，都使用统一的逻辑
   return `${getBaseUrl()}/api`
 }
 
@@ -33,20 +28,46 @@ export function getBaseUrl(): string {
     return window.location.origin
   }
   
-  // 服务端环境 - 开发环境
-  if (process.env.NODE_ENV === 'development') {
-    return 'http://localhost:3000'
+  // 服务端环境
+  // 优先使用显式设置的网站 URL
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL
   }
   
-  // 服务端环境 - 生产环境
-  // 在 Docker 容器中，使用环境变量或默认值
-  const host = process.env.VERCEL_URL 
+  // 尝试从请求头动态获取域名（仅在服务端组件中可用）
+  // 使用条件性导入避免在客户端组件中出错
+  if (typeof window === 'undefined') {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { headers } = require('next/headers')
+      const headersList = headers()
+      const host = headersList.get('x-forwarded-host') || headersList.get('host')
+      
+      if (host) {
+        // 判断协议：优先使用 x-forwarded-proto，否则默认 https
+        // 在开发环境下如果没有 x-forwarded-proto，默认使用 http
+        const proto = headersList.get('x-forwarded-proto') || 
+                      (process.env.NODE_ENV === 'development' ? 'http' : 'https')
+        return `${proto}://${host}`
+      }
+    } catch (error) {
+      // headers() 可能在某些上下文中不可用（如静态生成）
+      // 静默处理，回退到其他方案
+    }
+  }
+  
+  // 回退到环境变量
+  const fallbackHost = process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}`
     : process.env.HOST 
     ? `https://${process.env.HOST}`
+    : process.env.NEXT_PUBLIC_APP_URL
+    ? process.env.NEXT_PUBLIC_APP_URL
+    : process.env.NODE_ENV === 'development'
+    ? 'http://localhost:3000'
     : 'http://localhost'
   
-  return host
+  return fallbackHost
 }
 
 /**
@@ -76,13 +97,8 @@ export function getMediaUrl(path: string): string {
     return `${window.location.origin}${normalizedPath}`
   }
   
-  // 服务端环境：使用统一的 getApiUrl 逻辑
-  if (process.env.NODE_ENV === 'development') {
-    return `http://localhost:8085${normalizedPath}`
-  } else {
-    // 生产环境：使用 getBaseUrl 确保正确的域名
-    return `${getBaseUrl()}${normalizedPath}`
-  }
+  // 服务端环境：使用 getBaseUrl 确保正确的域名
+  return `${getBaseUrl()}${normalizedPath}`
 }
 
 /**
@@ -90,12 +106,7 @@ export function getMediaUrl(path: string): string {
  * 与 getBaseUrl 的区别：这个专门用于对外展示的 URL
  */
 export function getSiteUrl(): string {
-  // 优先使用显式设置的网站 URL
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL
-  }
-  
-  // 回退到 getBaseUrl 的逻辑
+  // 直接使用 getBaseUrl 的逻辑，它已经包含了从 headers 获取域名的功能
   return getBaseUrl()
 }
 

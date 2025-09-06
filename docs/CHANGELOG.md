@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Fixed canonical and alternate links showing localhost in containerized environments
+- Implemented dynamic domain detection from request headers for accurate URL generation
+- Unified domain resolution logic for development and production environments without requiring NEXT_PUBLIC_APP_URL
+- Added support for X-Forwarded-Host and X-Forwarded-Proto headers in reverse proxy scenarios
+
 ## [1.3.8] - 2025-09-04
 
 ### Added
