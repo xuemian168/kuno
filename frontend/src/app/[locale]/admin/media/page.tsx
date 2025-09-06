@@ -54,6 +54,9 @@ export default function MediaPage({ params }: MediaPageProps) {
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
   const [selectedMediaIds, setSelectedMediaIds] = useState<Set<number>>(new Set())
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
+  
+  // Tab state for automatic switching on paste
+  const [activeTab, setActiveTab] = useState('upload')
 
   useEffect(() => {
     params.then(({ locale: paramLocale }) => {
@@ -72,6 +75,26 @@ export default function MediaPage({ params }: MediaPageProps) {
       setOnlineVideos(JSON.parse(savedOnlineVideos))
     }
   }, [])
+
+  // Global paste event listener for automatic tab switching
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      if (!e.clipboardData) return
+
+      const items = Array.from(e.clipboardData.items)
+      const hasImage = items.some(item => item.type.startsWith('image/'))
+      
+      if (hasImage && activeTab !== 'upload') {
+        setActiveTab('upload')
+      }
+    }
+
+    document.addEventListener('paste', handleGlobalPaste)
+    
+    return () => {
+      document.removeEventListener('paste', handleGlobalPaste)
+    }
+  }, [activeTab])
 
   const fetchMedia = async () => {
     try {
@@ -336,7 +359,7 @@ export default function MediaPage({ params }: MediaPageProps) {
       </div>
 
       {/* Upload Section */}
-      <Tabs defaultValue="upload" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="upload">{t('media.uploadFiles')}</TabsTrigger>
           <TabsTrigger value="online">{t('media.addOnlineVideo')}</TabsTrigger>

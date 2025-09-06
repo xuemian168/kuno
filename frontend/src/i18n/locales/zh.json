@@ -246,6 +246,7 @@
     "uploadMedia": "上传媒体",
     "dropFilesHere": "将文件拖拽到此处或点击浏览",
     "supportsUpTo100MB": "支持图片和视频，最大100MB",
+    "pasteImageTip": "Tip: 您也可以直接粘贴剪贴板中的图片 (Ctrl+V / Cmd+V)",
     "fileSizeExceeds": "文件大小超过 {maxSize}MB 限制"
   },
   "common": {

@@ -227,6 +227,7 @@
     "uploadMedia": "メディアをアップロード",
     "dropFilesHere": "ファイルをここにドロップするかクリックして参照",
     "supportsUpTo100MB": "画像と動画をサポート、最大100MB",
+    "pasteImageTip": "Tip: クリップボードから画像を直接貼り付けることもできます (Ctrl+V / Cmd+V)",
     "fileSizeExceeds": "ファイルサイズが {maxSize}MB の制限を超えています"
   },
   "common": {

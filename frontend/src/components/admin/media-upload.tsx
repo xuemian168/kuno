@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Upload, X, Image, Video, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -30,6 +30,7 @@ export default function MediaUpload({
   const [error, setError] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [alt, setAlt] = useState('')
+  const [pasteHint, setPasteHint] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const getAcceptString = () => {
@@ -95,6 +96,53 @@ export default function MediaUpload({
       handleFileSelect(e.target.files[0])
     }
   }
+
+  const handlePaste = (e: ClipboardEvent) => {
+    if (!e.clipboardData) return
+
+    const items = Array.from(e.clipboardData.items)
+    const imageItem = items.find(item => item.type.startsWith('image/'))
+    
+    if (imageItem) {
+      e.preventDefault()
+      const file = imageItem.getAsFile()
+      if (file) {
+        // Generate a filename based on current timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+        const extension = file.type.split('/')[1] || 'png'
+        const filename = `pasted-image-${timestamp}.${extension}`
+        
+        // Create a new File object with a proper name
+        const namedFile = new File([file], filename, {
+          type: file.type,
+          lastModified: Date.now()
+        })
+        
+        handleFileSelect(namedFile)
+        setPasteHint(false)
+      }
+    }
+  }
+
+  useEffect(() => {
+    // Add paste event listener to document
+    document.addEventListener('paste', handlePaste)
+    
+    return () => {
+      document.removeEventListener('paste', handlePaste)
+    }
+  }, [])
+
+  useEffect(() => {
+    // Show paste hint briefly when component mounts
+    const timer = setTimeout(() => setPasteHint(true), 500)
+    const hideTimer = setTimeout(() => setPasteHint(false), 3000)
+    
+    return () => {
+      clearTimeout(timer)
+      clearTimeout(hideTimer)
+    }
+  }, [])
 
   const handleUpload = async () => {
     if (!selectedFile) return
@@ -175,9 +223,14 @@ export default function MediaUpload({
             <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
               {t('media.dropFilesHere')}
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 mb-2">
               {t('media.supportsUpTo100MB')}
             </p>
+            <div className={`text-xs text-muted-foreground transition-opacity duration-300 ${
+              pasteHint ? 'opacity-100' : 'opacity-50'
+            }`}>
+              💡 {t('media.pasteImageTip')}
+            </div>
             <input
               ref={fileInputRef}
               type="file"
