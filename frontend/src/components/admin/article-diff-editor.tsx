@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { apiClient, Article, Category, ArticleTranslation, SiteSettings } from "@/lib/api"
+import { getMediaUrl } from "@/lib/config"
 import { 
   ArrowLeft,
   Save,
@@ -101,6 +102,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const [activeLine, setActiveLine] = useState<number | null>(null)
   const [sourceScrollTop, setSourceScrollTop] = useState(0)
   const [targetScrollTop, setTargetScrollTop] = useState(0)
+  const [isUploadingPastedImage, setIsUploadingPastedImage] = useState(false)
+  const [pasteUploadProgress, setPasteUploadProgress] = useState(0)
   const [isScrollSyncing, setIsScrollSyncing] = useState(false)
   const [editMode, setEditMode] = useState<'single' | 'translation'>('translation')
   const [showCopyConfirm, setShowCopyConfirm] = useState(false)
@@ -937,6 +940,182 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       setTimeout(() => setSaveStatus('idle'), 5000)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 处理Monaco编辑器的图片粘贴事件
+  const handleMonacoPaste = async (e: ClipboardEvent, targetSide: 'source' | 'target') => {
+    console.log('[Debug] handleMonacoPaste triggered for:', targetSide)
+    
+    // 检查剪贴板内容
+    if (!e.clipboardData) return
+    
+    const items = Array.from(e.clipboardData.items)
+    const imageItem = items.find(item => item.type.startsWith('image/'))
+    
+    if (imageItem) {
+      console.log('[Debug] Image detected in paste, preventing default Monaco behavior')
+      
+      // 完全阻止默认行为
+      e.preventDefault()
+      e.stopPropagation()
+      e.stopImmediatePropagation()
+      
+      try {
+        setIsUploadingPastedImage(true)
+        setPasteUploadProgress(0)
+        
+        // 获取图片文件
+        const file = imageItem.getAsFile()
+        if (!file) return
+        
+        // 生成文件名
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+        const extension = file.type.split('/')[1] || 'png'
+        const filename = `pasted-image-${timestamp}.${extension}`
+        
+        // 创建新的File对象
+        const namedFile = new File([file], filename, {
+          type: file.type,
+          lastModified: Date.now()
+        })
+        
+        // 模拟进度
+        const progressInterval = setInterval(() => {
+          setPasteUploadProgress(prev => Math.min(prev + 10, 90))
+        }, 100)
+        
+        console.log('[Debug] Starting image upload:', filename)
+        
+        // 上传图片
+        const uploadedMedia = await apiClient.uploadMedia(namedFile)
+        
+        clearInterval(progressInterval)
+        setPasteUploadProgress(100)
+        
+        console.log('[Debug] Image uploaded successfully:', uploadedMedia)
+        
+        // 生成Markdown文本
+        const altText = uploadedMedia.alt || (normalizedLocale === 'zh' 
+          ? (file.type.includes('png') ? 'PNG图片' : 
+             file.type.includes('jpeg') || file.type.includes('jpg') ? 'JPEG图片' : 
+             file.type.includes('gif') ? 'GIF图片' : 
+             file.type.includes('webp') ? 'WebP图片' : '图片')
+          : (file.type.includes('png') ? 'PNG Image' :
+             file.type.includes('jpeg') || file.type.includes('jpg') ? 'JPEG Image' :
+             file.type.includes('gif') ? 'GIF Image' :
+             file.type.includes('webp') ? 'WebP Image' : 'Image'))
+        
+        const markdownText = `![${altText}](${getMediaUrl(uploadedMedia.url)})`
+        
+        console.log('[Debug] Generated markdown:', markdownText)
+        
+        // 插入到Monaco编辑器
+        await insertIntoMonacoEditor(targetSide, markdownText)
+        
+        // 显示成功通知
+        notification.showSuccess(
+          normalizedLocale === 'zh' ? '图片上传成功' : 'Image Uploaded Successfully',
+          normalizedLocale === 'zh' ? '图片已成功上传并插入到编辑器中' : 'Image uploaded and inserted into editor'
+        )
+        
+      } catch (error) {
+        console.error('[Debug] Failed to upload pasted image:', error)
+        notification.showError(
+          normalizedLocale === 'zh' ? '图片上传失败' : 'Image Upload Failed',
+          normalizedLocale === 'zh' ? '请检查网络连接和文件格式' : 'Please check your network connection and file format'
+        )
+      } finally {
+        setIsUploadingPastedImage(false)
+        setTimeout(() => setPasteUploadProgress(0), 1000)
+      }
+    }
+  }
+
+  // 在Monaco编辑器中插入文本
+  const insertIntoMonacoEditor = async (targetSide: 'source' | 'target', text: string) => {
+    if (!dualLanguageEditorRef.current) {
+      console.warn('[Debug] DualLanguageEditor ref not available')
+      return
+    }
+    
+    const editor = targetSide === 'source' 
+      ? dualLanguageEditorRef.current.getLeftEditor?.()
+      : dualLanguageEditorRef.current.getRightEditor?.()
+    
+    if (!editor) {
+      console.warn('[Debug] Monaco editor instance not available for:', targetSide)
+      return
+    }
+    
+    try {
+      // 获取当前光标位置
+      const position = editor.getPosition()
+      if (!position) {
+        console.warn('[Debug] No cursor position available, inserting at end')
+        const model = editor.getModel()
+        if (model) {
+          const endPosition = model.getFullModelRange().getEndPosition()
+          editor.setPosition(endPosition)
+          const newPosition = editor.getPosition()
+          if (newPosition) {
+            editor.executeEdits('paste-image', [{
+              range: {
+                startLineNumber: newPosition.lineNumber,
+                startColumn: newPosition.column,
+                endLineNumber: newPosition.lineNumber,
+                endColumn: newPosition.column
+              },
+              text: text,
+              forceMoveMarkers: true
+            }])
+          }
+        }
+        return
+      }
+      
+      console.log('[Debug] Inserting text at position:', position, 'Text:', text)
+      
+      // 在当前位置插入文本
+      const success = editor.executeEdits('paste-image', [{
+        range: {
+          startLineNumber: position.lineNumber,
+          startColumn: position.column,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column
+        },
+        text: text,
+        forceMoveMarkers: true
+      }])
+      
+      if (success) {
+        // 计算新的光标位置（在插入文本之后）
+        const lines = text.split('\n')
+        let newLine = position.lineNumber
+        let newColumn = position.column
+        
+        if (lines.length > 1) {
+          // 多行插入
+          newLine = position.lineNumber + lines.length - 1
+          newColumn = lines[lines.length - 1].length + 1
+        } else {
+          // 单行插入
+          newColumn = position.column + text.length
+        }
+        
+        // 设置光标到插入文本的末尾
+        editor.setPosition({ lineNumber: newLine, column: newColumn })
+        
+        // 确保编辑器获得焦点
+        editor.focus()
+        
+        console.log('[Debug] Text inserted successfully, new cursor position:', { lineNumber: newLine, column: newColumn })
+      } else {
+        console.error('[Debug] Failed to insert text into Monaco editor')
+      }
+      
+    } catch (error) {
+      console.error('[Debug] Error inserting text into Monaco editor:', error)
     }
   }
 
@@ -2338,6 +2517,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
               rightLanguageName={getLanguageDisplayName(targetLanguage)}
               onLeftChange={(value) => updateTranslation(sourceLanguage, 'content', value)}
               onRightChange={(value) => updateTranslation(targetLanguage, 'content', value)}
+              onLeftPaste={(e) => handleMonacoPaste(e, 'source')}
+              onRightPaste={(e) => handleMonacoPaste(e, 'target')}
               language="markdown"
               height="100%"
               theme={resolvedTheme === 'dark' ? 'vs-dark' : 'vs'}

@@ -247,6 +247,8 @@
     "dropFilesHere": "Drop files here or click to browse",
     "supportsUpTo100MB": "Supports images and videos up to 100MB",
     "pasteImageTip": "Tip: You can also paste images directly from clipboard (Ctrl+V / Cmd+V)",
+    "imageUploaded": "Image uploaded successfully",
+    "uploadFailed": "Failed to upload image",
     "fileSizeExceeds": "File size exceeds {maxSize}MB limit"
   },
   "common": {

@@ -14,6 +14,8 @@ export interface DualLanguageEditorRef {
   getRightValue: () => string
   setLeftValue: (value: string) => void
   setRightValue: (value: string) => void
+  getLeftEditor?: () => editor.IStandaloneCodeEditor | null
+  getRightEditor?: () => editor.IStandaloneCodeEditor | null
 }
 
 interface DualLanguageEditorProps {
@@ -25,6 +27,8 @@ interface DualLanguageEditorProps {
   rightLanguageName: string
   onLeftChange?: (value: string) => void
   onRightChange?: (value: string) => void
+  onLeftPaste?: (e: ClipboardEvent) => void
+  onRightPaste?: (e: ClipboardEvent) => void
   language?: string
   height?: string | number
   theme?: string
@@ -47,6 +51,8 @@ export const DualLanguageEditor = forwardRef<
     rightLanguageName,
     onLeftChange,
     onRightChange,
+    onLeftPaste,
+    onRightPaste,
     language = "markdown",
     height = "400px",
     theme,
@@ -93,8 +99,22 @@ export const DualLanguageEditor = forwardRef<
       if (rightEditorRef.current) {
         rightEditorRef.current.setValue(value)
       }
-    }
+    },
+    getLeftEditor: () => leftEditorRef.current,
+    getRightEditor: () => rightEditorRef.current
   }), [leftValue, rightValue])
+
+  // Cleanup paste event listeners when component unmounts
+  useEffect(() => {
+    return () => {
+      if (leftEditorRef.current && (leftEditorRef.current as any)._pasteCleanup) {
+        (leftEditorRef.current as any)._pasteCleanup()
+      }
+      if (rightEditorRef.current && (rightEditorRef.current as any)._pasteCleanup) {
+        (rightEditorRef.current as any)._pasteCleanup()
+      }
+    }
+  }, [])
 
   const handleLeftEditorMount = (editor: editor.IStandaloneCodeEditor) => {
     leftEditorRef.current = editor
@@ -113,6 +133,33 @@ export const DualLanguageEditor = forwardRef<
       const newValue = editor.getValue()
       onLeftChange?.(newValue)
     })
+
+    // Add paste event listener for the left editor
+    if (onLeftPaste) {
+      const editorDomNode = editor.getDomNode()
+      if (editorDomNode) {
+        const pasteHandler = (e: ClipboardEvent) => {
+          // 检查是否有图片数据，如果有则完全阻止Monaco的默认行为
+          const hasImage = e.clipboardData && Array.from(e.clipboardData.items).some(item => item.type.startsWith('image/'))
+          
+          if (hasImage) {
+            e.preventDefault()
+            e.stopPropagation()
+            e.stopImmediatePropagation()
+            
+            console.log('[Debug] Left editor paste intercepted - image detected, blocking Monaco default behavior')
+          }
+          
+          onLeftPaste(e)
+        }
+        editorDomNode.addEventListener('paste', pasteHandler, true) // 使用捕获阶段
+        
+        // Store cleanup function
+        ;(editor as any)._pasteCleanup = () => {
+          editorDomNode.removeEventListener('paste', pasteHandler, true)
+        }
+      }
+    }
   }
 
   const handleRightEditorMount = (editor: editor.IStandaloneCodeEditor) => {
@@ -132,6 +179,33 @@ export const DualLanguageEditor = forwardRef<
       const newValue = editor.getValue()
       onRightChange?.(newValue)
     })
+
+    // Add paste event listener for the right editor
+    if (onRightPaste) {
+      const editorDomNode = editor.getDomNode()
+      if (editorDomNode) {
+        const pasteHandler = (e: ClipboardEvent) => {
+          // 检查是否有图片数据，如果有则完全阻止Monaco的默认行为
+          const hasImage = e.clipboardData && Array.from(e.clipboardData.items).some(item => item.type.startsWith('image/'))
+          
+          if (hasImage) {
+            e.preventDefault()
+            e.stopPropagation()
+            e.stopImmediatePropagation()
+            
+            console.log('[Debug] Right editor paste intercepted - image detected, blocking Monaco default behavior')
+          }
+          
+          onRightPaste(e)
+        }
+        editorDomNode.addEventListener('paste', pasteHandler, true) // 使用捕获阶段
+        
+        // Store cleanup function
+        ;(editor as any)._pasteCleanup = () => {
+          editorDomNode.removeEventListener('paste', pasteHandler, true)
+        }
+      }
+    }
   }
 
   return (

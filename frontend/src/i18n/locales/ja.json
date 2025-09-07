@@ -228,6 +228,8 @@
     "dropFilesHere": "ファイルをここにドロップするかクリックして参照",
     "supportsUpTo100MB": "画像と動画をサポート、最大100MB",
     "pasteImageTip": "Tip: クリップボードから画像を直接貼り付けることもできます (Ctrl+V / Cmd+V)",
+    "imageUploaded": "画像のアップロードが完了しました",
+    "uploadFailed": "画像のアップロードに失敗しました",
     "fileSizeExceeds": "ファイルサイズが {maxSize}MB の制限を超えています"
   },
   "common": {
