@@ -15,8 +15,10 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { MarkdownEditor } from "@/components/markdown/markdown-editor"
-import { apiClient, Article, Category, ArticleTranslation } from "@/lib/api"
-import { Languages, Plus, Trash2, Pin } from "lucide-react"
+import { apiClient, Article, Category, ArticleTranslation, MediaLibrary } from "@/lib/api"
+import { Languages, Plus, Trash2, Pin, ImageIcon, X } from "lucide-react"
+import MediaSelector from "@/components/admin/media-selector"
+import { getMediaUrl } from "@/lib/config"
 
 
 interface ArticleFormProps {
@@ -44,7 +46,10 @@ export function ArticleForm({ article, isEditing = false, locale = 'zh' }: Artic
     category_id: article?.category_id || 0,
     created_at: article?.created_at || new Date().toISOString(),
     is_pinned: article?.is_pinned || false,
-    pin_order: article?.pin_order || 1
+    pin_order: article?.pin_order || 1,
+    cover_image_url: article?.cover_image_url || "",
+    cover_image_id: article?.cover_image_id || undefined,
+    cover_image_alt: article?.cover_image_alt || ""
   })
   const [translations, setTranslations] = useState<ArticleTranslation[]>(() => {
     // Initialize translations from article data if available
@@ -152,6 +157,30 @@ export function ArticleForm({ article, isEditing = false, locale = 'zh' }: Artic
     if (activeTab === langCode) {
       setActiveTab(locale)
     }
+  }
+
+  // Media selector state and handlers
+  const [mediaSelector, setMediaSelector] = useState({
+    open: false
+  })
+
+  const handleCoverImageSelect = (media: MediaLibrary) => {
+    setFormData(prev => ({
+      ...prev,
+      cover_image_url: media.url,
+      cover_image_id: media.id,
+      cover_image_alt: media.alt || ""
+    }))
+    setMediaSelector({ open: false })
+  }
+
+  const removeCoverImage = () => {
+    setFormData(prev => ({
+      ...prev,
+      cover_image_url: "",
+      cover_image_id: undefined,
+      cover_image_alt: ""
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -351,6 +380,54 @@ export function ArticleForm({ article, isEditing = false, locale = 'zh' }: Artic
                       />
                     </div>
 
+                    {/* Cover Image Section - Only show for primary language */}
+                    {translation.language === locale && (
+                      <div className="space-y-2">
+                        <Label>{locale === 'zh' ? '封面图片' : 'Cover Image'}</Label>
+                        {formData.cover_image_url ? (
+                          <div className="relative inline-block">
+                            <img
+                              src={getMediaUrl(formData.cover_image_url)}
+                              alt={formData.cover_image_alt}
+                              className="h-32 w-48 object-cover rounded-lg border"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                              onClick={removeCoverImage}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setMediaSelector({ open: true })}
+                            className="h-32 w-48 border-dashed flex flex-col items-center justify-center gap-2"
+                          >
+                            <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                              {locale === 'zh' ? '选择封面图片' : 'Select Cover Image'}
+                            </span>
+                          </Button>
+                        )}
+                        {formData.cover_image_url && (
+                          <div className="space-y-2">
+                            <Label htmlFor="cover-image-alt">{locale === 'zh' ? '图片描述 (Alt)' : 'Image Alt Text'}</Label>
+                            <Input
+                              id="cover-image-alt"
+                              value={formData.cover_image_alt}
+                              onChange={(e) => setFormData(prev => ({ ...prev, cover_image_alt: e.target.value }))}
+                              placeholder={locale === 'zh' ? '输入图片描述...' : 'Enter image description...'}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label htmlFor={`summary-${translation.language}`}>{t('article.summary')}</Label>
@@ -408,6 +485,14 @@ export function ArticleForm({ article, isEditing = false, locale = 'zh' }: Artic
           </form>
         </CardContent>
       </Card>
+      
+      {/* Media Selector Dialog */}
+      <MediaSelector
+        open={mediaSelector.open}
+        onOpenChange={(open) => setMediaSelector({ open })}
+        onSelect={(media) => handleCoverImageSelect(media as MediaLibrary)}
+        acceptedTypes="image"
+      />
     </motion.div>
   )
 }

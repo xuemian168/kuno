@@ -16,6 +16,10 @@ type Article struct {
 	DefaultLang  string               `gorm:"default:'zh'" json:"default_lang"`
 	Translations []ArticleTranslation `gorm:"foreignKey:ArticleID" json:"translations,omitempty"`
 	ViewCount    uint                 `gorm:"default:0" json:"view_count"`
+	// Cover Image Fields
+	CoverImageURL *string `gorm:"size:500" json:"cover_image_url,omitempty"`
+	CoverImageID  *uint   `json:"cover_image_id,omitempty"`
+	CoverImageAlt string  `gorm:"size:255" json:"cover_image_alt"`
 	// Pinned Fields
 	IsPinned bool       `gorm:"default:false" json:"is_pinned"`
 	PinOrder int        `gorm:"default:0" json:"pin_order"`

@@ -6,11 +6,12 @@ import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Calendar, ArrowRight, Eye, Rss, Pin } from 'lucide-react'
+import { Calendar, ArrowRight, Eye, Rss, Pin, ImageIcon } from 'lucide-react'
+import { getMediaUrl } from '@/lib/config'
 import { apiClient, Article, Category } from '@/lib/api'
 import NextLink from 'next/link'
 import { WebsiteStructuredData } from '@/components/seo/structured-data'
-import { getBaseUrl } from '@/lib/utils'
+import { getBaseUrl, truncateText, generateCategoryTheme, getInitialLetter, parseKeywords, formatKeywordDisplay } from '@/lib/utils'
 import { PersonalizedRecommendations } from '@/components/recommendations'
 
 interface HomePageClientProps {
@@ -166,8 +167,93 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
                     transition={{ duration: 0.5, delay: index * 0.1 }}
                   >
                     <NextLink href={`/${locale}/article/${article.id}`} className="block h-full">
-                      <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group">
-                        <CardHeader>
+                      <Card className={`h-full hover:shadow-lg transition-all cursor-pointer group overflow-hidden ${
+                        !article.cover_image_url ? 'hover:shadow-xl hover:scale-[1.02]' : ''
+                      }`}>
+                        {article.cover_image_url ? (
+                          /* With Cover Image */
+                          <div className="relative w-full h-48 overflow-hidden bg-gray-100 dark:bg-gray-800">
+                            <img
+                              src={getMediaUrl(article.cover_image_url)}
+                              alt={article.cover_image_alt || article.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                          </div>
+                        ) : (
+                          /* Without Cover Image - Keywords or Enhanced Header */
+                          (() => {
+                            const theme = generateCategoryTheme(article.category.name)
+                            const keywords = parseKeywords(article.seo_keywords)
+                            const keywordDisplay = formatKeywordDisplay(keywords)
+                            
+                            return (
+                              <div className={`relative w-full h-32 overflow-hidden bg-gradient-to-br ${theme.gradient} ${theme.border} border-b`}>
+                                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent" />
+                                
+                                {keywordDisplay.hasKeywords ? (
+                                  /* SEO Keywords Tag Cloud */
+                                  <div className="relative h-full flex flex-col justify-center p-4">
+                                    {/* Primary keyword */}
+                                    {keywordDisplay.primaryKeyword && (
+                                      <div className="text-center mb-2">
+                                        <span className={`inline-block px-3 py-1 rounded-full ${theme.bg} ${theme.accent} text-sm md:text-lg font-bold border ${theme.border} group-hover:scale-105 transition-transform shadow-sm`}>
+                                          {keywordDisplay.primaryKeyword}
+                                        </span>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Secondary keywords */}
+                                    {keywordDisplay.secondaryKeywords.length > 0 && (
+                                      <div className="flex flex-wrap justify-center gap-1 max-w-full">
+                                        {keywordDisplay.secondaryKeywords.slice(0, 3).map((keyword, idx) => (
+                                          <span 
+                                            key={idx}
+                                            className={`inline-block px-2 py-1 rounded-full ${theme.bg} ${theme.accent} text-xs font-medium border ${theme.border} opacity-80 group-hover:opacity-100 transition-all shadow-sm truncate max-w-20 md:max-w-none`}
+                                            title={keyword}
+                                          >
+                                            {keyword}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                    
+                                    {/* Category and Pin in corner */}
+                                    <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
+                                      <Badge variant="secondary" className={`${theme.bg} ${theme.accent} border-0 font-medium text-xs`}>
+                                        {article.category.name}
+                                      </Badge>
+                                      {article.is_pinned && (
+                                        <div className={`${theme.accent} rounded-full p-1`}>
+                                          <Pin className="h-3 w-3" />
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  /* Fallback: Enhanced Header with Initial Letter */
+                                  <div className="relative h-full flex items-center justify-between p-6">
+                                    <div className={`text-4xl font-bold ${theme.accent} opacity-80 group-hover:opacity-100 transition-opacity`}>
+                                      {getInitialLetter(article.title)}
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1">
+                                      <Badge variant="secondary" className={`${theme.bg} ${theme.accent} border-0 font-medium`}>
+                                        {article.category.name}
+                                      </Badge>
+                                      {article.is_pinned && (
+                                        <div className={`${theme.accent} rounded-full p-1`}>
+                                          <Pin className="h-3 w-3" />
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })()
+                        )}
+                        
+                        <CardHeader className="pb-2">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
                               {article.is_pinned && (
@@ -175,7 +261,10 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
                                   <Pin className="h-3 w-3" />
                                 </div>
                               )}
-                              <Badge variant="secondary">{article.category.name}</Badge>
+                              {/* Only show category badge for articles WITH cover images */}
+                              {article.cover_image_url && (
+                                <Badge variant="secondary">{article.category.name}</Badge>
+                              )}
                             </div>
                             <div className="flex items-center gap-3 text-sm text-muted-foreground">
                               <div className="flex items-center">
@@ -194,11 +283,11 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
                             {article.title}
                           </CardTitle>
                         </CardHeader>
-                        <CardContent>
-                          <CardDescription className="mb-4">
-                            {article.summary}
+                        <CardContent className={!article.cover_image_url ? "pt-3" : ""}>
+                          <CardDescription className={`mb-4 ${!article.cover_image_url ? 'text-sm leading-relaxed' : ''}`}>
+                            {truncateText(article.summary, !article.cover_image_url ? 100 : 120)}
                           </CardDescription>
-                          <div className="flex items-center text-primary font-medium">
+                          <div className="flex items-center text-primary font-medium text-sm">
                             {locale === 'zh' ? '阅读更多' : 'Read More'}
                             <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
                           </div>

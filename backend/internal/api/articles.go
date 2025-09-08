@@ -108,6 +108,15 @@ func CreateArticle(c *gin.Context) {
 		CategoryID   uint   `json:"category_id"`
 		DefaultLang  string `json:"default_lang"`
 		CreatedAt    string `json:"created_at"`
+		// Cover Image Fields
+		CoverImageURL *string `json:"cover_image_url"`
+		CoverImageID  *uint   `json:"cover_image_id"`
+		CoverImageAlt string  `json:"cover_image_alt"`
+		// SEO Fields  
+		SEOTitle      string  `json:"seo_title"`
+		SEODescription string `json:"seo_description"`
+		SEOKeywords   string  `json:"seo_keywords"`
+		SEOSlug       string  `json:"seo_slug"`
 		Translations []struct {
 			Language string `json:"language"`
 			Title    string `json:"title"`
@@ -129,6 +138,15 @@ func CreateArticle(c *gin.Context) {
 		Summary:     req.Summary,
 		CategoryID:  req.CategoryID,
 		DefaultLang: req.DefaultLang,
+		// Cover Image Fields
+		CoverImageURL: req.CoverImageURL,
+		CoverImageID:  req.CoverImageID,
+		CoverImageAlt: req.CoverImageAlt,
+		// SEO Fields
+		SEOTitle:       req.SEOTitle,
+		SEODescription: req.SEODescription,
+		SEOKeywords:    req.SEOKeywords,
+		SEOSlug:        req.SEOSlug,
 	}
 	if article.DefaultLang == "" {
 		article.DefaultLang = "zh"
@@ -190,6 +208,15 @@ func UpdateArticle(c *gin.Context) {
 		CategoryID  uint   `json:"category_id"`
 		DefaultLang string `json:"default_lang"`
 		CreatedAt   string `json:"created_at"`
+		// Cover Image Fields
+		CoverImageURL *string `json:"cover_image_url"`
+		CoverImageID  *uint   `json:"cover_image_id"`
+		CoverImageAlt string  `json:"cover_image_alt"`
+		// SEO Fields  
+		SEOTitle      string  `json:"seo_title"`
+		SEODescription string `json:"seo_description"`
+		SEOKeywords   string  `json:"seo_keywords"`
+		SEOSlug       string  `json:"seo_slug"`
 		// Pinned Fields
 		IsPinned     *bool   `json:"is_pinned"`
 		PinOrder     *int    `json:"pin_order"`
@@ -216,6 +243,16 @@ func UpdateArticle(c *gin.Context) {
 	if req.DefaultLang != "" {
 		article.DefaultLang = req.DefaultLang
 	}
+	
+	// Update Cover Image Fields
+	article.CoverImageURL = req.CoverImageURL
+	article.CoverImageID = req.CoverImageID  
+	article.CoverImageAlt = req.CoverImageAlt
+	// Update SEO Fields
+	article.SEOTitle = req.SEOTitle
+	article.SEODescription = req.SEODescription
+	article.SEOKeywords = req.SEOKeywords
+	article.SEOSlug = req.SEOSlug
 
 	// Update created_at if provided
 	if req.CreatedAt != "" {

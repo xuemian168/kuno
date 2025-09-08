@@ -11,7 +11,9 @@ import {
   Youtube, 
   X,
   Check,
-  Plus
+  Plus,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -49,20 +51,41 @@ export default function MediaPicker({ open, onOpenChange, onMediaSelect }: Media
   const [searchTerm, setSearchTerm] = useState('')
   const [error, setError] = useState('')
   const [selectedMedia, setSelectedMedia] = useState<MediaLibrary | OnlineVideo | null>(null)
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
+  const [itemsPerPage] = useState(8)
+
+  useEffect(() => {
+    if (open) {
+      setCurrentPage(1) // Reset to first page when opening or changing type
+      fetchMedia()
+    }
+  }, [open, selectedType])
 
   useEffect(() => {
     if (open) {
       fetchMedia()
     }
-  }, [open])
+  }, [currentPage]) // Fetch data when page changes
 
   const fetchMedia = async () => {
     try {
       setLoading(true)
-      const response = await apiClient.getMediaList()
-      setMedia(response.media)
+      setError('')
       
-      // Load online videos from localStorage
+      const response = await apiClient.getMediaList(
+        undefined, // No type filter for MediaPicker 
+        currentPage,
+        itemsPerPage
+      )
+      
+      setMedia(response.media)
+      setTotalItems(response.total)
+      setTotalPages(Math.ceil(response.total / itemsPerPage))
+      
+      // Load online videos from localStorage (not paginated)
       const savedOnlineVideos = localStorage.getItem('online-videos')
       if (savedOnlineVideos) {
         setOnlineVideos(JSON.parse(savedOnlineVideos))
@@ -75,7 +98,8 @@ export default function MediaPicker({ open, onOpenChange, onMediaSelect }: Media
   }
 
   const handleUploadComplete = (newMedia: MediaLibrary) => {
-    setMedia(prev => [newMedia, ...prev])
+    // Refresh the current page to show the new media
+    fetchMedia()
     // Auto-select the newly uploaded media
     setSelectedMedia(newMedia)
   }
@@ -92,6 +116,17 @@ export default function MediaPicker({ open, onOpenChange, onMediaSelect }: Media
     
     // Auto-select the newly added video
     setSelectedMedia(video)
+  }
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages && !loading) {
+      setCurrentPage(newPage)
+    }
+  }
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value)
+    setCurrentPage(1) // Reset to first page when searching
   }
 
   const handleSelectMedia = () => {
@@ -147,7 +182,7 @@ export default function MediaPicker({ open, onOpenChange, onMediaSelect }: Media
                 <Input
                   placeholder={t('media.searchMedia')}
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -233,6 +268,64 @@ export default function MediaPicker({ open, onOpenChange, onMediaSelect }: Media
                         </Card>
                       </motion.div>
                     ))}
+                  </div>
+                )}
+                
+                {/* Pagination Controls for Upload Tab */}
+                {selectedType === 'upload' && !loading && totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-4 px-2 border-t pt-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>
+                        {totalItems} {t('media.items')} • {t('common.page')} {currentPage} {t('common.of')} {totalPages}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage <= 1 || loading}
+                        className="h-8 w-8 p-0"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      
+                      {/* Page numbers */}
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNumber
+                        if (totalPages <= 5) {
+                          pageNumber = i + 1
+                        } else {
+                          const start = Math.max(1, currentPage - 2)
+                          const end = Math.min(totalPages, start + 4)
+                          pageNumber = start + i
+                          if (pageNumber > end) return null
+                        }
+                        
+                        return (
+                          <Button
+                            key={pageNumber}
+                            variant={currentPage === pageNumber ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handlePageChange(pageNumber)}
+                            disabled={loading}
+                            className="h-8 w-8 p-0"
+                          >
+                            {pageNumber}
+                          </Button>
+                        )
+                      })}
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage >= totalPages || loading}
+                        className="h-8 w-8 p-0"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

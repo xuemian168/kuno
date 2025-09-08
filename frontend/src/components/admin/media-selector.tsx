@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Image as ImageIcon, Video, Youtube, Search, Upload } from 'lucide-react'
+import { Image as ImageIcon, Video, Youtube, Search, Upload, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -43,23 +43,54 @@ export default function MediaSelector({
   const [selectedTab, setSelectedTab] = useState<'browse' | 'upload' | 'online'>('browse')
   const [filterType, setFilterType] = useState<'all' | 'image' | 'video' | 'online'>('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const [error, setError] = useState('')
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
+  // Responsive items per page: 8 on desktop, 6 on tablet, 4 on mobile
+  const [itemsPerPage] = useState(8)
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  useEffect(() => {
+    if (open) {
+      setCurrentPage(1) // Reset to first page when opening or changing filter/search
+      fetchMedia()
+    }
+  }, [open, filterType, debouncedSearchTerm])
 
   useEffect(() => {
     if (open) {
       fetchMedia()
     }
-  }, [open, filterType])
+  }, [currentPage]) // Fetch data when page changes
 
   const fetchMedia = async () => {
     try {
       setLoading(true)
-      const response = await apiClient.getMediaList(
-        filterType === 'all' || filterType === 'online' ? undefined : filterType as 'image' | 'video'
-      )
-      setMedia(response.media)
+      setError('')
       
-      // Load online videos from localStorage
+      const response = await apiClient.getMediaList(
+        filterType === 'all' || filterType === 'online' ? undefined : filterType as 'image' | 'video',
+        currentPage,
+        itemsPerPage,
+        debouncedSearchTerm || undefined
+      )
+      
+      setMedia(response.media)
+      setTotalItems(response.total)
+      setTotalPages(Math.ceil(response.total / itemsPerPage))
+      
+      // Load online videos from localStorage (not paginated)
       const savedOnlineVideos = localStorage.getItem('online-videos')
       if (savedOnlineVideos) {
         setOnlineVideos(JSON.parse(savedOnlineVideos))
@@ -72,7 +103,8 @@ export default function MediaSelector({
   }
 
   const handleUploadComplete = (newMedia: MediaLibrary) => {
-    setMedia(prev => [newMedia, ...prev])
+    // Refresh the current page to show the new media
+    fetchMedia()
     setSelectedTab('browse')
   }
 
@@ -88,11 +120,16 @@ export default function MediaSelector({
     setSelectedTab('browse')
   }
 
-  const filteredMedia = media.filter(item => {
-    if (acceptedTypes !== 'all' && item.media_type !== acceptedTypes) return false
-    return item.original_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           item.alt.toLowerCase().includes(searchTerm.toLowerCase())
-  })
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages && !loading) {
+      setCurrentPage(newPage)
+    }
+  }
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value)
+    setCurrentPage(1) // Reset to first page when searching
+  }
 
   const filteredOnlineVideos = onlineVideos.filter(video =>
     video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -123,7 +160,7 @@ export default function MediaSelector({
                 <Input
                   placeholder="Search media..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -163,7 +200,9 @@ export default function MediaSelector({
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {/* Regular Media Files */}
-                  {(filterType !== 'online') && filteredMedia.map((item) => (
+                  {(filterType !== 'online') && media.filter(item => 
+                    acceptedTypes === 'all' || item.media_type === acceptedTypes
+                  ).map((item) => (
                     <motion.div
                       key={item.id}
                       initial={{ opacity: 0, scale: 0.9 }}
@@ -240,6 +279,64 @@ export default function MediaSelector({
                       </Card>
                     </motion.div>
                   ))}
+                </div>
+              )}
+              
+              {/* Pagination Controls */}
+              {!loading && totalPages > 1 && (filterType !== 'online') && (
+                <div className="flex items-center justify-between mt-4 px-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>
+                      {totalItems} items • Page {currentPage} of {totalPages}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage <= 1 || loading}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    {/* Page numbers */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNumber
+                      if (totalPages <= 5) {
+                        pageNumber = i + 1
+                      } else {
+                        const start = Math.max(1, currentPage - 2)
+                        const end = Math.min(totalPages, start + 4)
+                        pageNumber = start + i
+                        if (pageNumber > end) return null
+                      }
+                      
+                      return (
+                        <Button
+                          key={pageNumber}
+                          variant={currentPage === pageNumber ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(pageNumber)}
+                          disabled={loading}
+                          className="h-8 w-8 p-0"
+                        >
+                          {pageNumber}
+                        </Button>
+                      )
+                    })}
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage >= totalPages || loading}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

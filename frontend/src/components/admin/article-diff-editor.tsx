@@ -38,6 +38,7 @@ import {
   ToggleLeft,
   ToggleRight,
   Image,
+  ImageIcon,
   Video,
   Keyboard,
   HelpCircle,
@@ -48,7 +49,8 @@ import {
   ChevronDown,
   ArrowLeftRight,
   Sparkles,
-  Code
+  Code,
+  Trash2
 } from "lucide-react"
 import { translationService, initializeTranslationService } from "@/services/translation"
 import { languageManager } from "@/services/translation/language-manager"
@@ -57,7 +59,7 @@ import { aiSummaryService, initializeAISummaryService } from "@/services/ai-summ
 import { cn } from "@/lib/utils"
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer"
 import { ArticleSEOForm } from "@/components/admin/article-seo-form"
-import MediaPicker from "./media-picker"
+import MediaSelector from "./media-selector"
 import { MediaLibrary } from "@/lib/api"
 import { playSuccessSound, initializeSoundSettings } from "@/lib/sound"
 import { NotificationDialog, useNotificationDialog } from "@/components/ui/notification-dialog"
@@ -108,6 +110,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const [editMode, setEditMode] = useState<'single' | 'translation'>('translation')
   const [showCopyConfirm, setShowCopyConfirm] = useState(false)
   const [showMediaPicker, setShowMediaPicker] = useState(false)
+  const [isSelectingCoverImage, setIsSelectingCoverImage] = useState(false)
   const [activeTextarea, setActiveTextarea] = useState<'source' | 'target' | 'single'>('source')
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const [isTranslating, setIsTranslating] = useState(false)
@@ -228,6 +231,10 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     summary: article?.summary || "",
     category_id: article?.category_id || 0,
     created_at: article?.created_at || new Date().toISOString(),
+    // Cover Image Fields
+    cover_image_url: article?.cover_image_url || "",
+    cover_image_id: article?.cover_image_id || undefined,
+    cover_image_alt: article?.cover_image_alt || "",
     // SEO Fields
     seo_title: article?.seo_title || "",
     seo_description: article?.seo_description || "",
@@ -871,6 +878,31 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       return
     }
 
+    // Validate and sanitize data before saving
+    const validationErrors = []
+    
+    // Validate cover image data
+    if (formData.cover_image_url && !formData.cover_image_id) {
+      validationErrors.push(normalizedLocale === 'zh' ? '封面图片数据不完整' : 'Cover image data incomplete')
+    }
+    
+    // Validate SEO data lengths
+    if (formData.seo_title && formData.seo_title.length > 60) {
+      validationErrors.push(normalizedLocale === 'zh' ? 'SEO标题过长 (超过60字符)' : 'SEO title too long (over 60 characters)')
+    }
+    
+    if (formData.seo_description && formData.seo_description.length > 160) {
+      validationErrors.push(normalizedLocale === 'zh' ? 'SEO描述过长 (超过160字符)' : 'SEO description too long (over 160 characters)')
+    }
+
+    if (validationErrors.length > 0) {
+      notification.showError(
+        normalizedLocale === 'zh' ? '数据验证失败' : 'Data Validation Failed',
+        validationErrors.join('; ')
+      )
+      return
+    }
+
     setLoading(true)
     setSaveStatus('saving')
 
@@ -884,6 +916,20 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         (t.title.trim() || t.content.trim() || t.summary.trim())
       )
 
+      // Debug: Log formData before saving
+      console.log('💾 Saving article with formData:', formData)
+      console.log('🖼️ Cover image data:', {
+        cover_image_url: formData.cover_image_url,
+        cover_image_id: formData.cover_image_id,
+        cover_image_alt: formData.cover_image_alt
+      })
+      console.log('🔍 SEO data:', {
+        seo_title: formData.seo_title,
+        seo_description: formData.seo_description,
+        seo_keywords: formData.seo_keywords,
+        seo_slug: formData.seo_slug
+      })
+
       const articleData = {
         ...formData,
         default_lang: defaultLang, // Keep the existing default language
@@ -891,15 +937,26 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         selected_comments: JSON.stringify(selectedComments) // Save selected comments
       }
 
+      console.log('📤 Final articleData being sent to API:', articleData)
+
       if (isEditing && article) {
-        await apiClient.updateArticle(article.id, articleData)
+        const updatedArticle = await apiClient.updateArticle(article.id, articleData)
+        console.log('✅ Article updated successfully. Response:', updatedArticle)
         setSaveStatus('saved')
         playSuccessSound() // Play success sound
         
-        // Show success notification
+        // Show detailed success notification
+        const coverInfo = formData.cover_image_url ? 
+          (normalizedLocale === 'zh' ? '✓ 封面图片' : '✓ Cover image') : ''
+        const seoInfo = (formData.seo_title || formData.seo_description || formData.seo_keywords) ? 
+          (normalizedLocale === 'zh' ? '✓ SEO设置' : '✓ SEO settings') : ''
+        const detailsMessage = [coverInfo, seoInfo].filter(Boolean).join(', ')
+        
         notification.showSuccess(
           normalizedLocale === 'zh' ? '文章保存成功！' : 'Article Saved Successfully!',
-          normalizedLocale === 'zh' ? '您的文章已成功保存。' : 'Your article has been saved successfully.'
+          normalizedLocale === 'zh' 
+            ? `您的文章已成功保存${detailsMessage ? ` (${detailsMessage})` : '。'}`
+            : `Your article has been saved successfully${detailsMessage ? ` (${detailsMessage})` : '.'}`
         )
         
         if (exitAfterSave) {
@@ -1401,10 +1458,21 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     platform: 'youtube' | 'bilibili'
   }
 
-  const handleMediaSelect = (media: MediaLibrary | OnlineVideo, type: 'upload' | 'online') => {
+  const handleMediaSelect = (media: MediaLibrary | OnlineVideo, type: 'media' | 'online') => {
+    // Handle cover image selection
+    if (isSelectingCoverImage && type === 'media') {
+      const uploadedMedia = media as MediaLibrary
+      if (uploadedMedia.media_type === 'image') {
+        console.log('🖼️ Cover image selected:', uploadedMedia)
+        handleCoverImageSelect(uploadedMedia)
+        setIsSelectingCoverImage(false)
+        return
+      }
+    }
+
     let markdownText = ''
     
-    if (type === 'upload') {
+    if (type === 'media') {
       const uploadedMedia = media as MediaLibrary
       if (uploadedMedia.media_type === 'image') {
         markdownText = `![${uploadedMedia.alt || uploadedMedia.original_name}](${getApiUrl()}${uploadedMedia.url})`
@@ -1556,6 +1624,34 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       setActiveTextarea(textareaType)
     }
     setShowMediaPicker(true)
+  }
+
+  const handleCoverImageSelect = (media: MediaLibrary) => {
+    console.log('🔄 Setting cover image data:', {
+      url: media.url,
+      id: media.id,
+      alt: media.alt || ""
+    })
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        cover_image_url: media.url,
+        cover_image_id: media.id,
+        cover_image_alt: media.alt || ""
+      }
+      console.log('📝 Updated formData:', newData)
+      return newData
+    })
+    setShowMediaPicker(false)
+  }
+
+  const removeCoverImage = () => {
+    setFormData(prev => ({
+      ...prev,
+      cover_image_url: "",
+      cover_image_id: undefined,
+      cover_image_alt: ""
+    }))
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -1799,6 +1895,24 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       case 'basic':
         return isPreview ? (
           <div className="p-4 space-y-4">
+            {/* Cover Image Preview */}
+            {formData.cover_image_url && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  {normalizedLocale === 'zh' ? '封面预览' : 'Cover Preview'}
+                </h3>
+                <img
+                  src={getMediaUrl(formData.cover_image_url)}
+                  alt={formData.cover_image_alt}
+                  className="w-full max-w-md h-48 object-cover rounded-lg border"
+                />
+                {formData.cover_image_alt && (
+                  <p className="text-xs text-muted-foreground">
+                    Alt: {formData.cover_image_alt}
+                  </p>
+                )}
+              </div>
+            )}
             <h1 className="text-2xl font-bold">{translation.title || 'Untitled'}</h1>
             <p className="text-muted-foreground leading-relaxed">{translation.summary || 'No summary'}</p>
             
@@ -1860,6 +1974,56 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                 className="min-h-[100px] resize-none"
               />
             </div>
+            {/* Cover Image Section - Only show on source side and only if it's default language */}
+            {isSource && language === getDefaultLanguage() && (
+              <div className="space-y-2">
+                <Label>{normalizedLocale === 'zh' ? '封面图片' : 'Cover Image'}</Label>
+                {formData.cover_image_url ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={getMediaUrl(formData.cover_image_url)}
+                      alt={formData.cover_image_alt}
+                      className="h-32 w-48 object-cover rounded-lg border"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2 h-6 w-6 p-0"
+                      onClick={removeCoverImage}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsSelectingCoverImage(true)
+                      setShowMediaPicker(true)
+                    }}
+                    className="h-32 w-48 border-dashed flex flex-col items-center justify-center gap-2"
+                  >
+                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {normalizedLocale === 'zh' ? '选择封面图片' : 'Select Cover Image'}
+                    </span>
+                  </Button>
+                )}
+                {formData.cover_image_url && (
+                  <div className="space-y-2">
+                    <Label htmlFor="cover-image-alt">{normalizedLocale === 'zh' ? '图片描述 (Alt)' : 'Image Alt Text'}</Label>
+                    <Input
+                      id="cover-image-alt"
+                      value={formData.cover_image_alt}
+                      onChange={(e) => setFormData(prev => ({ ...prev, cover_image_alt: e.target.value }))}
+                      placeholder={normalizedLocale === 'zh' ? '输入图片描述...' : 'Enter image description...'}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
             {/* SEO快捷字段 - Only show on source side and only if it's default language */}
             {isSource && language === getDefaultLanguage() && (
               <>
@@ -1934,6 +2098,41 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
                       {normalizedLocale === 'zh' ? '建议不超过160个字符' : 'Recommended under 160 characters'}
                     </p>
                   )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor={`seo_keywords-${side}`} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {t('seo.seoKeywords')}
+                      <span className="text-xs text-muted-foreground">
+                        ({formData.seo_keywords.split(',').filter(k => k.trim()).length} {normalizedLocale === 'zh' ? '个关键字' : 'keywords'})
+                      </span>
+                    </div>
+                  </Label>
+                  <Input
+                    id={`seo_keywords-${side}`}
+                    value={formData.seo_keywords}
+                    onChange={(e) => setFormData(prev => ({ ...prev, seo_keywords: e.target.value }))}
+                    placeholder={t('seo.seoKeywordsPlaceholder')}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {normalizedLocale === 'zh' ? '用逗号分隔关键字' : 'Separate keywords with commas'}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor={`seo_slug-${side}`}>
+                    {t('seo.seoSlug')}
+                  </Label>
+                  <Input
+                    id={`seo_slug-${side}`}
+                    value={formData.seo_slug}
+                    onChange={(e) => setFormData(prev => ({ ...prev, seo_slug: e.target.value }))}
+                    placeholder={t('seo.seoSlugPlaceholder')}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {normalizedLocale === 'zh' ? '自定义URL路径，留空则自动生成' : 'Custom URL path, leave empty to auto-generate'}
+                  </p>
                 </div>
               </>
             )}
@@ -2722,11 +2921,17 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         </DialogContent>
       </Dialog>
 
-      {/* Media Picker Dialog */}
-      <MediaPicker
+      {/* Media Selector Dialog */}
+      <MediaSelector
         open={showMediaPicker}
-        onOpenChange={setShowMediaPicker}
-        onMediaSelect={handleMediaSelect}
+        onOpenChange={(open) => {
+          setShowMediaPicker(open)
+          if (!open) {
+            setIsSelectingCoverImage(false)
+          }
+        }}
+        onSelect={handleMediaSelect}
+        acceptedTypes={isSelectingCoverImage ? "image" : "all"}
       />
 
       {/* Keyboard Shortcuts Help Dialog */}

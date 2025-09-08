@@ -27,6 +27,10 @@ export interface Article {
   default_lang: string
   translations: ArticleTranslation[]
   view_count?: number
+  // Cover Image Fields
+  cover_image_url?: string
+  cover_image_id?: number
+  cover_image_alt?: string
   // Pinned Fields
   is_pinned?: boolean
   pin_order?: number
@@ -1159,7 +1163,7 @@ class ApiClient {
     return response.json()
   }
 
-  async getMediaList(type?: 'image' | 'video', page = 1, limit = 20): Promise<MediaListResponse> {
+  async getMediaList(type?: 'image' | 'video', page = 1, limit = 20, search?: string): Promise<MediaListResponse> {
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -1167,6 +1171,10 @@ class ApiClient {
     
     if (type) {
       params.append('type', type)
+    }
+    
+    if (search) {
+      params.append('search', search)
     }
 
     return this.request<MediaListResponse>(`/media?${params}`)
