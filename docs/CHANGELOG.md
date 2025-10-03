@@ -5,6 +5,48 @@ All notable changes to KUNO Blog Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.14] - 2025-10-03
+
+### Security
+- **Fixed critical XSS vulnerability** in file upload functionality (Stored XSS)
+- Implemented 7-layer defense-in-depth security architecture for media uploads
+- Added magic number validation to prevent Content-Type spoofing attacks
+- Implemented comprehensive file integrity checks for all supported formats:
+  - JPEG: SOI/EOI marker validation
+  - PNG: Signature validation with PNG bomb protection (100 chunk limit)
+  - GIF: Signature validation with GIF bomb protection (1000 frame limit)
+  - WebP: RIFF/WEBP signature validation
+  - MP4, WebM, OGG, AVI: Video format signature validation
+- Added polyglot file detection to prevent multi-format hybrid attacks
+- Implemented SVG content sanitization:
+  - Removes all dangerous elements (script, foreignObject, iframe, object, embed, animations)
+  - Strips all event handlers (onload, onerror, onclick, etc.)
+  - Sanitizes dangerous protocols in href/xlink:href (javascript:, data:, vbscript:)
+- Added strict security response headers:
+  - X-Content-Type-Options: nosniff
+  - X-Frame-Options: DENY
+  - Content-Security-Policy for SVG files (prevents script execution)
+- File extension whitelist enforcement
+
+### Added
+- SVG file upload support with automatic sanitization
+- 48 comprehensive security test cases (100% pass rate)
+- Security warning in frontend for SVG uploads
+- Helper function minInt() for safe integer operations
+
+### Changed
+- Enhanced UploadMedia endpoint with 4-layer validation
+- Enhanced ServeMedia endpoint with security headers
+- Improved frontend media upload component with SVG support
+
+### Technical Details
+- Complies with OWASP Top 10 - A03:2021 Injection
+- Complies with OWASP ASVS Level 2 - File Upload Validation
+- Addresses CWE-79 (Cross-Site Scripting)
+- Addresses CWE-434 (Unrestricted File Upload)
+- Test coverage: 48 test cases validating all security measures
+- Files modified: media.go (730 lines), media_test.go (new), media-upload.tsx
+
 ## [1.3.9] - 2025-09-06
 
 ### Fixed

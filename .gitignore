@@ -2,4 +2,6 @@
 dev.sh
 blog.db
 .env
+backups/
 !/docs/CHANGELOG.md
+.DS_Store
