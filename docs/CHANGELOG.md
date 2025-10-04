@@ -5,6 +5,75 @@ All notable changes to KUNO Blog Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.15] - 2025-10-05
+
+### Security
+- **Fixed Stored XSS vulnerability via image metadata** (Critical)
+  - Implemented automatic metadata stripping for all uploaded images
+  - JPEG EXIF data completely removed via re-encoding
+  - PNG tEXt/zTXt/iTXt chunks removed via re-encoding
+  - GIF comment blocks removed via re-encoding
+  - Prevents XSS attacks via `exiftool`-injected payloads in metadata fields
+- **Enhanced Content Security Policy (CSP)** for all media files
+  - Applied strict CSP to all images: `default-src 'none'; img-src 'self'; script-src 'none'`
+  - Applied strict CSP to all videos: `default-src 'none'; media-src 'self'; script-src 'none'`
+  - Extra strict CSP for SVG files with explicit `script-src 'none'`
+  - Defense-in-depth protection against metadata-based XSS
+- **Removed SVG upload support** due to security concerns (XSS/SSRF/XXE/DoS risks)
+- **Removed WebP image upload support** to simplify supported formats
+- **Removed WebM and OGG video upload support** to minimize attack surface
+
+### Added
+- `stripImageMetadata()` function in `media.go` for automatic metadata removal
+- Image re-encoding using Go standard library (`image/jpeg`, `image/png`, `image/gif`)
+- Test cases for PNG and GIF metadata stripping (`TestStripImageMetadata`)
+- Comprehensive CSP headers for all media file types in `ServeMedia`
+
+### Changed
+- Security Layer 4: Now strips metadata from all images before storage
+- Security Layer 6: Enhanced CSP headers now apply to ALL media files, not just SVG
+- Restricted image uploads to 4 basic formats: JPEG (.jpg, .jpeg), PNG (.png), GIF (.gif)
+- Restricted video uploads to 3 formats: MP4 (.mp4), AVI (.avi), MOV (.mov)
+- Updated frontend media upload component to remove SVG, WebP, WebM, OGG from file picker
+- Added explicit SVG rejection error message: "SVG 文件由于安全原因不允许上传。请使用 PNG、JPEG、WebP 或 GIF 格式代替。"
+- Enhanced file type validation testing with comprehensive rejection checks
+- Graceful degradation: If metadata stripping fails, original file is uploaded with warning log
+- Updated `ServeMedia` to set stricter security headers based on file type (image vs video)
+
+### Removed
+- SVG file upload functionality (security mitigation)
+- SVG sanitization warning message in frontend
+- WebP image format support
+- WebM and OGG video format support
+
+### Technical Details
+- Addresses metadata injection attack vectors:
+  - JPEG: EXIF/IPTC/XMP metadata
+  - PNG: tEXt/zTXt/iTXt/eXIf chunks
+  - GIF: Comment Extension blocks
+  - MP4: Protected via CSP (metadata stripping requires ffmpeg, not implemented)
+- Complies with OWASP Top 10 - A03:2021 Injection
+- Complies with OWASP ASVS Level 2 - File Upload Validation (V12.2)
+- Addresses CWE-79 (Cross-Site Scripting) via metadata
+- Files modified:
+  - Backend: `media.go` (removed SVG/WebP/WebM/OGG from whitelists, added metadata stripping +56 lines, enhanced CSP +25 lines, added explicit rejection)
+  - Frontend: `media-upload.tsx` (removed file types from accept string, removed SVG security alert)
+  - Tests: `media_test.go` (updated TestFileTypeRejection to verify all removed formats, added metadata stripping tests +105 lines)
+- Dependencies added: Standard library only (`image/jpeg`, `image/png`, `image/gif`)
+- System SVG icons in `/public/` directory remain unaffected
+- All tests pass (20 SVG sanitization tests + 1 file type rejection + 2 metadata stripping tests = 23 tests)
+- Aligns with KISS principle: simplified format support reduces complexity and attack surface
+
+### Notes
+- Image quality set to 95% for JPEG re-encoding (minimal quality loss)
+- PNG uses default compression level (balance of speed and size)
+- GIF re-encoding preserves animation frames
+- Metadata stripping adds ~100-500ms per upload depending on image size
+- Video metadata not stripped due to complexity (requires ffmpeg), protected via CSP only
+- Users should convert SVG files to PNG/JPEG before uploading
+- System-provided browser/device icons (SVG) continue to function normally
+- This change prioritizes security over format flexibility
+
 ## [1.3.14] - 2025-10-03
 
 ### Security

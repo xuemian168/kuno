@@ -8,6 +8,10 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"image"
+	"image/gif"
+	"image/jpeg"
+	"image/png"
 	"io"
 	"net/http"
 	"os"
@@ -28,20 +32,21 @@ const (
 var UploadDir = getUploadDir()
 
 var allowedImageTypes = map[string]bool{
-	"image/jpeg":    true,
-	"image/jpg":     true,
-	"image/png":     true,
-	"image/gif":     true,
-	"image/webp":    true,
-	"image/svg+xml": true, // SVG support with sanitization
+	"image/jpeg": true,
+	"image/jpg":  true,
+	"image/png":  true,
+	"image/gif":  true,
+	// "image/webp": WebP 已禁止用户上传
+	// "image/svg+xml": SVG 已禁止用户上传 (安全原因: XSS/SSRF/XXE/DoS 风险)
+	// 注意: 系统内置 SVG 图标 (/public/**/*.svg) 不受此限制影响
 }
 
 var allowedVideoTypes = map[string]bool{
-	"video/mp4":  true,
-	"video/webm": true,
-	"video/ogg":  true,
-	"video/avi":  true,
-	"video/mov":  true,
+	"video/mp4": true,
+	"video/avi": true,
+	"video/mov": true,
+	// "video/webm": WebM 已禁止
+	// "video/ogg": OGG 已禁止
 }
 
 func getUploadDir() string {
@@ -75,16 +80,53 @@ var fileMagicNumbers = map[string][]byte{
 
 // Security: Dangerous SVG elements that must be removed
 var dangerousSVGElements = []string{
-	"script", "foreignObject", "iframe", "object", "embed",
-	"use", "animate", "animateTransform", "set", "animateMotion",
+	// Script execution
+	"script", "handler",
+
+	// External content loading
+	"foreignObject", "iframe", "object", "embed", "image",
+
+	// Link elements (can be weaponized with animate)
+	"a",
+
+	// Animation elements (can dynamically inject attributes)
+	"animate", "animateTransform", "set", "animateMotion", "animateColor", "discard",
+
+	// Filter elements (can load external resources via feImage)
+	"filter", "feBlend", "feColorMatrix", "feComponentTransfer", "feComposite",
+	"feConvolveMatrix", "feDiffuseLighting", "feDisplacementMap", "feDistantLight",
+	"feDropShadow", "feFlood", "feFuncA", "feFuncB", "feFuncG", "feFuncR",
+	"feGaussianBlur", "feImage", "feMerge", "feMergeNode", "feMorphology",
+	"feOffset", "fePointLight", "feSpecularLighting", "feSpotLight", "feTile", "feTurbulence",
+
+	// Pattern/Mask elements (can reference external resources)
+	"pattern", "mask", "clipPath",
+
+	// Style injection vector
+	"style",
+
+	// Metadata (can contain arbitrary XML)
+	"metadata",
+
+	// Other potentially dangerous elements
+	"use", // Can reference external SVG fragments
 }
 
 // Security: Dangerous SVG attributes that must be removed
 var dangerousSVGAttributes = []string{
+	// Event handlers
 	"onload", "onerror", "onclick", "onmouseover", "onmouseout",
 	"onmousedown", "onmouseup", "onmousemove", "onkeydown",
 	"onkeyup", "onkeypress", "onfocus", "onblur", "onchange",
-	"onsubmit", "onreset", "onselect", "onabort", "href", "xlink:href",
+	"onsubmit", "onreset", "onselect", "onabort",
+	"onbegin", "onend", "onrepeat", // SVG-specific animation events
+
+	// External resource references
+	"href", "xlink:href",
+
+	// Animation-related attributes (defense in depth)
+	"attributeName", "values", "from", "to", "by",
+	"dur", "repeatCount", "repeatDur", "keytimes", "keyTimes",
 }
 
 // Helper function to get minimum of two integers
@@ -356,9 +398,98 @@ func validateFileContent(content []byte, declaredType string) bool {
 	return bytes.HasPrefix(content, magic)
 }
 
+// stripImageMetadata removes all metadata from images by re-encoding them
+// This prevents XSS attacks via EXIF (JPEG), tEXt chunks (PNG), or comment blocks (GIF)
+func stripImageMetadata(content []byte, mimeType string) ([]byte, error) {
+	var img image.Image
+	var err error
+
+	// Decode image based on type
+	reader := bytes.NewReader(content)
+	switch mimeType {
+	case "image/jpeg", "image/jpg":
+		img, err = jpeg.Decode(reader)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode JPEG: %v", err)
+		}
+
+		// Re-encode as JPEG without metadata
+		buf := new(bytes.Buffer)
+		opts := &jpeg.Options{Quality: 95}
+		if err := jpeg.Encode(buf, img, opts); err != nil {
+			return nil, fmt.Errorf("failed to encode JPEG: %v", err)
+		}
+		return buf.Bytes(), nil
+
+	case "image/png":
+		img, err = png.Decode(reader)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode PNG: %v", err)
+		}
+
+		// Re-encode as PNG without metadata (tEXt/zTXt/iTXt chunks removed)
+		buf := new(bytes.Buffer)
+		encoder := &png.Encoder{CompressionLevel: png.DefaultCompression}
+		if err := encoder.Encode(buf, img); err != nil {
+			return nil, fmt.Errorf("failed to encode PNG: %v", err)
+		}
+		return buf.Bytes(), nil
+
+	case "image/gif":
+		img, err = gif.Decode(reader)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode GIF: %v", err)
+		}
+
+		// Re-encode as GIF without metadata (comment blocks removed)
+		buf := new(bytes.Buffer)
+		opts := &gif.Options{}
+		if err := gif.Encode(buf, img, opts); err != nil {
+			return nil, fmt.Errorf("failed to encode GIF: %v", err)
+		}
+		return buf.Bytes(), nil
+
+	default:
+		return nil, fmt.Errorf("unsupported image type for metadata stripping: %s", mimeType)
+	}
+}
+
 // sanitizeSVG removes dangerous elements and attributes from SVG content
 func sanitizeSVG(content []byte) ([]byte, error) {
 	contentStr := string(content)
+
+	// Security Layer 1: Remove DOCTYPE declarations to prevent XXE attacks
+	// Removes:
+	// <!DOCTYPE svg [...]>
+	// <!DOCTYPE svg SYSTEM "...">
+	// <!DOCTYPE svg PUBLIC "..." "...">
+	doctypePattern := regexp.MustCompile(`(?is)<!DOCTYPE[^>]*(\[.*?\])?\s*>`)
+	contentStr = doctypePattern.ReplaceAllString(contentStr, "")
+
+	// Also remove any remaining ENTITY declarations that might have escaped
+	entityPattern := regexp.MustCompile(`(?is)<!ENTITY[^>]*>`)
+	contentStr = entityPattern.ReplaceAllString(contentStr, "")
+
+	// Remove custom entity references that could exploit XXE (e.g., &xxe;, &file;)
+	// We'll remove all entity references and then restore the standard XML ones
+	allEntitiesPattern := regexp.MustCompile(`&[a-zA-Z_][a-zA-Z0-9_.-]*;`)
+	contentStr = allEntitiesPattern.ReplaceAllStringFunc(contentStr, func(entity string) string {
+		// Allow only standard XML/HTML entities
+		allowedEntities := map[string]bool{
+			"&lt;":   true,
+			"&gt;":   true,
+			"&amp;":  true,
+			"&quot;": true,
+			"&apos;": true,
+		}
+		if allowedEntities[entity] {
+			return entity
+		}
+		return "" // Remove custom entities
+	})
+
+	// Also remove numeric character references are generally safe but let's preserve them
+	// Pattern: &#1234; or &#xABCD;
 
 	// Remove dangerous elements
 	for _, element := range dangerousSVGElements {
@@ -373,11 +504,20 @@ func sanitizeSVG(content []byte) ([]byte, error) {
 
 	// Remove dangerous attributes - improved regex patterns
 	for _, attr := range dangerousSVGAttributes {
-		// Handle href specially (remove javascript:, data:, vbscript: protocols)
+		// Handle href specially - COMPLETELY REMOVE all href and xlink:href attributes
+		// to prevent external resource loading (SSRF, privacy leaks)
 		if attr == "href" || attr == "xlink:href" {
-			// Match and remove dangerous protocols in href/xlink:href
-			dangerousProtocols := regexp.MustCompile(`(?i)\s*` + regexp.QuoteMeta(attr) + `\s*=\s*["']?(javascript|data|vbscript):[^"'\s>]*["'\s>]?`)
-			contentStr = dangerousProtocols.ReplaceAllString(contentStr, "")
+			// Remove href/xlink:href attributes with double quotes
+			attrPattern := regexp.MustCompile(`(?i)\s+` + regexp.QuoteMeta(attr) + `\s*=\s*"[^"]*"`)
+			contentStr = attrPattern.ReplaceAllString(contentStr, "")
+
+			// Remove href/xlink:href attributes with single quotes
+			attrPattern2 := regexp.MustCompile(`(?i)\s+` + regexp.QuoteMeta(attr) + `\s*=\s*'[^']*'`)
+			contentStr = attrPattern2.ReplaceAllString(contentStr, "")
+
+			// Remove href/xlink:href attributes without quotes
+			attrPattern3 := regexp.MustCompile(`(?i)\s+` + regexp.QuoteMeta(attr) + `\s*=\s*[^\s>]+`)
+			contentStr = attrPattern3.ReplaceAllString(contentStr, "")
 			continue
 		}
 
@@ -424,8 +564,18 @@ func UploadMedia(c *gin.Context) {
 		return
 	}
 
-	// Check content type
+	// Security Layer 0: Explicitly reject SVG files with friendly error message
 	contentType := header.Header.Get("Content-Type")
+	fileExt := strings.ToLower(filepath.Ext(header.Filename))
+
+	if contentType == "image/svg+xml" || fileExt == ".svg" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "SVG 文件由于安全原因不允许上传。请使用 PNG、JPEG、WebP 或 GIF 格式代替。",
+		})
+		return
+	}
+
+	// Check content type
 	var mediaType models.MediaType
 	var subDir string
 
@@ -461,15 +611,31 @@ func UploadMedia(c *gin.Context) {
 	// Validate file extension with whitelist
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	allowedExtensions := map[string]bool{
-		".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true, ".svg": true,
-		".mp4": true, ".webm": true, ".ogg": true, ".avi": true, ".mov": true,
+		".jpg": true, ".jpeg": true, ".png": true, ".gif": true,
+		// ".webp": 已禁止
+		// ".svg": 已禁止 (安全原因)
+		".mp4": true, ".avi": true, ".mov": true,
+		// ".webm": 已禁止
+		// ".ogg": 已禁止
 	}
 	if !allowedExtensions[ext] {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "File extension not allowed"})
 		return
 	}
 
-	// Security Layer 4: Sanitize SVG content if it's an SVG file
+	// Security Layer 4: Strip metadata from images to prevent XSS via EXIF/tEXt/Comment blocks
+	if mediaType == models.MediaTypeImage && contentType != "image/svg+xml" {
+		cleanContent, err := stripImageMetadata(fileContent, contentType)
+		if err != nil {
+			fmt.Printf("Warning: Failed to strip metadata from %s: %v (uploading original)\n", header.Filename, err)
+			// Continue with original content if stripping fails (graceful degradation)
+		} else {
+			fileContent = cleanContent
+			fmt.Printf("Metadata stripped from image: %s (JPEG EXIF/PNG tEXt/GIF Comment removed)\n", header.Filename)
+		}
+	}
+
+	// Security Layer 5: Sanitize SVG content if it's an SVG file
 	isSVG := contentType == "image/svg+xml"
 	if isSVG {
 		sanitized, err := sanitizeSVG(fileContent)
@@ -720,20 +886,31 @@ func ServeMedia(c *gin.Context) {
 		return
 	}
 
-	// Security Layer 5: Set security response headers
-	// Prevent MIME type sniffing
+	// Security Layer 6: Set strict security response headers for all media files
+	ext := strings.ToLower(filepath.Ext(fileName))
+
+	// Prevent MIME type sniffing (critical for preventing MIME confusion attacks)
 	c.Header("X-Content-Type-Options", "nosniff")
+
 	// Prevent clickjacking
 	c.Header("X-Frame-Options", "DENY")
 
-	// Special handling for SVG files
-	ext := strings.ToLower(filepath.Ext(fileName))
-	if ext == ".svg" {
-		// Strict CSP for SVG files to prevent script execution
-		c.Header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:")
-		c.Header("Content-Type", "image/svg+xml")
-		// Force browser to treat as attachment (optional: could use 'inline' if you want to display)
-		c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", fileName))
+	// Apply strict CSP to ALL media files to prevent any potential script execution
+	// This protects against metadata-based XSS attacks in JPEG EXIF, PNG tEXt, MP4 metadata, etc.
+	if subDir == "images" {
+		if ext == ".svg" {
+			// Extra strict CSP for SVG files
+			c.Header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; script-src 'none'")
+			c.Header("Content-Type", "image/svg+xml")
+			c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", fileName))
+		} else {
+			// Strict CSP for all other images (JPEG, PNG, GIF)
+			// Even though metadata is stripped, defense in depth
+			c.Header("Content-Security-Policy", "default-src 'none'; img-src 'self'; script-src 'none'; style-src 'none'")
+		}
+	} else if subDir == "videos" {
+		// Strict CSP for video files to prevent script execution from metadata
+		c.Header("Content-Security-Policy", "default-src 'none'; media-src 'self'; script-src 'none'; style-src 'none'")
 	}
 
 	c.File(filePath)

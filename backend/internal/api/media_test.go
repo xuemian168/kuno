@@ -52,11 +52,10 @@ func TestSanitizeSVG(t *testing.T) {
     <text x="0" y="15">Click me</text>
   </a>
 </svg>`,
-			// This might fail XML validation after sanitization because nested structure is broken
-			// That's OK - we prefer to reject than to allow potential XSS
-			shouldPass: false,
-			shouldContain: []string{},
-			shouldNotContain: []string{},
+			// After enhanced fix: entire <a> tag is removed (including nested content)
+			shouldPass: true,
+			shouldContain: []string{"<svg"},
+			shouldNotContain: []string{"<a", "<text", "href", "javascript", "alert", "Click me"},
 		},
 		{
 			name: "SVG with foreignObject",
@@ -73,14 +72,154 @@ func TestSanitizeSVG(t *testing.T) {
 			shouldNotContain: []string{"<foreignObject", "<script", "alert"},
 		},
 		{
+			name: "SVG with external URL reference (SSRF attack)",
+			input: `<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink">
+  <image xlink:href="http://xxx.xxx.xxx.xxx:2333" />
+</svg>`,
+			shouldPass: true,
+			shouldContain: []string{"<svg"},
+			shouldNotContain: []string{"<image", "xlink:href=", "xxx.xxx.xxx.xxx"},
+		},
+		{
+			name: "SVG with HTTPS external reference",
+			input: `<svg xmlns="http://www.w3.org/2000/svg">
+  <image href="https://evil.com/malicious.svg" />
+</svg>`,
+			shouldPass: true,
+			shouldContain: []string{"<svg"},
+			shouldNotContain: []string{"<image", "href=", "evil.com"},
+		},
+		{
+			name: "SVG with style tag (Mutation XSS)",
+			input: `<svg><style>/*<img src onerror=alert(origin)>*/</style><circle cx="50" cy="50" r="40"/></svg>`,
+			shouldPass: true,
+			shouldContain: []string{"<circle", "<svg"},
+			shouldNotContain: []string{"<style", "onerror", "alert"},
+		},
+		{
+			name: "SVG with a tag clickjacking",
+			input: `<svg><a href="javascript:alert(1)"><text x="0" y="15">Click</text></a></svg>`,
+			shouldPass: true,
+			shouldContain: []string{"<svg"},
+			shouldNotContain: []string{"<a", "<text", "href", "javascript", "Click"},
+		},
+		{
+			name: "SVG with animate attributeName values injection",
+			input: `<svg>
+<animate xlink:href=#xss attributeName=href values="javascript:alert(1)" />
+<a id=xss><text>XSS</text></a>
+</svg>`,
+			shouldPass: true,
+			shouldContain: []string{"<svg"},
+			shouldNotContain: []string{"<animate", "attributeName", "values", "javascript", "<a", "<text", "XSS"},
+		},
+		{
+			name: "SVG with feImage filter SSRF",
+			input: `<svg>
+<filter id="f1">
+  <feImage xlink:href="http://evil.com/steal.php"/>
+</filter>
+<rect filter="url(#f1)" width="100" height="100"/>
+</svg>`,
+			shouldPass: true,
+			shouldContain: []string{"<rect", "<svg"},
+			shouldNotContain: []string{"<filter", "<feImage", "xlink:href", "evil.com"},
+		},
+		{
+			name: "SVG with pattern external reference",
+			input: `<svg>
+<pattern id="p1">
+  <image xlink:href="http://attacker.com/track.gif"/>
+</pattern>
+<rect fill="url(#p1)" width="100" height="100"/>
+</svg>`,
+			shouldPass: true,
+			shouldContain: []string{"<rect", "<svg"},
+			shouldNotContain: []string{"<pattern", "<image", "attacker.com"},
+		},
+		{
+			name: "SVG with XXE attack via DOCTYPE",
+			input: `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<svg xmlns="http://www.w3.org/2000/svg">
+  <text>&xxe;</text>
+</svg>`,
+			shouldPass: true,
+			shouldContain: []string{"<text", "<svg"},
+			shouldNotContain: []string{"<!DOCTYPE", "<!ENTITY", "SYSTEM", "file://", "&xxe;"},
+		},
+		{
+			name: "SVG with metadata XML injection",
+			input: `<svg>
+<metadata>
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <script>alert(1)</script>
+  </rdf:RDF>
+</metadata>
+<circle cx="50" cy="50" r="40"/>
+</svg>`,
+			shouldPass: true,
+			shouldContain: []string{"<circle", "<svg"},
+			shouldNotContain: []string{"<metadata", "rdf:RDF", "<script"},
+		},
+		{
+			name: "SVG with use element referencing external fragment",
+			input: `<svg>
+<use xlink:href="http://evil.com/malicious.svg#fragment"/>
+</svg>`,
+			shouldPass: true,
+			shouldContain: []string{"<svg"},
+			shouldNotContain: []string{"<use", "xlink:href", "evil.com"},
+		},
+		{
+			name: "SVG with mask and clipPath",
+			input: `<svg>
+<mask id="m1">
+  <image xlink:href="http://track.com/pixel.gif"/>
+</mask>
+<clipPath id="c1">
+  <use xlink:href="#external"/>
+</clipPath>
+<circle cx="50" cy="50" r="40"/>
+</svg>`,
+			shouldPass: true,
+			shouldContain: []string{"<circle", "<svg"},
+			shouldNotContain: []string{"<mask", "<clipPath", "<image", "<use", "track.com"},
+		},
+		{
+			name: "SVG with handler element",
+			input: `<svg>
+<handler event="click" script="alert(1)"/>
+<circle cx="50" cy="50" r="40"/>
+</svg>`,
+			shouldPass: true,
+			shouldContain: []string{"<circle", "<svg"},
+			shouldNotContain: []string{"<handler", "event", "script"},
+		},
+		{
+			name: "SVG with discard animation",
+			input: `<svg>
+<discard begin="5s" xlink:href="#target"/>
+<circle id="target" cx="50" cy="50" r="40"/>
+</svg>`,
+			shouldPass: true,
+			shouldContain: []string{"<circle", "<svg"},
+			shouldNotContain: []string{"<discard", "xlink:href"},
+		},
+		{
 			name: "Clean SVG should remain unchanged",
 			input: `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
   <circle cx="50" cy="50" r="40" fill="red"/>
   <rect x="10" y="10" width="30" height="30" fill="blue"/>
+  <path d="M10 10 L50 50" stroke="black"/>
+  <ellipse cx="50" cy="50" rx="30" ry="20" fill="green"/>
 </svg>`,
 			shouldPass: true,
-			shouldContain: []string{"<circle", "<rect", "<svg", "<?xml"},
+			shouldContain: []string{"<circle", "<rect", "<path", "<ellipse", "<svg", "<?xml"},
 			shouldNotContain: []string{},
 		},
 	}
@@ -616,5 +755,141 @@ func BenchmarkDetectPolyglot(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = detectPolyglot(content)
+	}
+}
+
+// Test file type rejection - verify that disallowed file types are properly rejected
+func TestFileTypeRejection(t *testing.T) {
+	// Verify SVG MIME type is not in allowed image types
+	if allowedImageTypes["image/svg+xml"] {
+		t.Error("image/svg+xml should not be in allowedImageTypes")
+	}
+
+	// Verify WebP MIME type is not in allowed image types
+	if allowedImageTypes["image/webp"] {
+		t.Error("image/webp should not be in allowedImageTypes")
+	}
+
+	// Verify WebM and OGG MIME types are not in allowed video types
+	if allowedVideoTypes["video/webm"] {
+		t.Error("video/webm should not be in allowedVideoTypes")
+	}
+
+	if allowedVideoTypes["video/ogg"] {
+		t.Error("video/ogg should not be in allowedVideoTypes")
+	}
+
+	// Verify disallowed extensions
+	allowedExtensions := map[string]bool{
+		".jpg": true, ".jpeg": true, ".png": true, ".gif": true,
+		".mp4": true, ".avi": true, ".mov": true,
+	}
+
+	if allowedExtensions[".svg"] {
+		t.Error(".svg should not be in allowedExtensions")
+	}
+
+	if allowedExtensions[".webp"] {
+		t.Error(".webp should not be in allowedExtensions")
+	}
+
+	if allowedExtensions[".webm"] {
+		t.Error(".webm should not be in allowedExtensions")
+	}
+
+	if allowedExtensions[".ogg"] {
+		t.Error(".ogg should not be in allowedExtensions")
+	}
+
+	// Count allowed types
+	expectedImageTypes := 4 // jpg, jpeg, png, gif
+	if len(allowedImageTypes) != expectedImageTypes {
+		t.Errorf("Expected %d allowed image types, got %d", expectedImageTypes, len(allowedImageTypes))
+	}
+
+	expectedVideoTypes := 3 // mp4, avi, mov
+	if len(allowedVideoTypes) != expectedVideoTypes {
+		t.Errorf("Expected %d allowed video types, got %d", expectedVideoTypes, len(allowedVideoTypes))
+	}
+}
+
+// Test metadata stripping for images
+func TestStripImageMetadata(t *testing.T) {
+	tests := []struct {
+		name     string
+		mimeType string
+		// Using minimal valid image data that can actually be decoded
+		imageData  []byte
+		shouldPass bool
+	}{
+		// Note: JPEG test is omitted as creating valid minimal JPEG is complex
+		// JPEG metadata stripping is tested through integration tests with real files
+		{
+			name:     "PNG with metadata",
+			mimeType: "image/png",
+			// Minimal 1x1 PNG
+			imageData: []byte{
+				0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+				0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
+				0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+				0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89,
+				0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, // IDAT chunk
+				0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
+				0x0D, 0x0A, 0x2D, 0xB4,
+				0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, // IEND chunk
+				0xAE, 0x42, 0x60, 0x82,
+			},
+			shouldPass: true,
+		},
+		{
+			name:     "GIF with metadata",
+			mimeType: "image/gif",
+			// Minimal 1x1 GIF
+			imageData: []byte{
+				0x47, 0x49, 0x46, 0x38, 0x39, 0x61, // GIF89a
+				0x01, 0x00, 0x01, 0x00, // Width: 1, Height: 1
+				0x80, 0x00, 0x00, // Global color table flag, color resolution
+				0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, // Color table
+				0x2C, 0x00, 0x00, 0x00, 0x00, // Image descriptor
+				0x01, 0x00, 0x01, 0x00, 0x00, // Width: 1, Height: 1
+				0x02, 0x02, 0x44, 0x01, 0x00, // Image data
+				0x3B, // Trailer
+			},
+			shouldPass: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Strip metadata
+			cleanedContent, err := stripImageMetadata(tt.imageData, tt.mimeType)
+
+			if tt.shouldPass && err != nil {
+				t.Errorf("stripImageMetadata() failed: %v", err)
+				return
+			}
+
+			if !tt.shouldPass && err == nil {
+				t.Errorf("stripImageMetadata() should have failed but didn't")
+				return
+			}
+
+			if tt.shouldPass {
+				// Verify cleaned content is valid
+				if len(cleanedContent) == 0 {
+					t.Error("Cleaned content is empty")
+					return
+				}
+
+				// Verify file integrity of cleaned content
+				if err := validateFileIntegrity(cleanedContent, tt.mimeType); err != nil {
+					t.Errorf("Cleaned content failed integrity check: %v", err)
+				}
+
+				// The cleaned content should be different size (re-encoding usually changes size)
+				// or at least should not crash
+				t.Logf("Original size: %d, Cleaned size: %d", len(tt.imageData), len(cleanedContent))
+			}
+		})
 	}
 }

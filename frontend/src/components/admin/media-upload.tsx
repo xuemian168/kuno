@@ -36,11 +36,11 @@ export default function MediaUpload({
   const getAcceptString = () => {
     switch (acceptedTypes) {
       case 'image':
-        return 'image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml'
+        return 'image/jpeg,image/jpg,image/png,image/gif'
       case 'video':
-        return 'video/mp4,video/webm,video/ogg,video/avi,video/mov'
+        return 'video/mp4,video/avi,video/mov'
       default:
-        return 'image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,video/mp4,video/webm,video/ogg,video/avi,video/mov'
+        return 'image/jpeg,image/jpg,image/png,image/gif,video/mp4,video/avi,video/mov'
     }
   }
 
@@ -276,14 +276,6 @@ export default function MediaUpload({
                   onChange={(e) => setAlt(e.target.value)}
                 />
               </div>
-            )}
-
-            {selectedFile.type === 'image/svg+xml' && (
-              <Alert>
-                <AlertDescription className="text-sm">
-                  ⚠️ SVG files will be automatically sanitized to remove any scripts for security. Only safe SVG graphics elements will be preserved.
-                </AlertDescription>
-              </Alert>
             )}
 
             {uploading && (
