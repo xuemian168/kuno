@@ -249,7 +249,14 @@
     "pasteImageTip": "Tip: 您也可以直接粘贴剪贴板中的图片 (Ctrl+V / Cmd+V)",
     "imageUploaded": "图片上传成功",
     "uploadFailed": "图片上传失败",
-    "fileSizeExceeds": "文件大小超过 {maxSize}MB 限制"
+    "fileSizeExceeds": "文件大小超过 {maxSize}MB 限制",
+    "videoDuplicateError": "此视频已存在于媒体库中",
+    "deleteVideoTitle": "删除在线视频",
+    "deleteVideoDescription": "此操作将从媒体库中删除该视频,此操作无法撤销。",
+    "deleteVideoConfirmText": "删除",
+    "deleteMediaTitle": "删除媒体文件",
+    "deleteMediaDescription": "此操作将从媒体库中永久删除该文件,此操作无法撤销。",
+    "deleteMediaConfirmText": "删除"
   },
   "common": {
     "save": "保存",

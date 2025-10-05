@@ -249,7 +249,14 @@
     "pasteImageTip": "Tip: You can also paste images directly from clipboard (Ctrl+V / Cmd+V)",
     "imageUploaded": "Image uploaded successfully",
     "uploadFailed": "Failed to upload image",
-    "fileSizeExceeds": "File size exceeds {maxSize}MB limit"
+    "fileSizeExceeds": "File size exceeds {maxSize}MB limit",
+    "videoDuplicateError": "This video already exists in the media library",
+    "deleteVideoTitle": "Delete Online Video",
+    "deleteVideoDescription": "This will remove the video from your media library. This action cannot be undone.",
+    "deleteVideoConfirmText": "delete",
+    "deleteMediaTitle": "Delete Media File",
+    "deleteMediaDescription": "This will permanently remove the file from your media library. This action cannot be undone.",
+    "deleteMediaConfirmText": "delete"
   },
   "common": {
     "save": "Save",

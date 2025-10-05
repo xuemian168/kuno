@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog'
 import MediaUpload from '@/components/admin/media-upload'
 import VideoAdd from '@/components/admin/video-add'
 import { apiClient, MediaLibrary } from '@/lib/api'
@@ -20,7 +21,8 @@ import { getMediaUrl } from '@/lib/url-utils'
 import { useTranslations } from 'next-intl'
 
 interface OnlineVideo {
-  id: string
+  uuid: string       // Unique identifier for each video entry
+  id: string         // Platform video ID (YouTube videoId or Bilibili BV/av)
   url: string
   title: string
   thumbnail: string
@@ -54,7 +56,19 @@ export default function MediaPage({ params }: MediaPageProps) {
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
   const [selectedMediaIds, setSelectedMediaIds] = useState<Set<number>>(new Set())
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false)
-  
+
+  // Delete video dialog state
+  const [deleteVideoDialog, setDeleteVideoDialog] = useState<{
+    open: boolean
+    videoToDelete: OnlineVideo | null
+  }>({ open: false, videoToDelete: null })
+
+  // Delete media dialog state
+  const [deleteMediaDialog, setDeleteMediaDialog] = useState<{
+    open: boolean
+    mediaToDelete: MediaLibrary | null
+  }>({ open: false, mediaToDelete: null })
+
   // Tab state for automatic switching on paste
   const [activeTab, setActiveTab] = useState('upload')
 
@@ -68,11 +82,19 @@ export default function MediaPage({ params }: MediaPageProps) {
     fetchMedia()
   }, [selectedType])
 
-  // Load online videos on component mount
+  // Load online videos on component mount with UUID migration
   useEffect(() => {
     const savedOnlineVideos = localStorage.getItem('online-videos')
     if (savedOnlineVideos) {
-      setOnlineVideos(JSON.parse(savedOnlineVideos))
+      const videos = JSON.parse(savedOnlineVideos)
+      // Migrate old data: add uuid if missing
+      const videosWithUuid = videos.map((v: OnlineVideo) => ({
+        ...v,
+        uuid: v.uuid || crypto.randomUUID()
+      }))
+      setOnlineVideos(videosWithUuid)
+      // Update localStorage with migrated data
+      localStorage.setItem('online-videos', JSON.stringify(videosWithUuid))
     }
   }, [])
 
@@ -105,10 +127,18 @@ export default function MediaPage({ params }: MediaPageProps) {
         )
         setMedia(response.media || [])
       }
-      // Load online videos from localStorage
+      // Load online videos from localStorage with UUID migration
       const savedOnlineVideos = localStorage.getItem('online-videos')
       if (savedOnlineVideos) {
-        setOnlineVideos(JSON.parse(savedOnlineVideos))
+        const videos = JSON.parse(savedOnlineVideos)
+        // Migrate old data: add uuid if missing
+        const videosWithUuid = videos.map((v: OnlineVideo) => ({
+          ...v,
+          uuid: v.uuid || crypto.randomUUID()
+        }))
+        setOnlineVideos(videosWithUuid)
+        // Update localStorage with migrated data
+        localStorage.setItem('online-videos', JSON.stringify(videosWithUuid))
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('media.failedToFetchMedia'))
@@ -122,22 +152,46 @@ export default function MediaPage({ params }: MediaPageProps) {
   }
 
   const handleVideoAdd = (video: OnlineVideo) => {
+    // Check for duplicate URL
+    const isDuplicate = onlineVideos.some(v => v.url === video.url)
+    if (isDuplicate) {
+      setError(t('media.videoDuplicateError'))
+      setTimeout(() => setError(''), 5000) // Clear error after 5 seconds
+      return
+    }
+
     // If it's a Bilibili video and doesn't have a proper thumbnail, generate one
     if (video.platform === 'bilibili' && video.thumbnail.includes('placeholder')) {
       video.thumbnail = generateBilibiliThumbnail(video.id)
     }
-    
+
     const updatedVideos = [video, ...onlineVideos]
     setOnlineVideos(updatedVideos)
     localStorage.setItem('online-videos', JSON.stringify(updatedVideos))
+
+    // Clear any previous errors
+    setError('')
   }
 
-  const handleDeleteOnlineVideo = (videoUrl: string) => {
-    if (!confirm(t('media.confirmDeleteVideo'))) return
-    
-    const updatedVideos = onlineVideos.filter(v => v.url !== videoUrl)
+  const handleDeleteOnlineVideo = (videoUuid: string) => {
+    const video = onlineVideos.find(v => v.uuid === videoUuid)
+    if (!video) return
+
+    setDeleteVideoDialog({
+      open: true,
+      videoToDelete: video
+    })
+  }
+
+  const handleConfirmDeleteVideo = () => {
+    if (!deleteVideoDialog.videoToDelete) return
+
+    const updatedVideos = onlineVideos.filter(v => v.uuid !== deleteVideoDialog.videoToDelete!.uuid)
     setOnlineVideos(updatedVideos)
     localStorage.setItem('online-videos', JSON.stringify(updatedVideos))
+
+    // Close dialog and reset state
+    setDeleteVideoDialog({ open: false, videoToDelete: null })
   }
 
   const handlePlayVideo = (video: OnlineVideo) => {
@@ -156,8 +210,8 @@ export default function MediaPage({ params }: MediaPageProps) {
   const handleSaveVideoEdit = () => {
     if (!editingVideo) return
 
-    const updatedVideos = onlineVideos.map(v => 
-      v.url === editingVideo.url 
+    const updatedVideos = onlineVideos.map(v =>
+      v.uuid === editingVideo.uuid
         ? { ...v, title: editingVideoTitle.trim() || v.title }
         : v
     )
@@ -227,13 +281,27 @@ export default function MediaPage({ params }: MediaPageProps) {
   }
 
   const handleDeleteMedia = async (id: number) => {
-    if (!confirm(t('media.confirmDeleteMedia'))) return
+    const mediaItem = media.find(m => m.id === id)
+    if (!mediaItem) return
+
+    setDeleteMediaDialog({
+      open: true,
+      mediaToDelete: mediaItem
+    })
+  }
+
+  const handleConfirmDeleteMedia = async () => {
+    if (!deleteMediaDialog.mediaToDelete) return
 
     try {
-      await apiClient.deleteMedia(id)
-      setMedia(prev => (prev || []).filter(m => m.id !== id))
+      await apiClient.deleteMedia(deleteMediaDialog.mediaToDelete.id)
+      setMedia(prev => (prev || []).filter(m => m.id !== deleteMediaDialog.mediaToDelete!.id))
+
+      // Close dialog and reset state
+      setDeleteMediaDialog({ open: false, mediaToDelete: null })
     } catch (err) {
       setError(err instanceof Error ? err.message : t('media.failedToDeleteMedia'))
+      // Keep dialog open on error
     }
   }
 
@@ -725,16 +793,16 @@ export default function MediaPage({ params }: MediaPageProps) {
           {/* Online Videos */}
           {(selectedType === 'online' || selectedType === 'all') && filteredOnlineVideos.map((video, index) => (
             <motion.div
-              key={`${video.platform}-${video.id}-${video.url}`}
+              key={video.uuid}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
             >
-              <Card 
+              <Card
                 className="group hover:shadow-lg transition-shadow cursor-pointer"
                 onContextMenu={(e) => {
                   e.preventDefault()
-                  setContextMenuOpen(video.url)
+                  setContextMenuOpen(video.uuid)
                 }}
                 onDoubleClick={() => handlePlayVideo(video)}
               >
@@ -760,8 +828,8 @@ export default function MediaPage({ params }: MediaPageProps) {
                     <h3 className="font-medium truncate text-sm">
                       {video.title}
                     </h3>
-                    <DropdownMenu 
-                      open={contextMenuOpen === video.url}
+                    <DropdownMenu
+                      open={contextMenuOpen === video.uuid}
                       onOpenChange={(open) => {
                         if (!open) setContextMenuOpen(null)
                       }}
@@ -773,7 +841,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           className="ml-2 h-6 w-6 p-0"
                           onClick={(e) => {
                             e.stopPropagation()
-                            setContextMenuOpen(contextMenuOpen === video.url ? null : video.url)
+                            setContextMenuOpen(contextMenuOpen === video.uuid ? null : video.uuid)
                           }}
                         >
                           <MoreVertical className="h-3 w-3" />
@@ -819,7 +887,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           onClick={(e) => {
                             e.stopPropagation()
                             setContextMenuOpen(null)
-                            handleDeleteOnlineVideo(video.url)
+                            handleDeleteOnlineVideo(video.uuid)
                           }}
                           className="cursor-pointer text-destructive focus:text-destructive"
                         >
@@ -951,6 +1019,30 @@ export default function MediaPage({ params }: MediaPageProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Video Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteVideoDialog.open}
+        onOpenChange={(open) => setDeleteVideoDialog({ open, videoToDelete: null })}
+        onConfirm={handleConfirmDeleteVideo}
+        title={t('media.deleteVideoTitle')}
+        description={t('media.deleteVideoDescription')}
+        itemName={deleteVideoDialog.videoToDelete?.title}
+        confirmText={t('media.deleteVideoConfirmText')}
+        locale={locale}
+      />
+
+      {/* Delete Media Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteMediaDialog.open}
+        onOpenChange={(open) => setDeleteMediaDialog({ open, mediaToDelete: null })}
+        onConfirm={handleConfirmDeleteMedia}
+        title={t('media.deleteMediaTitle')}
+        description={t('media.deleteMediaDescription')}
+        itemName={deleteMediaDialog.mediaToDelete?.original_name}
+        confirmText={t('media.deleteMediaConfirmText')}
+        locale={locale}
+      />
     </div>
   )
 }

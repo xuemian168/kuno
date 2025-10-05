@@ -14,7 +14,8 @@ import BiliBiliEmbed from '@/components/bilibili-embed'
 import { generateBilibiliThumbnail, getBiliBiliVideoInfo } from '@/lib/bilibili-utils'
 
 interface OnlineVideo {
-  id: string
+  uuid: string       // Unique identifier for each video entry
+  id: string         // Platform video ID (YouTube videoId or Bilibili BV/av)
   url: string
   title: string
   thumbnail: string
@@ -172,6 +173,7 @@ export default function VideoAdd({ onVideoAdd }: VideoAddProps) {
     }
 
     const video: OnlineVideo = {
+      uuid: '',  // Will be generated when adding
       id: videoId,
       url: url.trim(),
       title: videoTitle || `${detectedPlatform === 'youtube' ? 'YouTube' : 'Bilibili'} Video`,
@@ -187,7 +189,13 @@ export default function VideoAdd({ onVideoAdd }: VideoAddProps) {
   const handleAdd = () => {
     if (!preview) return
 
-    onVideoAdd?.(preview)
+    // Generate unique UUID for the video entry
+    const videoWithUuid: OnlineVideo = {
+      ...preview,
+      uuid: crypto.randomUUID()
+    }
+
+    onVideoAdd?.(videoWithUuid)
     
     // Reset form
     setUrl('')

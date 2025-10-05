@@ -230,7 +230,14 @@
     "pasteImageTip": "Tip: クリップボードから画像を直接貼り付けることもできます (Ctrl+V / Cmd+V)",
     "imageUploaded": "画像のアップロードが完了しました",
     "uploadFailed": "画像のアップロードに失敗しました",
-    "fileSizeExceeds": "ファイルサイズが {maxSize}MB の制限を超えています"
+    "fileSizeExceeds": "ファイルサイズが {maxSize}MB の制限を超えています",
+    "videoDuplicateError": "この動画はすでにメディアライブラリに存在します",
+    "deleteVideoTitle": "オンライン動画を削除",
+    "deleteVideoDescription": "この操作によりメディアライブラリから動画が削除されます。この操作は元に戻せません。",
+    "deleteVideoConfirmText": "削除",
+    "deleteMediaTitle": "メディアファイルを削除",
+    "deleteMediaDescription": "この操作によりメディアライブラリからファイルが完全に削除されます。この操作は元に戻せません。",
+    "deleteMediaConfirmText": "削除"
   },
   "common": {
     "save": "保存",
