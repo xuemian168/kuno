@@ -301,17 +301,17 @@ export function ArticleSEOForm({
         <div className="space-y-2">
           <Label htmlFor="focus-keyword" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
-            焦点关键词
+            {t('seo.focusKeyword')}
           </Label>
           <Input
             id="focus-keyword"
             value={focusKeyword}
             onChange={(e) => setFocusKeyword(e.target.value)}
-            placeholder="输入主要关键词..."
+            placeholder={t('seo.focusKeywordPlaceholder')}
             className="w-full"
           />
           <p className="text-xs text-muted-foreground">
-            设置焦点关键词以获得更准确的SEO分析和建议
+            {t('seo.focusKeywordDescription')}
           </p>
         </div>
 
@@ -328,7 +328,7 @@ export function ArticleSEOForm({
               ) : (
                 <Sparkles className="h-4 w-4" />
               )}
-              AI智能优化全部
+              {t('seo.aiSmartOptimizeAll')}
             </Button>
             <Button
               variant="outline"
@@ -337,7 +337,7 @@ export function ArticleSEOForm({
               className="gap-2"
             >
               <Zap className="h-4 w-4" />
-              生成标题
+              {t('seo.generateTitle')}
             </Button>
             <Button
               variant="outline"
@@ -346,7 +346,7 @@ export function ArticleSEOForm({
               className="gap-2"
             >
               <Zap className="h-4 w-4" />
-              生成描述
+              {t('seo.generateDescription')}
             </Button>
             <Button
               variant="outline"
@@ -355,7 +355,7 @@ export function ArticleSEOForm({
               className="gap-2"
             >
               <Zap className="h-4 w-4" />
-              提取关键词
+              {t('seo.extractKeywords')}
             </Button>
           </div>
         )}
@@ -363,9 +363,9 @@ export function ArticleSEOForm({
         {/* Tabs for different SEO sections */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="optimize">SEO优化</TabsTrigger>
-            <TabsTrigger value="analysis">分析报告</TabsTrigger>
-            <TabsTrigger value="preview">搜索预览</TabsTrigger>
+            <TabsTrigger value="optimize">{t('seo.seoOptimizationTab')}</TabsTrigger>
+            <TabsTrigger value="analysis">{t('seo.analysisReportTab')}</TabsTrigger>
+            <TabsTrigger value="preview">{t('seo.searchPreviewTab')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="optimize" className="space-y-6">
@@ -374,7 +374,7 @@ export function ArticleSEOForm({
               <Label htmlFor="seo-title" className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Globe className="h-4 w-4" />
-                  SEO标题
+                  {t('seo.seoTitleLabel')}
                 </div>
                 {analysisResult?.title_analysis && (
                   <Badge variant={getScoreBadgeVariant(analysisResult.title_analysis.score)}>
@@ -386,18 +386,18 @@ export function ArticleSEOForm({
                 id="seo-title"
                 value={currentSEO.seo_title}
                 onChange={(e) => handleSEOFieldChange('seo_title', e.target.value)}
-                placeholder="输入SEO标题..."
+                placeholder={t('seo.seoTitlePlaceholder')}
                 className="w-full"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>建议长度: 30-60字符</span>
+                <span>{t('seo.suggestedLength')}</span>
                 <span className={(currentSEO.seo_title?.length || 0) > 60 ? 'text-red-500' : ''}>
                   {currentSEO.seo_title?.length || 0}/60
                 </span>
               </div>
               {(analysisResult?.title_analysis?.issues?.length || 0) > 0 && (
                 <div className="text-sm text-amber-600">
-                  <span className="font-medium">建议：</span>
+                  <span className="font-medium">{t('seo.suggestions')}：</span>
                   {analysisResult?.title_analysis?.suggestions?.join('; ')}
                 </div>
               )}
@@ -408,7 +408,7 @@ export function ArticleSEOForm({
               <Label htmlFor="seo-description" className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Search className="h-4 w-4" />
-                  SEO描述
+                  {t('seo.seoDescriptionLabel')}
                 </div>
                 {analysisResult?.description_analysis && (
                   <Badge variant={getScoreBadgeVariant(analysisResult.description_analysis.score)}>
@@ -420,18 +420,18 @@ export function ArticleSEOForm({
                 id="seo-description"
                 value={currentSEO.seo_description}
                 onChange={(e) => handleSEOFieldChange('seo_description', e.target.value)}
-                placeholder="输入SEO描述..."
+                placeholder={t('seo.seoDescriptionPlaceholder')}
                 className="min-h-[100px] resize-none"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>建议长度: 120-160字符</span>
+                <span>{t('seo.suggestedDescriptionLength')}</span>
                 <span className={(currentSEO.seo_description?.length || 0) > 160 ? 'text-red-500' : ''}>
                   {currentSEO.seo_description?.length || 0}/160
                 </span>
               </div>
               {(analysisResult?.description_analysis?.issues?.length || 0) > 0 && (
                 <div className="text-sm text-amber-600">
-                  <span className="font-medium">建议：</span>
+                  <span className="font-medium">{t('seo.suggestions')}：</span>
                   {analysisResult?.description_analysis?.suggestions?.join('; ')}
                 </div>
               )}
@@ -441,17 +441,17 @@ export function ArticleSEOForm({
             <div className="space-y-2">
               <Label htmlFor="seo-keywords" className="flex items-center gap-2">
                 <Hash className="h-4 w-4" />
-                SEO关键词
+                {t('seo.seoKeywordsLabel')}
               </Label>
               <Input
                 id="seo-keywords"
                 value={currentSEO.seo_keywords}
                 onChange={(e) => handleSEOFieldChange('seo_keywords', e.target.value)}
-                placeholder="输入关键词，用逗号分隔..."
+                placeholder={t('seo.seoKeywordsPlaceholder')}
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground">
-                使用逗号分隔多个关键词，建议3-5个主要关键词
+                {t('seo.seoKeywordsDesc')}
               </p>
             </div>
 
@@ -459,14 +459,14 @@ export function ArticleSEOForm({
             <div className="space-y-2">
               <Label htmlFor="seo-slug" className="flex items-center gap-2">
                 <Link className="h-4 w-4" />
-                SEO URL别名
+                {t('seo.seoSlugLabel')}
               </Label>
               <div className="flex gap-2">
                 <Input
                   id="seo-slug"
                   value={currentSEO.seo_slug}
                   onChange={(e) => handleSEOFieldChange('seo_slug', e.target.value)}
-                  placeholder="url-friendly-slug"
+                  placeholder={t('seo.seoSlugPlaceholder')}
                   className="flex-1"
                 />
                 <Button
@@ -480,11 +480,11 @@ export function ArticleSEOForm({
                   }}
                   className="px-3"
                 >
-                  生成
+                  {t('seo.generateSlug')}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                用于搜索引擎友好的URL，只能包含字母、数字和连字符
+                {t('seo.seoSlugDescription')}
               </p>
             </div>
           </TabsContent>
