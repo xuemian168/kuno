@@ -18,7 +18,7 @@ COPY backend/ .
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o main cmd/server/main.go
 
 # Frontend build stage
-FROM node:18-alpine AS frontend-builder
+FROM node:20-alpine AS frontend-builder
 
 # Install frontend dependencies
 RUN apk add --no-cache libc6-compat git
