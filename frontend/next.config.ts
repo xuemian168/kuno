@@ -6,6 +6,8 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Disable Turbopack for production builds (Tailwind CSS v4 compatibility)
+  turbopack: false,
   // Disable source maps in production to reduce build time and size
   productionBrowserSourceMaps: false,
   // Optimize images
