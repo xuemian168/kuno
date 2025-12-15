@@ -36,8 +36,6 @@ COPY frontend/ .
 # Build arguments for environment variables
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 ENV NEXT_TELEMETRY_DISABLED=1
-# Disable Turbopack for Tailwind CSS v4 compatibility
-ENV TURBOPACK=0
 
 # Clean any existing build artifacts
 RUN rm -rf .next
