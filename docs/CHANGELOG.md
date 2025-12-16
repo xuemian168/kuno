@@ -5,6 +5,29 @@ All notable changes to KUNO Blog Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.18] - 2025-12-16
+
+### Fixed
+- **Localization support for ArticleSEOForm component** ([#9](https://github.com/xuemian168/EchoPaper/pull/9))
+  - Replaced hardcoded text with translation keys for SEO-related fields and descriptions
+  - Updated `en.json` and `zh.json` localization files with new translation keys
+  - Improved internationalization coverage for article SEO management interface
+  - Contributor: [@bchewy](https://github.com/bchewy)
+
+### Security
+- **Updated js-yaml to version 4.1.1**
+  - Upgraded from v4.1.0 to v4.1.1 to incorporate latest security patches and fixes
+  - Addresses potential YAML parsing vulnerabilities
+
+### Technical Details
+- Files modified:
+  - `frontend/src/components/admin/article-seo-form.tsx` (+50 lines refactored for i18n)
+  - `frontend/src/i18n/locales/en.json` (+18 new translation keys)
+  - `frontend/src/i18n/locales/zh.json` (+20 new translation keys)
+  - `frontend/package-lock.json` (js-yaml update)
+- Zero breaking changes - backward compatible
+- All builds pass with no ESLint errors
+
 ## [1.3.16] - 2025-10-05
 
 ### Security
