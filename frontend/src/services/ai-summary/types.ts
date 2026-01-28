@@ -24,6 +24,7 @@ export interface AISummaryConfig {
   provider: 'openai' | 'gemini' | 'volcano'
   apiKey?: string
   model?: string
+  baseUrl?: string  // Custom base URL for API endpoint
   maxKeywords?: number
   summaryLength?: 'short' | 'medium' | 'long'
 }

@@ -452,18 +452,18 @@ export async function initializeSEOAIService(config?: SEOConfig): Promise<void> 
   if (!config) return
 
   try {
-    const { provider, apiKey, model } = config
+    const { provider, apiKey, model, baseUrl } = config
 
     switch (provider) {
       case 'openai':
-        const openaiProvider = new OpenAISEOProvider(apiKey, model)
+        const openaiProvider = new OpenAISEOProvider(apiKey, model, baseUrl)
         seoAIService.registerProvider('openai', openaiProvider)
         seoAIService.setActiveProvider('openai')
         break
-      
+
       // Add other providers as needed
       // case 'gemini':
-      //   const geminiProvider = new GeminiSEOProvider(apiKey, model)
+      //   const geminiProvider = new GeminiSEOProvider(apiKey, model, baseUrl)
       //   seoAIService.registerProvider('gemini', geminiProvider)
       //   seoAIService.setActiveProvider('gemini')
       //   break

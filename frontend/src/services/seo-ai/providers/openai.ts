@@ -1,21 +1,32 @@
 import { BaseSEOAIProvider } from './base'
-import { 
-  SEOGenerationResult, 
-  KeywordResult, 
-  SEOContent, 
+import {
+  SEOGenerationResult,
+  KeywordResult,
+  SEOContent,
   SEOAnalysisResult,
   SEOTitleOptions,
   SEODescriptionOptions,
   KeywordOptions
 } from '../types'
+import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
 export class OpenAISEOProvider extends BaseSEOAIProvider {
   name = 'OpenAI SEO'
   protected model = 'gpt-3.5-turbo'
+  private baseUrl?: string
 
-  constructor(apiKey?: string, model?: string) {
+  constructor(apiKey?: string, model?: string, baseUrl?: string) {
     super(apiKey)
     if (model) this.model = model
+    if (baseUrl) this.baseUrl = baseUrl
+  }
+
+  private getEndpoint(): string {
+    return getProviderEndpoint(
+      this.baseUrl,
+      PROVIDER_DEFAULTS.openai.baseUrl,
+      PROVIDER_DEFAULTS.openai.chatCompletionsPath
+    )
   }
 
   async generateSEOTitle(content: string, language: string, options: SEOTitleOptions = {}): Promise<SEOGenerationResult> {
@@ -67,7 +78,7 @@ Respond in JSON format:
 }`
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -173,7 +184,7 @@ Respond in JSON format:
 }`
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -288,7 +299,7 @@ Respond in JSON format:
 }`
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

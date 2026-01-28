@@ -1,12 +1,22 @@
 import { BaseAISummaryProvider } from './base'
 import { AISummaryResult } from '../types'
+import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
 export class VolcanoSummaryProvider extends BaseAISummaryProvider {
   name = 'Volcano Engine'
-  private endpoint = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
-  
-  constructor(apiKey?: string, model?: string, maxKeywords?: number, summaryLength?: 'short' | 'medium' | 'long') {
+  private baseUrl?: string
+
+  constructor(apiKey?: string, model?: string, maxKeywords?: number, summaryLength?: 'short' | 'medium' | 'long', baseUrl?: string) {
     super(apiKey, model || 'doubao-seed-1-6-250615', maxKeywords, summaryLength)
+    if (baseUrl) this.baseUrl = baseUrl
+  }
+
+  private getEndpoint(): string {
+    return getProviderEndpoint(
+      this.baseUrl,
+      PROVIDER_DEFAULTS.volcano.baseUrl,
+      PROVIDER_DEFAULTS.volcano.chatCompletionsPath
+    )
   }
 
   async generateSummary(content: string, language: string): Promise<AISummaryResult> {
@@ -27,7 +37,7 @@ export class VolcanoSummaryProvider extends BaseAISummaryProvider {
     const userPrompt = `Analyze this article content:\n\n${cleanedContent}`
 
     try {
-      const response = await fetch(this.endpoint, {
+      const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -122,7 +132,7 @@ export class VolcanoSummaryProvider extends BaseAISummaryProvider {
     const userPrompt = `Generate SEO keywords for this content:\n\n${cleanedContent}`
 
     try {
-      const response = await fetch(this.endpoint, {
+      const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -217,7 +227,7 @@ export class VolcanoSummaryProvider extends BaseAISummaryProvider {
     const userPrompt = `Generate a title for this content:\n\n${cleanedContent.slice(0, 1000)}...`
 
     try {
-      const response = await fetch(this.endpoint, {
+      const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

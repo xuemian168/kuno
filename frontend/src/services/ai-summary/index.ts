@@ -187,26 +187,29 @@ export class AISummaryService {
     switch (config.provider) {
       case 'openai':
         provider = new OpenAISummaryProvider(
-          config.apiKey, 
+          config.apiKey,
           config.model,
           config.maxKeywords,
-          config.summaryLength
+          config.summaryLength,
+          config.baseUrl
         )
         break
       case 'gemini':
         provider = new GeminiSummaryProvider(
-          config.apiKey, 
+          config.apiKey,
           config.model,
           config.maxKeywords,
-          config.summaryLength
+          config.summaryLength,
+          config.baseUrl
         )
         break
       case 'volcano':
         provider = new VolcanoSummaryProvider(
-          config.apiKey, 
+          config.apiKey,
           config.model,
           config.maxKeywords,
-          config.summaryLength
+          config.summaryLength,
+          config.baseUrl
         )
         break
       default:

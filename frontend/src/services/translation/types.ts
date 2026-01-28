@@ -26,7 +26,8 @@ export interface TranslationConfig {
   apiSecret?: string
   region?: string
   model?: string
-  apiUrl?: string // For LibreTranslate custom instances
+  baseUrl?: string  // Custom base URL for AI providers (OpenAI, Gemini, Volcano)
+  apiUrl?: string // For LibreTranslate custom instances (backward compatibility)
   email?: string // For MyMemory
   enabledLanguages?: SupportedLanguage[] // User-configured languages
 }

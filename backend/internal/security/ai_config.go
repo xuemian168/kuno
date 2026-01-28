@@ -16,10 +16,11 @@ type SecureAIConfig struct {
 
 // SecureProviderConfig represents a provider configuration with encrypted API key
 type SecureProviderConfig struct {
-	Provider        string `json:"provider"`
-	EncryptedAPIKey string `json:"encrypted_api_key"`
-	Model           string `json:"model"`
-	Enabled         bool   `json:"enabled"`
+	Provider        string            `json:"provider"`
+	EncryptedAPIKey string            `json:"encrypted_api_key"`
+	Model           string            `json:"model"`
+	Enabled         bool              `json:"enabled"`
+	Settings        map[string]string `json:"settings,omitempty"` // Custom settings like base_url
 }
 
 // SecureEmbeddingConfig represents embedding configuration
@@ -37,11 +38,12 @@ type ClientAIConfig struct {
 
 // ClientProviderConfig represents provider config for client (masked key)
 type ClientProviderConfig struct {
-	Provider     string `json:"provider"`
-	APIKey       string `json:"api_key"` // Masked version
-	Model        string `json:"model"`
-	Enabled      bool   `json:"enabled"`
-	IsConfigured bool   `json:"is_configured"` // Whether a real key is configured
+	Provider     string            `json:"provider"`
+	APIKey       string            `json:"api_key"` // Masked version
+	Model        string            `json:"model"`
+	Enabled      bool              `json:"enabled"`
+	IsConfigured bool              `json:"is_configured"` // Whether a real key is configured
+	Settings     map[string]string `json:"settings,omitempty"`  // Custom settings like base_url
 }
 
 // ClientEmbeddingConfig represents embedding config for client
@@ -59,10 +61,11 @@ type InputAIConfig struct {
 
 // InputProviderConfig represents provider config from client input
 type InputProviderConfig struct {
-	Provider string `json:"provider"`
-	APIKey   string `json:"api_key"` // Could be new key or placeholder
-	Model    string `json:"model"`
-	Enabled  bool   `json:"enabled"`
+	Provider string            `json:"provider"`
+	APIKey   string            `json:"api_key"` // Could be new key or placeholder
+	Model    string            `json:"model"`
+	Enabled  bool              `json:"enabled"`
+	Settings map[string]string `json:"settings,omitempty"` // Custom settings like base_url
 }
 
 // InputEmbeddingConfig represents embedding config from client input
@@ -111,6 +114,7 @@ func (acs *AIConfigService) EncryptAIConfig(input *InputAIConfig) (*SecureAIConf
 			EncryptedAPIKey: encryptedKey,
 			Model:           provider.Model,
 			Enabled:         provider.Enabled,
+			Settings:        provider.Settings, // Pass through Settings
 		}
 	}
 
@@ -146,6 +150,7 @@ func (acs *AIConfigService) DecryptAIConfig(secure *SecureAIConfig) (*InputAICon
 			APIKey:   decryptedKey,
 			Model:    provider.Model,
 			Enabled:  provider.Enabled,
+			Settings: provider.Settings, // Pass through Settings
 		}
 	}
 
@@ -181,6 +186,7 @@ func (acs *AIConfigService) ToClientConfig(secure *SecureAIConfig) *ClientAIConf
 			Model:        provider.Model,
 			Enabled:      provider.Enabled,
 			IsConfigured: isConfigured,
+			Settings:     provider.Settings, // Pass through Settings
 		}
 	}
 
@@ -251,11 +257,33 @@ func (acs *AIConfigService) MergeWithExisting(input *InputAIConfig, existing *Se
 		}
 		// If no existing key and input is placeholder/empty, encryptedKey remains empty
 
+		// Merge Settings
+		var settings map[string]string
+
+		// Start with existing settings if available
+		if exists && existingProvider.Settings != nil {
+			settings = make(map[string]string)
+			for k, v := range existingProvider.Settings {
+				settings[k] = v
+			}
+		}
+
+		// Merge or overwrite with new settings
+		if inputProvider.Settings != nil {
+			if settings == nil {
+				settings = make(map[string]string)
+			}
+			for k, v := range inputProvider.Settings {
+				settings[k] = v
+			}
+		}
+
 		merged.Providers[name] = SecureProviderConfig{
 			Provider:        inputProvider.Provider,
 			EncryptedAPIKey: encryptedKey,
 			Model:           inputProvider.Model,
 			Enabled:         inputProvider.Enabled,
+			Settings:        settings, // Save merged Settings
 		}
 
 		log.Printf("  ✓ Final encrypted key length: %d", len(encryptedKey))

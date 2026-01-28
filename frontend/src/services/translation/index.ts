@@ -607,13 +607,13 @@ export class TranslationService {
         provider = new DeepLProvider(config.apiKey)
         break
       case 'openai':
-        provider = new OpenAIProvider(config.apiKey, config.model)
+        provider = new OpenAIProvider(config.apiKey, config.model, config.baseUrl)
         break
       case 'gemini':
-        provider = new GeminiProvider(config.apiKey, config.model)
+        provider = new GeminiProvider(config.apiKey, config.model, config.baseUrl)
         break
       case 'volcano':
-        provider = new VolcanoProvider(config.apiKey, config.apiSecret, config.region)
+        provider = new VolcanoProvider(config.apiKey, config.apiSecret, config.region, config.baseUrl)
         break
       case 'libretranslate':
         provider = new LibreTranslateProvider(config.apiKey, config.apiUrl)

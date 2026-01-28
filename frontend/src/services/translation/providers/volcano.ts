@@ -1,15 +1,25 @@
 import { BaseTranslationProvider } from './base'
+import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
 export class VolcanoProvider extends BaseTranslationProvider {
   name = 'Volcano Engine'
   private arkApiKey: string
   private model: string
-  private endpoint = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
-  
-  constructor(apiKey?: string, model?: string, region?: string) {
+  private baseUrl?: string
+
+  constructor(apiKey?: string, model?: string, region?: string, baseUrl?: string) {
     super(apiKey)
     this.arkApiKey = apiKey || ''
     this.model = model || 'doubao-seed-1-6-250615'
+    if (baseUrl) this.baseUrl = baseUrl
+  }
+
+  private getEndpoint(): string {
+    return getProviderEndpoint(
+      this.baseUrl,
+      PROVIDER_DEFAULTS.volcano.baseUrl,
+      PROVIDER_DEFAULTS.volcano.chatCompletionsPath
+    )
   }
 
   isConfigured(): boolean {
@@ -31,7 +41,7 @@ export class VolcanoProvider extends BaseTranslationProvider {
     const userPrompt = text
 
     try {
-      const response = await fetch(this.endpoint, {
+      const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

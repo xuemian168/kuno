@@ -196,6 +196,7 @@ export interface SEOConfig {
   provider: 'openai' | 'gemini' | 'volcano'
   apiKey?: string
   model?: string
+  baseUrl?: string  // Custom base URL for API endpoint
   language_preferences?: Record<string, any>
   default_options?: {
     title?: SEOTitleOptions

@@ -1,14 +1,24 @@
 import { BaseTranslationProvider } from './base'
 import { TranslationResult } from '../types'
 import { formatErrorMessage } from '../error-messages'
+import { getGeminiEndpoint } from '../../ai-providers/utils'
 
 export class GeminiProvider extends BaseTranslationProvider {
   name = 'Gemini'
   private model = 'gemini-1.5-flash'
-  
-  constructor(apiKey?: string, model?: string) {
+  private baseUrl?: string
+
+  constructor(apiKey?: string, model?: string, baseUrl?: string) {
     super(apiKey)
     if (model) this.model = model
+    if (baseUrl) this.baseUrl = baseUrl
+  }
+
+  private getEndpoint(): string {
+    if (!this.apiKey) {
+      throw this.createError('Gemini API key not configured', 'NOT_CONFIGURED')
+    }
+    return getGeminiEndpoint(this.baseUrl, this.model, this.apiKey)
   }
 
   async translate(text: string, from: string, to: string): Promise<string> {
@@ -22,7 +32,7 @@ export class GeminiProvider extends BaseTranslationProvider {
     const toLang = this.getLanguageName(to)
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`, {
+      const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,7 +125,7 @@ export class GeminiProvider extends BaseTranslationProvider {
     const toLang = this.getLanguageName(to)
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`, {
+      const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -245,7 +255,7 @@ export class GeminiProvider extends BaseTranslationProvider {
       // Format texts as a numbered list for batch translation
       const numberedTexts = texts.map((text, i) => `${i + 1}. ${text}`).join('\n\n')
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`, {
+      const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

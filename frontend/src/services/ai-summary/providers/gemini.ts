@@ -1,13 +1,23 @@
 import { BaseAISummaryProvider } from './base'
 import { AISummaryResult } from '../types'
+import { getGeminiEndpoint } from '../../ai-providers/utils'
 
 export class GeminiSummaryProvider extends BaseAISummaryProvider {
   name = 'Gemini Summary'
   protected model = 'gemini-1.5-flash'
+  private baseUrl?: string
 
-  constructor(apiKey?: string, model?: string, maxKeywords?: number, summaryLength?: 'short' | 'medium' | 'long') {
+  constructor(apiKey?: string, model?: string, maxKeywords?: number, summaryLength?: 'short' | 'medium' | 'long', baseUrl?: string) {
     super(apiKey, model, maxKeywords, summaryLength)
     if (model) this.model = model
+    if (baseUrl) this.baseUrl = baseUrl
+  }
+
+  private getEndpoint(): string {
+    if (!this.apiKey) {
+      throw this.createError('Gemini API key not configured', 'NOT_CONFIGURED')
+    }
+    return getGeminiEndpoint(this.baseUrl, this.model, this.apiKey)
   }
 
   async generateSummary(content: string, language: string): Promise<AISummaryResult> {
@@ -21,7 +31,7 @@ export class GeminiSummaryProvider extends BaseAISummaryProvider {
     const summaryLengthPrompt = this.getSummaryLengthPrompt()
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`, {
+      const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

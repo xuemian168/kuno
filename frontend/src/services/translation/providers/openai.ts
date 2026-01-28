@@ -1,14 +1,25 @@
 import { BaseTranslationProvider } from './base'
 import { TranslationResult } from '../types'
 import { formatErrorMessage } from '../error-messages'
+import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
 export class OpenAIProvider extends BaseTranslationProvider {
   name = 'OpenAI'
   private model = 'gpt-3.5-turbo'
-  
-  constructor(apiKey?: string, model?: string) {
+  private baseUrl?: string
+
+  constructor(apiKey?: string, model?: string, baseUrl?: string) {
     super(apiKey)
     if (model) this.model = model
+    if (baseUrl) this.baseUrl = baseUrl
+  }
+
+  private getEndpoint(): string {
+    return getProviderEndpoint(
+      this.baseUrl,
+      PROVIDER_DEFAULTS.openai.baseUrl,
+      PROVIDER_DEFAULTS.openai.chatCompletionsPath
+    )
   }
 
   async translate(text: string, from: string, to: string): Promise<string> {
@@ -22,7 +33,7 @@ export class OpenAIProvider extends BaseTranslationProvider {
     const toLang = this.getLanguageName(to)
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,7 +105,7 @@ export class OpenAIProvider extends BaseTranslationProvider {
     const toLang = this.getLanguageName(to)
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -199,7 +210,7 @@ export class OpenAIProvider extends BaseTranslationProvider {
       // Format texts as a numbered list for batch translation
       const numberedTexts = texts.map((text, i) => `${i + 1}. ${text}`).join('\n\n')
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
