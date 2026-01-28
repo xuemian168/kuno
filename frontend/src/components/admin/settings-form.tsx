@@ -29,6 +29,7 @@ import { AboutDialog } from "@/components/admin/about-dialog"
 import { UpdateChecker } from "@/components/admin/update-checker"
 import { AIUsageStatsComponent } from "./ai-usage-stats"
 import { aiUsageTracker } from "@/services/ai-usage-tracker"
+import { BaseUrlInput } from "./base-url-input"
 
 // Dynamic languages based on user configuration - will be set in component
 
@@ -1532,6 +1533,27 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                   </div>
                 )}
 
+                {/* Base URL field for AI providers */}
+                {(translationConfig.provider === 'openai' ||
+                  translationConfig.provider === 'gemini' ||
+                  translationConfig.provider === 'volcano') && (
+                  <BaseUrlInput
+                    provider={translationConfig.provider}
+                    value={translationConfig.baseUrl}
+                    onChange={(baseUrl) => {
+                      const newConfig = { ...translationConfig, baseUrl }
+                      setTranslationConfig(newConfig)
+                      try {
+                        translationService.configureFromSettings(newConfig)
+                        setHasTranslationProvider(translationService.isConfigured())
+                        localStorage.setItem('translation_config', JSON.stringify(newConfig))
+                      } catch (error) {
+                        console.error('Failed to configure translation service:', error)
+                      }
+                    }}
+                    locale={locale}
+                  />
+                )}
 
                 {/* API URL field for LibreTranslate */}
                 {translationConfig.provider === 'libretranslate' && (
@@ -2072,6 +2094,27 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Base URL field for AI providers */}
+                {(aiSummaryConfig.provider === 'openai' ||
+                  aiSummaryConfig.provider === 'gemini' ||
+                  aiSummaryConfig.provider === 'volcano') && (
+                  <BaseUrlInput
+                    provider={aiSummaryConfig.provider}
+                    value={aiSummaryConfig.baseUrl}
+                    onChange={(baseUrl) => {
+                      const newConfig = { ...aiSummaryConfig, baseUrl }
+                      setAISummaryConfig(newConfig)
+                      try {
+                        aiSummaryService.configureFromSettings(newConfig)
+                        localStorage.setItem('ai_summary_config', JSON.stringify(newConfig))
+                      } catch (error) {
+                        console.error('Failed to configure AI summary service:', error)
+                      }
+                    }}
+                    locale={locale}
+                  />
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -2992,6 +3035,17 @@ function AIConfigurationPanel({ aiConfig, setAIConfig, locale, originalMaskedKey
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Base URL field for AI providers */}
+                  <BaseUrlInput
+                    provider={provider.id}
+                    value={config.settings?.base_url}
+                    onChange={(baseUrl) => {
+                      const newSettings = { ...(config.settings || {}), base_url: baseUrl }
+                      updateProvider(provider.id, { settings: newSettings })
+                    }}
+                    locale={locale}
+                  />
                 </CardContent>
               )}
             </Card>
