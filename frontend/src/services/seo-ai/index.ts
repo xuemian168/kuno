@@ -10,6 +10,7 @@ import {
   SEOAnalysisResult
 } from './types'
 import { OpenAISEOProvider } from './providers/openai'
+import { ClaudeSEOProvider } from './providers/claude'
 import { aiUsageTracker } from '../ai-usage-tracker'
 
 export * from './types'
@@ -452,13 +453,19 @@ export async function initializeSEOAIService(config?: SEOConfig): Promise<void> 
   if (!config) return
 
   try {
-    const { provider, apiKey, model, baseUrl } = config
+    const { provider, apiKey, model, baseUrl, authType, customAuthHeader } = config
 
     switch (provider) {
       case 'openai':
-        const openaiProvider = new OpenAISEOProvider(apiKey, model, baseUrl)
+        const openaiProvider = new OpenAISEOProvider(apiKey, model, baseUrl, authType, customAuthHeader)
         seoAIService.registerProvider('openai', openaiProvider)
         seoAIService.setActiveProvider('openai')
+        break
+
+      case 'claude':
+        const claudeProvider = new ClaudeSEOProvider(apiKey, model, baseUrl)
+        seoAIService.registerProvider('claude', claudeProvider)
+        seoAIService.setActiveProvider('claude')
         break
 
       // Add other providers as needed

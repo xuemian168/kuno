@@ -21,6 +21,11 @@ export const PROVIDER_DEFAULTS = {
     baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
     chatCompletionsPath: '/chat/completions',
   },
+  claude: {
+    baseUrl: 'https://api.anthropic.com/v1',
+    messagesPath: '/messages',
+    apiVersion: '2023-06-01',
+  },
 } as const
 
 /**
@@ -93,4 +98,30 @@ export function getGeminiEndpoint(
   )
 
   return `${base}${path}?key=${apiKey}`
+}
+
+/**
+ * 为 Claude 构建 endpoint
+ *
+ * Claude API 的特点：
+ * 1. 使用 /v1/messages 而不是 /chat/completions
+ * 2. API key 通过 x-api-key header 传递（而非 Authorization）
+ * 3. 需要 anthropic-version header
+ *
+ * @param baseUrl - 自定义 base URL（可选）
+ * @returns 完整的 Claude endpoint URL
+ *
+ * @example
+ * getClaudeEndpoint(undefined)
+ * // => 'https://api.anthropic.com/v1/messages'
+ *
+ * getClaudeEndpoint('https://proxy.example.com/v1')
+ * // => 'https://proxy.example.com/v1/messages'
+ */
+export function getClaudeEndpoint(baseUrl: string | undefined): string {
+  return getProviderEndpoint(
+    baseUrl,
+    PROVIDER_DEFAULTS.claude.baseUrl,
+    PROVIDER_DEFAULTS.claude.messagesPath
+  )
 }

@@ -14,6 +14,12 @@ import { CheckCircle, XCircle, AlertCircle, Info, X } from "lucide-react"
 
 export type NotificationType = 'success' | 'error' | 'warning' | 'info'
 
+export interface NotificationOptions {
+  suggestion?: string
+  retryable?: boolean
+  onRetry?: () => void
+}
+
 interface NotificationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -21,6 +27,7 @@ interface NotificationDialogProps {
   title: string
   description?: string
   autoCloseDelay?: number
+  options?: NotificationOptions
 }
 
 const typeConfig = {
@@ -82,13 +89,14 @@ const typeConfig = {
   }
 }
 
-export function NotificationDialog({ 
-  open, 
-  onOpenChange, 
+export function NotificationDialog({
+  open,
+  onOpenChange,
   type,
-  title, 
+  title,
   description,
-  autoCloseDelay = 3000 
+  autoCloseDelay = 3000,
+  options
 }: NotificationDialogProps) {
   const [isVisible, setIsVisible] = useState(open)
   const config = typeConfig[type]
@@ -130,12 +138,39 @@ export function NotificationDialog({
           </DialogTitle>
           
           {description && (
-            <DialogDescription className={`${config.colors.descColor} mt-2`}>
+            <DialogDescription className={`${config.colors.descColor} mt-2 whitespace-pre-line`}>
               {description}
             </DialogDescription>
           )}
+
+          {options?.suggestion && (
+            <DialogDescription className={`${config.colors.descColor} mt-3 text-sm italic`}>
+              💡 {options.suggestion}
+            </DialogDescription>
+          )}
         </DialogHeader>
-      
+
+        {options?.retryable && options.onRetry && (
+          <div className="mt-4 flex justify-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className={`${config.colors.buttonBorder} ${config.colors.buttonText} ${config.colors.buttonHover}`}
+            >
+              关闭
+            </Button>
+            <Button
+              onClick={() => {
+                options.onRetry?.()
+                onOpenChange(false)
+              }}
+              className={`bg-gradient-to-r ${config.colors.iconBg} text-white hover:opacity-90`}
+            >
+              重试
+            </Button>
+          </div>
+        )}
+
       </DialogContent>
     </Dialog>
   )
@@ -147,32 +182,39 @@ export function useNotificationDialog() {
     open: false,
     type: 'success' as NotificationType,
     title: '',
-    description: ''
+    description: '',
+    options: undefined as NotificationOptions | undefined
   })
 
-  const showNotification = (type: NotificationType, title: string, description?: string) => {
+  const showNotification = (
+    type: NotificationType,
+    title: string,
+    description?: string,
+    options?: NotificationOptions
+  ) => {
     setDialogState({
       open: true,
       type,
       title,
-      description: description || ''
+      description: description || '',
+      options
     })
   }
 
-  const showSuccess = (title: string, description?: string) => {
-    showNotification('success', title, description)
+  const showSuccess = (title: string, description?: string, options?: NotificationOptions) => {
+    showNotification('success', title, description, options)
   }
 
-  const showError = (title: string, description?: string) => {
-    showNotification('error', title, description)
+  const showError = (title: string, description?: string, options?: NotificationOptions) => {
+    showNotification('error', title, description, options)
   }
 
-  const showWarning = (title: string, description?: string) => {
-    showNotification('warning', title, description)
+  const showWarning = (title: string, description?: string, options?: NotificationOptions) => {
+    showNotification('warning', title, description, options)
   }
 
-  const showInfo = (title: string, description?: string) => {
-    showNotification('info', title, description)
+  const showInfo = (title: string, description?: string, options?: NotificationOptions) => {
+    showNotification('info', title, description, options)
   }
 
   const hideNotification = () => {

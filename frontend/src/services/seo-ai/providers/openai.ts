@@ -6,7 +6,8 @@ import {
   SEOAnalysisResult,
   SEOTitleOptions,
   SEODescriptionOptions,
-  KeywordOptions
+  KeywordOptions,
+  AuthHeaderType
 } from '../types'
 import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
@@ -14,11 +15,15 @@ export class OpenAISEOProvider extends BaseSEOAIProvider {
   name = 'OpenAI SEO'
   protected model = 'gpt-3.5-turbo'
   private baseUrl?: string
+  private authType: AuthHeaderType = 'bearer'
+  private customAuthHeader?: string
 
-  constructor(apiKey?: string, model?: string, baseUrl?: string) {
+  constructor(apiKey?: string, model?: string, baseUrl?: string, authType?: AuthHeaderType, customAuthHeader?: string) {
     super(apiKey)
     if (model) this.model = model
     if (baseUrl) this.baseUrl = baseUrl
+    if (authType) this.authType = authType
+    if (customAuthHeader) this.customAuthHeader = customAuthHeader
   }
 
   private getEndpoint(): string {
@@ -27,6 +32,43 @@ export class OpenAISEOProvider extends BaseSEOAIProvider {
       PROVIDER_DEFAULTS.openai.baseUrl,
       PROVIDER_DEFAULTS.openai.chatCompletionsPath
     )
+  }
+
+  private buildAuthHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    }
+
+    if (!this.apiKey) {
+      return headers
+    }
+
+    switch (this.authType) {
+      case 'bearer':
+        headers['Authorization'] = `Bearer ${this.apiKey}`
+        break
+      case 'x-api-key':
+        headers['x-api-key'] = this.apiKey
+        break
+      case 'x-goog-api-key':
+        headers['x-goog-api-key'] = this.apiKey
+        break
+      case 'api-key':
+        headers['api-key'] = this.apiKey
+        break
+      case 'custom':
+        if (this.customAuthHeader) {
+          headers[this.customAuthHeader] = this.apiKey
+        } else {
+          // Fallback to bearer if custom header not specified
+          headers['Authorization'] = `Bearer ${this.apiKey}`
+        }
+        break
+      default:
+        headers['Authorization'] = `Bearer ${this.apiKey}`
+    }
+
+    return headers
   }
 
   async generateSEOTitle(content: string, language: string, options: SEOTitleOptions = {}): Promise<SEOGenerationResult> {
@@ -80,10 +122,7 @@ Respond in JSON format:
     try {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
+        headers: this.buildAuthHeaders(),
         body: JSON.stringify({
           model: this.model,
           messages: [
@@ -186,10 +225,7 @@ Respond in JSON format:
     try {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
+        headers: this.buildAuthHeaders(),
         body: JSON.stringify({
           model: this.model,
           messages: [
@@ -301,10 +337,7 @@ Respond in JSON format:
     try {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
+        headers: this.buildAuthHeaders(),
         body: JSON.stringify({
           model: this.model,
           messages: [

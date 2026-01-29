@@ -192,8 +192,10 @@ export interface SEOSuggestion {
   impact: string
 }
 
+export type AuthHeaderType = 'bearer' | 'x-api-key' | 'x-goog-api-key' | 'api-key' | 'custom'
+
 export interface SEOConfig {
-  provider: 'openai' | 'gemini' | 'volcano'
+  provider: 'openai' | 'gemini' | 'volcano' | 'claude'
   apiKey?: string
   model?: string
   baseUrl?: string  // Custom base URL for API endpoint
@@ -203,6 +205,8 @@ export interface SEOConfig {
     description?: SEODescriptionOptions
     keywords?: KeywordOptions
   }
+  authType?: AuthHeaderType // API authentication method (default: bearer)
+  customAuthHeader?: string // Custom header name when authType is 'custom'
 }
 
 export interface SEOAIResult {

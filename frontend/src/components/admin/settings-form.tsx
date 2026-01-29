@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { translationService, TranslationConfig, SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation"
 import { languageManager } from "@/services/translation/language-manager"
+import { getErrorMessage } from "@/services/translation/error-messages"
 import { aiSummaryService, AISummaryConfig } from "@/services/ai-summary"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
@@ -32,6 +33,17 @@ import { aiUsageTracker } from "@/services/ai-usage-tracker"
 import { BaseUrlInput } from "./base-url-input"
 
 // Dynamic languages based on user configuration - will be set in component
+
+// Helper function to get default model for each provider
+function getDefaultModel(provider: string): string {
+  switch (provider) {
+    case 'openai': return 'gpt-4o-mini'
+    case 'claude': return 'claude-3-5-sonnet-20241022'
+    case 'gemini': return 'gemini-3-flash'
+    case 'volcano': return 'doubao-seed-1-6-250615'
+    default: return ''
+  }
+}
 
 interface SettingsFormProps {
   locale: string
@@ -69,11 +81,12 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     provider: 'google-free',
     apiKey: '',
     apiSecret: '',
-    model: 'gpt-3.5-turbo',
+    model: 'gpt-4o-mini',
     apiUrl: '',
     email: '',
     region: 'cn-beijing',
-    enabledLanguages: languageManager.getEnabledLanguages()
+    enabledLanguages: languageManager.getEnabledLanguages(),
+    authType: 'bearer'
   })
   const [enabledLanguages, setEnabledLanguages] = useState<SupportedLanguage[]>(
     languageManager.getEnabledLanguages()
@@ -84,12 +97,16 @@ export function SettingsForm({ locale }: SettingsFormProps) {
   const [aiSummaryConfig, setAISummaryConfig] = useState<AISummaryConfig>({
     provider: 'openai',
     apiKey: '',
-    model: 'gpt-3.5-turbo',
+    model: 'gpt-4o-mini',
     maxKeywords: 10,
     summaryLength: 'medium'
   })
   const [hasAISummaryProvider, setHasAISummaryProvider] = useState(false)
-  
+
+  // Custom model name states
+  const [customTranslationModel, setCustomTranslationModel] = useState(false)
+  const [customAISummaryModel, setCustomAISummaryModel] = useState(false)
+
   // Global AI API Configuration
   const [aiConfig, setAIConfig] = useState<AIConfig>({
     default_provider: 'openai',
@@ -102,7 +119,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
   
   // Track original masked keys to detect changes
   const [originalMaskedKeys, setOriginalMaskedKeys] = useState<Record<string, string>>({})
-  
+
   // Password change state
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -341,6 +358,14 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     }
   }
 
+  // Helper function to parse translation errors
+  const parseTranslationError = (error: unknown) => {
+    const message = error instanceof Error ? error.message : '未知错误'
+    const code = (error as any).code
+
+    return getErrorMessage(message, code, translationConfig.provider)
+  }
+
   const updateTranslation = (language: string, field: string, value: string) => {
     if (language === formData.default_language) {
       setFormData(prev => ({ ...prev, [field]: value }))
@@ -566,9 +591,16 @@ export function SettingsForm({ locale }: SettingsFormProps) {
       }
     } catch (error) {
       console.error('Translation failed:', error)
+      const errorDetails = parseTranslationError(error)
+
       notification.showError(
         locale === 'zh' ? '翻译失败' : 'Translation Failed',
-        locale === 'zh' ? '自动翻译失败，请检查翻译服务配置。' : 'Translation failed. Please check your translation service configuration.'
+        errorDetails.message,
+        {
+          suggestion: errorDetails.suggestion,
+          retryable: errorDetails.retryable,
+          onRetry: errorDetails.retryable ? () => handleAutoTranslate(targetLanguage) : undefined
+        }
       )
     } finally {
       setTranslatingLanguage(null)
@@ -1449,6 +1481,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                       <SelectItem value="google">Google Translate (API Key)</SelectItem>
                       <SelectItem value="deepl">DeepL (API Key)</SelectItem>
                       <SelectItem value="openai">OpenAI ChatGPT (API Key)</SelectItem>
+                      <SelectItem value="claude">Claude (Anthropic) (API Key)</SelectItem>
                       <SelectItem value="gemini">Google Gemini (API Key)</SelectItem>
                       <SelectItem value="volcano">Volcano Engine (API Key)</SelectItem>
                     </SelectContent>
@@ -1490,10 +1523,127 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                 {['openai', 'gemini', 'volcano'].includes(translationConfig.provider) && (
                   <div className="space-y-2">
                     <Label>{t('settings.model') || 'Model'}</Label>
+                    {customTranslationModel || (translationConfig.model && !['gpt-5.2', 'gpt-5.2-pro', 'gpt-5.1', 'gpt-5-nano', 'gpt-5-instant', 'gpt-4.5', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4o', 'gpt-4o-mini', 'o3', 'o3-mini', 'o4-mini', 'gemini-3-pro-preview', 'gemini-3-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash', 'doubao-seed-1-6-250615', 'doubao-seed-1-6-flash-250615', 'doubao-1-5-lite-32k-250115'].includes(translationConfig.model)) ? (
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          value={translationConfig.model}
+                          onChange={(e) => {
+                            const newConfig = { ...translationConfig, model: e.target.value }
+                            setTranslationConfig(newConfig)
+                            setCustomTranslationModel(!!e.target.value)
+                            try {
+                              translationService.configureFromSettings(newConfig)
+                              setHasTranslationProvider(translationService.isConfigured())
+                            } catch (error) {
+                              console.error('Failed to configure translation service:', error)
+                            }
+                          }}
+                          placeholder={locale === 'zh' ? '输入自定义模型名称，例如：gpt-4-turbo' : 'Enter custom model name, e.g.: gpt-4-turbo'}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const newConfig = { ...translationConfig, model: getDefaultModel(translationConfig.provider) }
+                            setTranslationConfig(newConfig)
+                            setCustomTranslationModel(false)
+                            try {
+                              translationService.configureFromSettings(newConfig)
+                              setHasTranslationProvider(translationService.isConfigured())
+                            } catch (error) {
+                              console.error('Failed to configure translation service:', error)
+                            }
+                          }}
+                        >
+                          {locale === 'zh' ? '返回' : 'Back'}
+                        </Button>
+                      </div>
+                    ) : (
+                      <Select
+                        value={translationConfig.model || getDefaultModel(translationConfig.provider)}
+                        onValueChange={(value) => {
+                          if (value === 'custom') {
+                            setCustomTranslationModel(true)
+                            setTranslationConfig({ ...translationConfig, model: '' })
+                          } else {
+                            const newConfig = { ...translationConfig, model: value }
+                            setTranslationConfig(newConfig)
+                            setCustomTranslationModel(false)
+                            try {
+                              translationService.configureFromSettings(newConfig)
+                              setHasTranslationProvider(translationService.isConfigured())
+                            } catch (error) {
+                              console.error('Failed to configure translation service:', error)
+                            }
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {translationConfig.provider === 'openai' ? (
+                            <>
+                              <SelectItem value="gpt-5.2">GPT-5.2 (Latest)</SelectItem>
+                              <SelectItem value="gpt-5.2-pro">GPT-5.2 Pro</SelectItem>
+                              <SelectItem value="gpt-5.1">GPT-5.1</SelectItem>
+                              <SelectItem value="gpt-5-nano">GPT-5 Nano (Fast)</SelectItem>
+                              <SelectItem value="gpt-5-instant">GPT-5 Instant</SelectItem>
+                              <SelectItem value="gpt-4.5">GPT-4.5</SelectItem>
+                              <SelectItem value="gpt-4.1">GPT-4.1 (Coding)</SelectItem>
+                              <SelectItem value="gpt-4.1-mini">GPT-4.1 Mini</SelectItem>
+                              <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                              <SelectItem value="gpt-4o-mini">GPT-4o Mini (Recommended)</SelectItem>
+                              <SelectItem value="o3">O3 (Reasoning)</SelectItem>
+                              <SelectItem value="o3-mini">O3 Mini</SelectItem>
+                              <SelectItem value="o4-mini">O4 Mini</SelectItem>
+                              <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
+                            </>
+                          ) : translationConfig.provider === 'claude' ? (
+                            <>
+                              <SelectItem value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Latest)</SelectItem>
+                              <SelectItem value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Fast)</SelectItem>
+                              <SelectItem value="claude-3-opus-20240229">Claude 3 Opus (Powerful)</SelectItem>
+                              <SelectItem value="claude-3-sonnet-20240229">Claude 3 Sonnet</SelectItem>
+                              <SelectItem value="claude-3-haiku-20240307">Claude 3 Haiku</SelectItem>
+                              <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
+                            </>
+                          ) : translationConfig.provider === 'volcano' ? (
+                            <>
+                              <SelectItem value="doubao-seed-1-6-250615">Doubao-1.6 (Pro-32k)</SelectItem>
+                              <SelectItem value="doubao-seed-1-6-flash-250615">Doubao-1.6-Flash (Lite)</SelectItem>
+                              <SelectItem value="doubao-1-5-lite-32k-250115">Doubao-1.5-lite-32k</SelectItem>
+                              <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
+                            </>
+                          ) : (
+                            <>
+                              <SelectItem value="gemini-3-pro-preview">Gemini 3 Pro (Preview)</SelectItem>
+                              <SelectItem value="gemini-3-flash">Gemini 3 Flash (Latest)</SelectItem>
+                              <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
+                              <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (Fast)</SelectItem>
+                              <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</SelectItem>
+                              <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</SelectItem>
+                              <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                )}
+
+                {/* API Authentication Type */}
+                {(translationConfig.provider === 'openai' ||
+                  translationConfig.provider === 'gemini' ||
+                  translationConfig.provider === 'volcano') && (
+                  <div className="space-y-2">
+                    <Label>{locale === 'zh' ? 'API 认证方式' : 'API Authentication'}</Label>
                     <Select
-                      value={translationConfig.model || (translationConfig.provider === 'openai' ? 'gpt-3.5-turbo' : translationConfig.provider === 'volcano' ? 'doubao-seed-1-6-250615' : 'gemini-1.5-flash')}
-                      onValueChange={(value) => {
-                        const newConfig = { ...translationConfig, model: value }
+                      value={translationConfig.authType || 'bearer'}
+                      onValueChange={(value: any) => {
+                        const newConfig = { ...translationConfig, authType: value }
                         setTranslationConfig(newConfig)
                         try {
                           translationService.configureFromSettings(newConfig)
@@ -1507,34 +1657,43 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {translationConfig.provider === 'openai' ? (
-                          <>
-                            <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                            <SelectItem value="gpt-4">GPT-4</SelectItem>
-                            <SelectItem value="gpt-4-turbo-preview">GPT-4 Turbo</SelectItem>
-                            <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                            <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
-                          </>
-                        ) : translationConfig.provider === 'volcano' ? (
-                          <>
-                            <SelectItem value="doubao-seed-1-6-250615">Doubao-1.6 (Pro-32k)</SelectItem>
-                            <SelectItem value="doubao-seed-1-6-flash-250615">Doubao-1.6-Flash (Lite)</SelectItem>
-                            <SelectItem value="doubao-1-5-lite-32k-250115">Doubao-1.5-lite-32k</SelectItem>
-                          </>
-                        ) : (
-                          <>
-                            <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
-                            <SelectItem value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</SelectItem>
-                            <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
-                          </>
-                        )}
+                        <SelectItem value="bearer">Bearer Token (OpenAI, Claude)</SelectItem>
+                        <SelectItem value="x-api-key">x-api-key</SelectItem>
+                        <SelectItem value="x-goog-api-key">x-goog-api-key (TikHub AI)</SelectItem>
+                        <SelectItem value="api-key">api-key</SelectItem>
+                        <SelectItem value="custom">{locale === 'zh' ? '自定义...' : 'Custom...'}</SelectItem>
                       </SelectContent>
                     </Select>
+                    {translationConfig.authType === 'custom' && (
+                      <Input
+                        type="text"
+                        value={translationConfig.customAuthHeader || ''}
+                        onChange={(e) => {
+                          const newConfig = { ...translationConfig, customAuthHeader: e.target.value }
+                          setTranslationConfig(newConfig)
+                          try {
+                            translationService.configureFromSettings(newConfig)
+                            setHasTranslationProvider(translationService.isConfigured())
+                          } catch (error) {
+                            console.error('Failed to configure translation service:', error)
+                          }
+                        }}
+                        placeholder={locale === 'zh' ? '输入自定义认证头名称，例如：x-custom-key' : 'Enter custom header name, e.g.: x-custom-key'}
+                        className="mt-2"
+                      />
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {locale === 'zh'
+                        ? '不同的 API 提供商使用不同的认证方式。TikHub AI 使用 x-goog-api-key，OpenAI 使用 Bearer Token。'
+                        : 'Different API providers use different authentication methods. TikHub AI uses x-goog-api-key, OpenAI uses Bearer Token.'
+                      }
+                    </p>
                   </div>
                 )}
 
                 {/* Base URL field for AI providers */}
                 {(translationConfig.provider === 'openai' ||
+                  translationConfig.provider === 'claude' ||
                   translationConfig.provider === 'gemini' ||
                   translationConfig.provider === 'volcano') && (
                   <BaseUrlInput
@@ -1945,7 +2104,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                 </Alert>
 
                 {/* Copy Translation API Configuration */}
-                {(translationConfig.provider === 'openai' || translationConfig.provider === 'gemini' || translationConfig.provider === 'volcano') && translationConfig.apiKey && (
+                {(translationConfig.provider === 'openai' || translationConfig.provider === 'claude' || translationConfig.provider === 'gemini' || translationConfig.provider === 'volcano') && translationConfig.apiKey && (
                   <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -1958,16 +2117,18 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          if (translationConfig.provider === 'openai' || translationConfig.provider === 'gemini' || translationConfig.provider === 'volcano') {
+                          if (translationConfig.provider === 'openai' || translationConfig.provider === 'claude' || translationConfig.provider === 'gemini' || translationConfig.provider === 'volcano') {
                             const newConfig = {
                               ...aiSummaryConfig,
                               provider: translationConfig.provider as any,
                               apiKey: translationConfig.apiKey,
-                              model: translationConfig.provider === 'openai' 
-                                ? (translationConfig.model || 'gpt-3.5-turbo')
+                              model: translationConfig.provider === 'openai'
+                                ? (translationConfig.model || getDefaultModel('openai'))
+                                : translationConfig.provider === 'claude'
+                                ? (translationConfig.model || getDefaultModel('claude'))
                                 : translationConfig.provider === 'volcano'
                                 ? 'doubao-seed-1-6-250615'
-                                : 'gemini-1.5-flash'
+                                : getDefaultModel('gemini')
                             }
                             setAISummaryConfig(newConfig)
                             try {
@@ -2015,13 +2176,14 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="openai">OpenAI GPT</SelectItem>
+                      <SelectItem value="claude">Claude (Anthropic)</SelectItem>
                       <SelectItem value="gemini">Google Gemini</SelectItem>
                       <SelectItem value="volcano">Volcano Engine (豆包)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {(aiSummaryConfig.provider === 'openai' || aiSummaryConfig.provider === 'gemini' || aiSummaryConfig.provider === 'volcano') && (
+                {(aiSummaryConfig.provider === 'openai' || aiSummaryConfig.provider === 'claude' || aiSummaryConfig.provider === 'gemini' || aiSummaryConfig.provider === 'volcano') && (
                   <div className="space-y-2">
                     <Label>{locale === 'zh' ? 'API密钥' : 'API Key'}</Label>
                     <div className="relative">
@@ -2041,6 +2203,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         }}
                         placeholder={
                           aiSummaryConfig.provider === 'openai' ? 'sk-...' :
+                          aiSummaryConfig.provider === 'claude' ? 'sk-ant-...' :
                           aiSummaryConfig.provider === 'gemini' ? 'AI...' :
                           aiSummaryConfig.provider === 'volcano' ? 'Enter your ARK API Key' : 'Enter your API key'
                         }
@@ -2051,52 +2214,125 @@ export function SettingsForm({ locale }: SettingsFormProps) {
 
                 <div className="space-y-2">
                   <Label>{locale === 'zh' ? '模型' : 'Model'}</Label>
-                  <Select
-                    value={aiSummaryConfig.model}
-                    onValueChange={(value) => {
-                      const newConfig = { ...aiSummaryConfig, model: value }
-                      setAISummaryConfig(newConfig)
-                      try {
-                        aiSummaryService.configureFromSettings(newConfig)
-                        setHasAISummaryProvider(aiSummaryService.isConfigured())
-                      } catch (error) {
-                        console.error('Failed to configure AI summary service:', error)
-                        setHasAISummaryProvider(false)
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {aiSummaryConfig.provider === 'openai' && (
-                        <>
-                          <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                          <SelectItem value="gpt-4">GPT-4</SelectItem>
-                          <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                          <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
-                        </>
-                      )}
-                      {aiSummaryConfig.provider === 'gemini' && (
-                        <>
-                          <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
-                          <SelectItem value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</SelectItem>
-                          <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
-                        </>
-                      )}
-                      {aiSummaryConfig.provider === 'volcano' && (
-                        <>
-                          <SelectItem value="doubao-seed-1-6-250615">Doubao-1.6 (Pro-32k)</SelectItem>
-                          <SelectItem value="doubao-seed-1-6-flash-250615">Doubao-1.6-Flash (Lite)</SelectItem>
-                          <SelectItem value="doubao-1-5-lite-32k-250115">Doubao-1.5-lite-32k</SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  {customAISummaryModel || (aiSummaryConfig.model && !['gpt-5.2', 'gpt-5.2-pro', 'gpt-5.1', 'gpt-5-nano', 'gpt-5-instant', 'gpt-4.5', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4o', 'gpt-4o-mini', 'o3', 'o3-mini', 'o4-mini', 'gemini-3-pro-preview', 'gemini-3-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash', 'doubao-seed-1-6-250615', 'doubao-seed-1-6-flash-250615', 'doubao-1-5-lite-32k-250115', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'].includes(aiSummaryConfig.model)) ? (
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        value={aiSummaryConfig.model}
+                        onChange={(e) => {
+                          const newConfig = { ...aiSummaryConfig, model: e.target.value }
+                          setAISummaryConfig(newConfig)
+                          setCustomAISummaryModel(!!e.target.value)
+                          try {
+                            aiSummaryService.configureFromSettings(newConfig)
+                            setHasAISummaryProvider(aiSummaryService.isConfigured())
+                          } catch (error) {
+                            console.error('Failed to configure AI summary service:', error)
+                            setHasAISummaryProvider(false)
+                          }
+                        }}
+                        placeholder={locale === 'zh' ? '输入自定义模型名称，例如：gpt-4-turbo' : 'Enter custom model name, e.g.: gpt-4-turbo'}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const newConfig = { ...aiSummaryConfig, model: getDefaultModel(aiSummaryConfig.provider) }
+                          setAISummaryConfig(newConfig)
+                          setCustomAISummaryModel(false)
+                          try {
+                            aiSummaryService.configureFromSettings(newConfig)
+                            setHasAISummaryProvider(aiSummaryService.isConfigured())
+                          } catch (error) {
+                            console.error('Failed to configure AI summary service:', error)
+                            setHasAISummaryProvider(false)
+                          }
+                        }}
+                      >
+                        {locale === 'zh' ? '返回' : 'Back'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select
+                      value={aiSummaryConfig.model}
+                      onValueChange={(value) => {
+                        if (value === 'custom') {
+                          setCustomAISummaryModel(true)
+                          setAISummaryConfig({ ...aiSummaryConfig, model: '' })
+                        } else {
+                          const newConfig = { ...aiSummaryConfig, model: value }
+                          setAISummaryConfig(newConfig)
+                          setCustomAISummaryModel(false)
+                          try {
+                            aiSummaryService.configureFromSettings(newConfig)
+                            setHasAISummaryProvider(aiSummaryService.isConfigured())
+                          } catch (error) {
+                            console.error('Failed to configure AI summary service:', error)
+                            setHasAISummaryProvider(false)
+                          }
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {aiSummaryConfig.provider === 'openai' && (
+                          <>
+                            <SelectItem value="gpt-5.2">GPT-5.2 (Latest)</SelectItem>
+                            <SelectItem value="gpt-5.2-pro">GPT-5.2 Pro</SelectItem>
+                            <SelectItem value="gpt-5.1">GPT-5.1</SelectItem>
+                            <SelectItem value="gpt-5-nano">GPT-5 Nano (Fast)</SelectItem>
+                            <SelectItem value="gpt-5-instant">GPT-5 Instant</SelectItem>
+                            <SelectItem value="gpt-4.5">GPT-4.5</SelectItem>
+                            <SelectItem value="gpt-4.1">GPT-4.1 (Coding)</SelectItem>
+                            <SelectItem value="gpt-4.1-mini">GPT-4.1 Mini</SelectItem>
+                            <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                            <SelectItem value="gpt-4o-mini">GPT-4o Mini (Recommended)</SelectItem>
+                            <SelectItem value="o3">O3 (Reasoning)</SelectItem>
+                            <SelectItem value="o3-mini">O3 Mini</SelectItem>
+                            <SelectItem value="o4-mini">O4 Mini</SelectItem>
+                            <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
+                          </>
+                        )}
+                        {aiSummaryConfig.provider === 'gemini' && (
+                          <>
+                            <SelectItem value="gemini-3-pro-preview">Gemini 3 Pro (Preview)</SelectItem>
+                            <SelectItem value="gemini-3-flash">Gemini 3 Flash (Latest)</SelectItem>
+                            <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
+                            <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (Fast)</SelectItem>
+                            <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</SelectItem>
+                            <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</SelectItem>
+                            <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
+                          </>
+                        )}
+                        {aiSummaryConfig.provider === 'volcano' && (
+                          <>
+                            <SelectItem value="doubao-seed-1-6-250615">Doubao-1.6 (Pro-32k)</SelectItem>
+                            <SelectItem value="doubao-seed-1-6-flash-250615">Doubao-1.6-Flash (Lite)</SelectItem>
+                            <SelectItem value="doubao-1-5-lite-32k-250115">Doubao-1.5-lite-32k</SelectItem>
+                            <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
+                          </>
+                        )}
+                        {aiSummaryConfig.provider === 'claude' && (
+                          <>
+                            <SelectItem value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Latest)</SelectItem>
+                            <SelectItem value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Fast)</SelectItem>
+                            <SelectItem value="claude-3-opus-20240229">Claude 3 Opus (Powerful)</SelectItem>
+                            <SelectItem value="claude-3-sonnet-20240229">Claude 3 Sonnet</SelectItem>
+                            <SelectItem value="claude-3-haiku-20240307">Claude 3 Haiku</SelectItem>
+                            <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 {/* Base URL field for AI providers */}
                 {(aiSummaryConfig.provider === 'openai' ||
+                  aiSummaryConfig.provider === 'claude' ||
                   aiSummaryConfig.provider === 'gemini' ||
                   aiSummaryConfig.provider === 'volcano') && (
                   <BaseUrlInput
@@ -2114,6 +2350,63 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     }}
                     locale={locale}
                   />
+                )}
+
+                {/* API Authentication Type for AI Summary */}
+                {(aiSummaryConfig.provider === 'openai' ||
+                  aiSummaryConfig.provider === 'gemini' ||
+                  aiSummaryConfig.provider === 'volcano') && (
+                  <div className="space-y-2">
+                    <Label>{locale === 'zh' ? 'API 认证方式' : 'API Authentication'}</Label>
+                    <Select
+                      value={aiSummaryConfig.authType || 'bearer'}
+                      onValueChange={(value: any) => {
+                        const newConfig = { ...aiSummaryConfig, authType: value }
+                        setAISummaryConfig(newConfig)
+                        try {
+                          aiSummaryService.configureFromSettings(newConfig)
+                          setHasAISummaryProvider(aiSummaryService.isConfigured())
+                        } catch (error) {
+                          console.error('Failed to configure AI summary service:', error)
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bearer">Bearer Token (OpenAI, Claude)</SelectItem>
+                        <SelectItem value="x-api-key">x-api-key</SelectItem>
+                        <SelectItem value="x-goog-api-key">x-goog-api-key (TikHub AI)</SelectItem>
+                        <SelectItem value="api-key">api-key</SelectItem>
+                        <SelectItem value="custom">{locale === 'zh' ? '自定义...' : 'Custom...'}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {aiSummaryConfig.authType === 'custom' && (
+                      <Input
+                        type="text"
+                        value={aiSummaryConfig.customAuthHeader || ''}
+                        onChange={(e) => {
+                          const newConfig = { ...aiSummaryConfig, customAuthHeader: e.target.value }
+                          setAISummaryConfig(newConfig)
+                          try {
+                            aiSummaryService.configureFromSettings(newConfig)
+                            setHasAISummaryProvider(aiSummaryService.isConfigured())
+                          } catch (error) {
+                            console.error('Failed to configure AI summary service:', error)
+                          }
+                        }}
+                        placeholder={locale === 'zh' ? '输入自定义认证头名称，例如：x-custom-key' : 'Enter custom header name, e.g.: x-custom-key'}
+                        className="mt-2"
+                      />
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {locale === 'zh'
+                        ? '不同的 API 提供商使用不同的认证方式。TikHub AI 使用 x-goog-api-key，OpenAI 使用 Bearer Token。'
+                        : 'Different API providers use different authentication methods. TikHub AI uses x-goog-api-key, OpenAI uses Bearer Token.'
+                      }
+                    </p>
+                  </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-4">
@@ -2714,10 +3007,12 @@ function AIConfigurationPanel({ aiConfig, setAIConfig, locale, originalMaskedKey
   // Basic API key validation
   const validateApiKey = (provider: string, key: string): 'valid' | 'invalid' | null => {
     if (!key || isKeyMasked(key)) return null
-    
+
     switch (provider) {
       case 'openai':
         return key.startsWith('sk-') && key.length > 20 ? 'valid' : 'invalid'
+      case 'claude':
+        return key.startsWith('sk-ant-') && key.length > 20 ? 'valid' : 'invalid'
       case 'gemini':
         return key.startsWith('AIza') && key.length > 20 ? 'valid' : 'invalid'
       case 'volcano':
@@ -2764,35 +3059,40 @@ function AIConfigurationPanel({ aiConfig, setAIConfig, locale, originalMaskedKey
     setAIConfig(updatedConfig)
   }
 
-  const getDefaultModel = (provider: string): string => {
-    switch (provider) {
-      case 'openai': return 'gpt-3.5-turbo'
-      case 'gemini': return 'gemini-1.5-flash'
-      case 'volcano': return 'doubao-seed-1-6-250615'
-      default: return ''
-    }
-  }
-
   const providers = [
     {
       id: 'openai',
       name: 'OpenAI',
-      description: locale === 'zh' ? '支持GPT模型进行翻译、摘要和对话' : 'Support GPT models for translation, summary and conversation',
+      description: locale === 'zh' ? '支持最新GPT模型，包括GPT-5、GPT-4.5、GPT-4o系列和O系列推理模型' : 'Support latest GPT models including GPT-5, GPT-4.5, GPT-4o series and O-series reasoning models',
       models: [
-        { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
-        { value: 'gpt-4', label: 'GPT-4' },
-        { value: 'gpt-4o', label: 'GPT-4o' },
-        { value: 'gpt-4o-mini', label: 'GPT-4o Mini' }
+        { value: 'gpt-5.2', label: 'GPT-5.2 (Latest)', group: 'GPT-5 系列' },
+        { value: 'gpt-5.2-pro', label: 'GPT-5.2 Pro', group: 'GPT-5 系列' },
+        { value: 'gpt-5.1', label: 'GPT-5.1', group: 'GPT-5 系列' },
+        { value: 'gpt-5-nano', label: 'GPT-5 Nano (Fast)', group: 'GPT-5 系列' },
+        { value: 'gpt-5-instant', label: 'GPT-5 Instant', group: 'GPT-5 系列' },
+        { value: 'gpt-4.5', label: 'GPT-4.5', group: 'GPT-4 系列' },
+        { value: 'gpt-4.1', label: 'GPT-4.1 (Coding)', group: 'GPT-4 系列' },
+        { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', group: 'GPT-4 系列' },
+        { value: 'gpt-4o', label: 'GPT-4o', group: 'GPT-4 系列' },
+        { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Recommended)', group: 'GPT-4 系列' },
+        { value: 'o3', label: 'O3 (Reasoning)', group: 'O 系列' },
+        { value: 'o3-mini', label: 'O3 Mini', group: 'O 系列' },
+        { value: 'o4-mini', label: 'O4 Mini', group: 'O 系列' },
+        { value: 'custom', label: locale === 'zh' ? '自定义模型...' : 'Custom Model...', group: '其他' }
       ]
     },
     {
       id: 'gemini',
       name: 'Google Gemini',
-      description: locale === 'zh' ? '谷歌的多模态AI模型，支持文本生成和向量化。注意：向量嵌入会自动使用text-embedding-004模型。' : 'Google\'s multimodal AI model for text generation and embeddings. Note: Embeddings automatically use text-embedding-004 model.',
+      description: locale === 'zh' ? '支持最新Gemini 3和Gemini 2.5系列模型，具备强大的多模态理解能力。注意：向量嵌入会自动使用text-embedding-004模型。' : 'Support latest Gemini 3 and Gemini 2.5 series with powerful multimodal capabilities. Note: Embeddings automatically use text-embedding-004 model.',
       models: [
-        { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
-        { value: 'gemini-1.5-flash-8b', label: 'Gemini 1.5 Flash-8B' },
-        { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' }
+        { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro (Preview)', group: 'Gemini 3 系列' },
+        { value: 'gemini-3-flash', label: 'Gemini 3 Flash (Latest)', group: 'Gemini 3 系列' },
+        { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', group: 'Gemini 2.5 系列' },
+        { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite (Fast)', group: 'Gemini 2.5 系列' },
+        { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (Legacy)', group: 'Gemini 1.5 系列' },
+        { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (Legacy)', group: 'Gemini 1.5 系列' },
+        { value: 'custom', label: locale === 'zh' ? '自定义模型...' : 'Custom Model...', group: '其他' }
       ]
     },
     {
@@ -2802,7 +3102,21 @@ function AIConfigurationPanel({ aiConfig, setAIConfig, locale, originalMaskedKey
       models: [
         { value: 'doubao-seed-1-6-250615', label: 'Doubao-1.6 (Pro-32k)' },
         { value: 'doubao-seed-1-6-flash-250615', label: 'Doubao-1.6-Flash (Lite)' },
-        { value: 'doubao-1-5-lite-32k-250115', label: 'Doubao-1.5-lite-32k' }
+        { value: 'doubao-1-5-lite-32k-250115', label: 'Doubao-1.5-lite-32k' },
+        { value: 'custom', label: locale === 'zh' ? '自定义模型...' : 'Custom Model...', group: '其他' }
+      ]
+    },
+    {
+      id: 'claude',
+      name: 'Claude (Anthropic)',
+      description: locale === 'zh' ? '最新Claude 3.5系列模型，具备卓越的推理和代码能力' : 'Latest Claude 3.5 series with exceptional reasoning and coding capabilities',
+      models: [
+        { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Latest)', group: 'Claude 3.5' },
+        { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku (Fast)', group: 'Claude 3.5' },
+        { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus (Powerful)', group: 'Claude 3' },
+        { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet', group: 'Claude 3' },
+        { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku', group: 'Claude 3' },
+        { value: 'custom', label: locale === 'zh' ? '自定义模型...' : 'Custom Model...', group: '其他' }
       ]
     }
   ]

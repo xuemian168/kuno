@@ -2,6 +2,7 @@ import { AISummaryProvider, AISummaryConfig, AISummaryResult, ArticleContent } f
 import { OpenAISummaryProvider } from './providers/openai'
 import { GeminiSummaryProvider } from './providers/gemini'
 import { VolcanoSummaryProvider } from './providers/volcano'
+import { ClaudeSummaryProvider } from './providers/claude'
 import { aiUsageTracker, trackSummaryGeneration, trackSEOGeneration } from '../ai-usage-tracker'
 
 export * from './types'
@@ -191,7 +192,9 @@ export class AISummaryService {
           config.model,
           config.maxKeywords,
           config.summaryLength,
-          config.baseUrl
+          config.baseUrl,
+          config.authType,
+          config.customAuthHeader
         )
         break
       case 'gemini':
@@ -200,11 +203,22 @@ export class AISummaryService {
           config.model,
           config.maxKeywords,
           config.summaryLength,
-          config.baseUrl
+          config.baseUrl,
+          config.authType,
+          config.customAuthHeader
         )
         break
       case 'volcano':
         provider = new VolcanoSummaryProvider(
+          config.apiKey,
+          config.model,
+          config.maxKeywords,
+          config.summaryLength,
+          config.baseUrl
+        )
+        break
+      case 'claude':
+        provider = new ClaudeSummaryProvider(
           config.apiKey,
           config.model,
           config.maxKeywords,

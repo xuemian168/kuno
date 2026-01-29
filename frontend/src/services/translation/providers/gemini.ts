@@ -1,24 +1,86 @@
 import { BaseTranslationProvider } from './base'
-import { TranslationResult } from '../types'
+import { TranslationResult, AuthHeaderType } from '../types'
 import { formatErrorMessage } from '../error-messages'
-import { getGeminiEndpoint } from '../../ai-providers/utils'
+import { getGeminiEndpoint, getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
 export class GeminiProvider extends BaseTranslationProvider {
   name = 'Gemini'
   private model = 'gemini-1.5-flash'
   private baseUrl?: string
+  private authType: AuthHeaderType = 'bearer'
+  private customAuthHeader?: string
 
-  constructor(apiKey?: string, model?: string, baseUrl?: string) {
+  constructor(apiKey?: string, model?: string, baseUrl?: string, authType?: AuthHeaderType, customAuthHeader?: string) {
     super(apiKey)
     if (model) this.model = model
     if (baseUrl) this.baseUrl = baseUrl
+    if (authType) this.authType = authType
+    if (customAuthHeader) this.customAuthHeader = customAuthHeader
+  }
+
+  private isUsingCustomBaseUrl(): boolean {
+    return !!this.baseUrl && this.baseUrl !== PROVIDER_DEFAULTS.gemini.baseUrl
   }
 
   private getEndpoint(): string {
     if (!this.apiKey) {
       throw this.createError('Gemini API key not configured', 'NOT_CONFIGURED')
     }
+
+    // 如果使用自定义 Base URL，不在 URL 中传递 API key
+    if (this.isUsingCustomBaseUrl()) {
+      const base = getProviderEndpoint(
+        this.baseUrl,
+        PROVIDER_DEFAULTS.gemini.baseUrl
+      )
+      const path = PROVIDER_DEFAULTS.gemini.generateContentPath.replace('{model}', this.model)
+      return `${base}${path}`
+    }
+
+    // 官方 Gemini API：在 URL 中传递 key
     return getGeminiEndpoint(this.baseUrl, this.model, this.apiKey)
+  }
+
+  private buildAuthHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    }
+
+    // 如果使用官方 Gemini API，API key 在 URL 中，不需要在 header 中
+    if (!this.isUsingCustomBaseUrl()) {
+      return headers
+    }
+
+    // 使用自定义 Base URL 时，使用认证头部
+    if (!this.apiKey) {
+      return headers
+    }
+
+    switch (this.authType) {
+      case 'bearer':
+        headers['Authorization'] = `Bearer ${this.apiKey}`
+        break
+      case 'x-api-key':
+        headers['x-api-key'] = this.apiKey
+        break
+      case 'x-goog-api-key':
+        headers['x-goog-api-key'] = this.apiKey
+        break
+      case 'api-key':
+        headers['api-key'] = this.apiKey
+        break
+      case 'custom':
+        if (this.customAuthHeader) {
+          headers[this.customAuthHeader] = this.apiKey
+        } else {
+          headers['Authorization'] = `Bearer ${this.apiKey}`
+        }
+        break
+      default:
+        headers['Authorization'] = `Bearer ${this.apiKey}`
+    }
+
+    return headers
   }
 
   async translate(text: string, from: string, to: string): Promise<string> {
@@ -34,9 +96,7 @@ export class GeminiProvider extends BaseTranslationProvider {
     try {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.buildAuthHeaders(),
         body: JSON.stringify({
           contents: [{
             parts: [{
@@ -127,9 +187,7 @@ export class GeminiProvider extends BaseTranslationProvider {
     try {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.buildAuthHeaders(),
         body: JSON.stringify({
           contents: [{
             parts: [{
@@ -257,9 +315,7 @@ export class GeminiProvider extends BaseTranslationProvider {
 
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.buildAuthHeaders(),
         body: JSON.stringify({
           contents: [{
             parts: [{

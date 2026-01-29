@@ -12,7 +12,7 @@ services:
       - GIN_MODE=release
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/api/categories"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8085/api/categories"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -25,6 +25,7 @@ services:
     container_name: blog-frontend
     environment:
       - NODE_ENV=production
+      - INTERNAL_API_URL=http://backend:8085/api
     depends_on:
       backend:
         condition: service_healthy

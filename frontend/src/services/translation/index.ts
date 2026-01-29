@@ -4,6 +4,7 @@ import { DeepLProvider } from './providers/deepl'
 import { OpenAIProvider } from './providers/openai'
 import { GeminiProvider } from './providers/gemini'
 import { VolcanoProvider } from './providers/volcano'
+import { ClaudeProvider } from './providers/claude'
 import { LibreTranslateProvider } from './providers/libre-translate'
 import { MyMemoryProvider } from './providers/mymemory'
 import { GoogleFreeProvider } from './providers/google-free'
@@ -312,7 +313,7 @@ export class TranslationService {
       })
       
       console.error('Translation with selective comments failed:', error)
-      return text
+      throw error
     }
   }
 
@@ -542,8 +543,8 @@ export class TranslationService {
       }
     } catch (error) {
       console.error('Translation failed:', error)
-      // Return original text if translation fails
-      return text
+      // Rethrow error to let caller handle it
+      throw error
     }
   }
 
@@ -607,13 +608,22 @@ export class TranslationService {
         provider = new DeepLProvider(config.apiKey)
         break
       case 'openai':
-        provider = new OpenAIProvider(config.apiKey, config.model, config.baseUrl)
+        provider = new OpenAIProvider(
+          config.apiKey,
+          config.model,
+          config.baseUrl,
+          config.authType,
+          config.customAuthHeader
+        )
         break
       case 'gemini':
-        provider = new GeminiProvider(config.apiKey, config.model, config.baseUrl)
+        provider = new GeminiProvider(config.apiKey, config.model, config.baseUrl, config.authType, config.customAuthHeader)
         break
       case 'volcano':
         provider = new VolcanoProvider(config.apiKey, config.apiSecret, config.region, config.baseUrl)
+        break
+      case 'claude':
+        provider = new ClaudeProvider(config.apiKey, config.model, config.baseUrl)
         break
       case 'libretranslate':
         provider = new LibreTranslateProvider(config.apiKey, config.apiUrl)

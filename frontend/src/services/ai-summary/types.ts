@@ -20,13 +20,17 @@ export interface AISummaryResult {
   }
 }
 
+export type AuthHeaderType = 'bearer' | 'x-api-key' | 'x-goog-api-key' | 'api-key' | 'custom'
+
 export interface AISummaryConfig {
-  provider: 'openai' | 'gemini' | 'volcano'
+  provider: 'openai' | 'gemini' | 'volcano' | 'claude'
   apiKey?: string
   model?: string
   baseUrl?: string  // Custom base URL for API endpoint
   maxKeywords?: number
   summaryLength?: 'short' | 'medium' | 'long'
+  authType?: AuthHeaderType // API authentication method (default: bearer)
+  customAuthHeader?: string // Custom header name when authType is 'custom'
 }
 
 export interface ArticleContent {

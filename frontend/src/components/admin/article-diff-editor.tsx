@@ -55,6 +55,7 @@ import {
 import { translationService, initializeTranslationService } from "@/services/translation"
 import { languageManager } from "@/services/translation/language-manager"
 import { SUPPORTED_LANGUAGES, SupportedLanguage } from "@/services/translation/types"
+import { getErrorMessage } from "@/services/translation/error-messages"
 import { aiSummaryService, initializeAISummaryService } from "@/services/ai-summary"
 import { cn } from "@/lib/utils"
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer"
@@ -426,6 +427,17 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }
   }, [sourceLanguage, targetLanguage, activeField, getTranslation])
 
+  // Helper function to parse translation errors
+  const parseTranslationError = useCallback((error: unknown) => {
+    const message = error instanceof Error ? error.message : '未知错误'
+    const code = (error as any).code
+    const settingsStr = localStorage.getItem('blog_settings')
+    const settings = settingsStr ? JSON.parse(settingsStr) : null
+    const provider = settings?.translation?.provider || 'unknown'
+
+    return getErrorMessage(message, code, provider)
+  }, [])
+
   // Initialize languages once site settings are loaded
   useEffect(() => {
     if (siteSettings && availableLanguages.length > 0) {
@@ -618,14 +630,18 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         const { filtered: filteredContent, placeholders: contentPlaceholders } = filterNonTranslatableContent(sourceTranslation.content)
         
         let successCount = 0
-        const failedLanguages: string[] = []
-        
+        const failedLanguages: Array<{
+          language: string
+          reason: string
+          retryable: boolean
+        }> = []
+
         // Translate to each enabled language
         for (const targetLang of targetLanguages) {
           try {
             // Set current translating language
             setCurrentTranslatingLanguage(targetLang)
-            
+
             // Translate all fields at once
             const result = await translationService.translateArticle(
               {
@@ -653,11 +669,17 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
               updateTranslation(targetLang, 'content', restoredContent)
               updateTranslation(targetLang, 'summary', result.summary)
             }
-            
+
             successCount++
           } catch (error) {
             console.error(`Failed to translate to ${targetLang}:`, error)
-            failedLanguages.push(SUPPORTED_LANGUAGES[targetLang] || targetLang)
+            const errorDetails = parseTranslationError(error)
+
+            failedLanguages.push({
+              language: SUPPORTED_LANGUAGES[targetLang] || targetLang,
+              reason: errorDetails.message,
+              retryable: errorDetails.retryable || false
+            })
           }
         }
         
@@ -670,12 +692,48 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             normalizedLocale === 'zh' ? '翻译完成！' : 'Translation Complete!',
             normalizedLocale === 'zh' ? `成功翻译到 ${successCount} 种语言` : `Successfully translated to ${successCount} languages`
           )
-        } else if (successCount > 0) {
+        } else if (successCount > 0 || failedLanguages.length > 0) {
+          const retryableErrors = failedLanguages.filter(f => f.retryable)
+          const permanentErrors = failedLanguages.filter(f => !f.retryable)
+
+          let message = ''
+          if (successCount > 0) {
+            message += normalizedLocale === 'zh'
+              ? `成功翻译: ${successCount} 种语言\n\n`
+              : `Successfully translated: ${successCount} languages\n\n`
+          }
+
+          if (retryableErrors.length > 0) {
+            message += normalizedLocale === 'zh' ? '以下错误可重试:\n' : 'Retryable errors:\n'
+            retryableErrors.forEach(f => {
+              message += `- ${f.language}: ${f.reason}\n`
+            })
+          }
+
+          if (permanentErrors.length > 0) {
+            message += normalizedLocale === 'zh' ? '\n以下错误需要修复配置:\n' : '\nConfiguration errors:\n'
+            permanentErrors.forEach(f => {
+              message += `- ${f.language}: ${f.reason}\n`
+            })
+          }
+
+          const hasRetryable = retryableErrors.length > 0
+
           notification.showWarning(
             normalizedLocale === 'zh' ? '部分翻译完成' : 'Partial Translation Complete',
-            normalizedLocale === 'zh' 
-              ? `成功翻译到 ${successCount} 种语言，失败: ${failedLanguages.join(', ')}`
-              : `Successfully translated to ${successCount} languages, failed: ${failedLanguages.join(', ')}`
+            message.trim(),
+            {
+              retryable: hasRetryable,
+              suggestion: hasRetryable
+                ? (normalizedLocale === 'zh' ? '可以点击重试按钮重新翻译失败的语言' : 'Click retry to translate failed languages again')
+                : undefined,
+              onRetry: hasRetryable
+                ? () => {
+                    // Note: This is a simplified retry - ideally should retry only failed languages
+                    handleAutoTranslate('all')
+                  }
+                : undefined
+            }
           )
         } else {
           notification.showError(
@@ -717,10 +775,17 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       }
     } catch (error) {
       console.error('Translation error:', error)
-      alert(
-        error instanceof Error 
-          ? error.message 
-          : 'Translation failed. Please check your API configuration.'
+
+      const errorDetails = parseTranslationError(error)
+
+      notification.showError(
+        normalizedLocale === 'zh' ? '翻译失败' : 'Translation Failed',
+        errorDetails.message,
+        {
+          suggestion: errorDetails.suggestion,
+          retryable: errorDetails.retryable,
+          onRetry: errorDetails.retryable ? () => handleAutoTranslate(field) : undefined
+        }
       )
     } finally {
       setIsTranslating(false)

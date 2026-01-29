@@ -20,16 +20,20 @@ export interface TranslationResult {
   }
 }
 
+export type AuthHeaderType = 'bearer' | 'x-api-key' | 'x-goog-api-key' | 'api-key' | 'custom'
+
 export interface TranslationConfig {
-  provider: 'google' | 'deepl' | 'openai' | 'gemini' | 'volcano' | 'libretranslate' | 'mymemory' | 'google-free'
+  provider: 'google' | 'deepl' | 'openai' | 'gemini' | 'volcano' | 'claude' | 'libretranslate' | 'mymemory' | 'google-free'
   apiKey?: string
   apiSecret?: string
   region?: string
   model?: string
-  baseUrl?: string  // Custom base URL for AI providers (OpenAI, Gemini, Volcano)
+  baseUrl?: string  // Custom base URL for AI providers (OpenAI, Gemini, Volcano, Claude)
   apiUrl?: string // For LibreTranslate custom instances (backward compatibility)
   email?: string // For MyMemory
   enabledLanguages?: SupportedLanguage[] // User-configured languages
+  authType?: AuthHeaderType // API authentication method (default: bearer)
+  customAuthHeader?: string // Custom header name when authType is 'custom'
 }
 
 export interface LanguageSettings {
