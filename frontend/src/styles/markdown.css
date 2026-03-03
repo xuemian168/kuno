@@ -2,6 +2,8 @@
 .prose {
   max-width: none;
   color: inherit;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Enhanced code blocks - ensure no conflicts with custom CodeBlock component */
