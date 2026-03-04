@@ -121,7 +121,7 @@ export function MarkdownRenderer({ content, className = "", includeStructuredDat
               <CodeBlock
                 className={className}
                 language={language}
-                showLineNumbers={!!language}
+                showLineNumbers={true}
               >
                 {children}
               </CodeBlock>
