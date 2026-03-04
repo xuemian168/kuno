@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useDynamicTheme } from '@/contexts/dynamic-theme-context'
 import QRCode from 'qrcode'
-import { 
-  Twitter, 
-  Facebook, 
-  Link, 
+import {
+  Twitter,
+  Facebook,
+  Linkedin,
+  Link,
   MessageCircle,
   Send,
   Copy,
@@ -69,6 +70,13 @@ export default function ShareBar({ url, title, description, className = '' }: Sh
       icon: Facebook,
       url: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
       color: 'text-blue-600 hover:text-blue-700 dark:text-blue-500 dark:hover:text-blue-400',
+      bgColor: 'hover:bg-blue-100 dark:hover:bg-blue-900'
+    },
+    {
+      name: t('share.linkedin'),
+      icon: Linkedin,
+      url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
+      color: 'text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300',
       bgColor: 'hover:bg-blue-100 dark:hover:bg-blue-900'
     },
     {
