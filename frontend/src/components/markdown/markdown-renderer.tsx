@@ -90,10 +90,11 @@ export function MarkdownRenderer({ content, className = "", includeStructuredDat
           code({ className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '')
             const language = match ? match[1] : undefined
-            
-            // Check if this is a block-level code by looking at className
-            const isBlockCode = className && className.includes('language-')
-            
+
+            // Check if this is a block-level code by looking at className or content with newlines
+            const codeString = String(children).replace(/\n$/, '')
+            const isBlockCode = (className && className.includes('language-')) || codeString.includes('\n')
+
             if (!isBlockCode) {
               // Inline code
               return (
@@ -117,10 +118,10 @@ export function MarkdownRenderer({ content, className = "", includeStructuredDat
             
             // Block code - use enhanced CodeBlock component
             return (
-              <CodeBlock 
-                className={className} 
+              <CodeBlock
+                className={className}
                 language={language}
-                showLineNumbers={true}
+                showLineNumbers={!!language}
               >
                 {children}
               </CodeBlock>
