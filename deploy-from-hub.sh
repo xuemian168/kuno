@@ -257,9 +257,20 @@ fi
 echo -e "${YELLOW}📥 Pulling Docker image...${NC}"
 docker pull ${IMAGE}
 
-# Create data directory for persistence
+# Create data directory for persistence and ensure correct permissions
 DATA_DIR="./blog-data"
 mkdir -p ${DATA_DIR}
+
+# Check and fix directory permissions
+echo -e "${YELLOW}🔐 Checking data directory permissions...${NC}"
+CURRENT_PERMS=$(stat -c '%a' "${DATA_DIR}" 2>/dev/null || stat -f '%Lp' "${DATA_DIR}" 2>/dev/null)
+if [ "$CURRENT_PERMS" != "777" ]; then
+    echo -e "${YELLOW}⚠️  Current permissions: ${CURRENT_PERMS}, setting to 777...${NC}"
+    chmod -R 777 "${DATA_DIR}"
+    echo -e "${GREEN}✅ Data directory permissions set to 777${NC}"
+else
+    echo -e "${GREEN}✅ Data directory permissions OK (${CURRENT_PERMS})${NC}"
+fi
 
 if [ "$DEPLOY_MODE" = "standard" ]; then
     echo -e "${BLUE}🔄 Using Standard Deployment...${NC}"
