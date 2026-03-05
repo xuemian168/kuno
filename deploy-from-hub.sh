@@ -163,71 +163,141 @@ if ! docker info >/dev/null 2>&1; then
     exit 1
 fi
 
+# Local config file for remembering settings
+CONFIG_FILE=".deploy-config"
+
+# Function to load saved config
+load_config() {
+    if [ -f "$CONFIG_FILE" ]; then
+        # Source the config file safely - only read known variables
+        local saved_image saved_port saved_container saved_strategy
+        saved_image=$(grep '^IMAGE=' "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2-)
+        saved_port=$(grep '^PORT=' "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2-)
+        saved_container=$(grep '^CONTAINER_NAME=' "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2-)
+        saved_strategy=$(grep '^STRATEGY=' "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2-)
+
+        if [ -n "$saved_image" ] && [ -n "$saved_port" ] && [ -n "$saved_container" ] && [ -n "$saved_strategy" ]; then
+            IMAGE="$saved_image"
+            PORT="$saved_port"
+            CONTAINER_NAME="$saved_container"
+            STRATEGY="$saved_strategy"
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# Function to save config
+save_config() {
+    cat > "$CONFIG_FILE" <<EOC
+IMAGE=${IMAGE}
+PORT=${PORT}
+CONTAINER_NAME=${CONTAINER_NAME}
+STRATEGY=${STRATEGY}
+EOC
+    echo -e "${GREEN}✅ Configuration saved to ${CONFIG_FILE}${NC}"
+}
+
+# Function to prompt for all configuration interactively
+prompt_config() {
+    while true; do
+        read -p "Docker image (default: ${DEFAULT_IMAGE}): " IMAGE
+        if [ "$IMAGE" = "" ]; then
+            IMAGE="$DEFAULT_IMAGE"
+            break
+        fi
+
+        if validate_docker_image "$IMAGE"; then
+            break
+        fi
+        echo -e "${YELLOW}Please try again...${NC}"
+        echo ""
+    done
+
+    while true; do
+        read -p "Port (default: ${DEFAULT_PORT}): " PORT
+        if [ "$PORT" = "" ]; then
+            PORT="$DEFAULT_PORT"
+            break
+        fi
+
+        if validate_port "$PORT"; then
+            break
+        fi
+        echo -e "${YELLOW}Please try again...${NC}"
+        echo ""
+    done
+
+    while true; do
+        read -p "Container name (default: ${DEFAULT_CONTAINER_NAME}): " CONTAINER_NAME
+        if [ "$CONTAINER_NAME" = "" ]; then
+            CONTAINER_NAME="$DEFAULT_CONTAINER_NAME"
+            break
+        fi
+
+        if validate_container_name "$CONTAINER_NAME"; then
+            break
+        fi
+        echo -e "${YELLOW}Please try again...${NC}"
+        echo ""
+    done
+
+    # Deployment strategy choice
+    echo ""
+    echo -e "${BLUE}🚀 Deployment Strategy:${NC}"
+    echo "1. Standard Deployment (simple, ~30s downtime)"
+    echo "2. Blue-Green Deployment (zero-downtime, recommended)"
+    echo ""
+    while true; do
+        read -p "Choose deployment strategy (1-2, default: 2): " STRATEGY
+        if [ "$STRATEGY" = "" ]; then
+            STRATEGY="2"
+            break
+        fi
+
+        if validate_strategy "$STRATEGY"; then
+            break
+        fi
+        echo -e "${YELLOW}Please try again...${NC}"
+        echo ""
+    done
+}
+
 # Prompt for configuration
 echo -e "${YELLOW}🔧 Configuration Setup${NC}"
 echo ""
 
-while true; do
-    read -p "Docker image (default: ${DEFAULT_IMAGE}): " IMAGE
-    if [ "$IMAGE" = "" ]; then
-        IMAGE="$DEFAULT_IMAGE"
-        break
-    fi
-    
-    if validate_docker_image "$IMAGE"; then
-        break
-    fi
-    echo -e "${YELLOW}Please try again...${NC}"
+USE_SAVED=false
+if load_config; then
+    local_strategy_label="Standard"
+    [ "$STRATEGY" = "2" ] && local_strategy_label="Blue-Green"
+    echo -e "${GREEN}📋 Found saved configuration:${NC}"
+    echo -e "  🐳 Image:     ${IMAGE}"
+    echo -e "  🌐 Port:      ${PORT}"
+    echo -e "  📦 Container: ${CONTAINER_NAME}"
+    echo -e "  🚀 Strategy:  ${local_strategy_label}"
     echo ""
-done
+    echo "1. Use saved configuration"
+    echo "2. Reconfigure"
+    echo ""
+    read -p "Choose (1-2, default: 1): " CONFIG_CHOICE
+    CONFIG_CHOICE=${CONFIG_CHOICE:-1}
 
-while true; do
-    read -p "Port (default: ${DEFAULT_PORT}): " PORT
-    if [ "$PORT" = "" ]; then
-        PORT="$DEFAULT_PORT"
-        break
+    if [ "$CONFIG_CHOICE" = "1" ]; then
+        USE_SAVED=true
+        echo -e "${GREEN}✅ Using saved configuration${NC}"
+    else
+        echo ""
+        prompt_config
     fi
-    
-    if validate_port "$PORT"; then
-        break
-    fi
-    echo -e "${YELLOW}Please try again...${NC}"
-    echo ""
-done
+else
+    prompt_config
+fi
 
-while true; do
-    read -p "Container name (default: ${DEFAULT_CONTAINER_NAME}): " CONTAINER_NAME
-    if [ "$CONTAINER_NAME" = "" ]; then
-        CONTAINER_NAME="$DEFAULT_CONTAINER_NAME"
-        break
-    fi
-    
-    if validate_container_name "$CONTAINER_NAME"; then
-        break
-    fi
-    echo -e "${YELLOW}Please try again...${NC}"
-    echo ""
-done
-
-# Deployment strategy choice
-echo ""
-echo -e "${BLUE}🚀 Deployment Strategy:${NC}"
-echo "1. Standard Deployment (simple, ~30s downtime)"
-echo "2. Blue-Green Deployment (zero-downtime, recommended)"
-echo ""
-while true; do
-    read -p "Choose deployment strategy (1-2, default: 2): " STRATEGY
-    if [ "$STRATEGY" = "" ]; then
-        STRATEGY="2"
-        break
-    fi
-    
-    if validate_strategy "$STRATEGY"; then
-        break
-    fi
-    echo -e "${YELLOW}Please try again...${NC}"
-    echo ""
-done
+# Save config for next time (only if user entered new config)
+if [ "$USE_SAVED" = false ]; then
+    save_config
+fi
 
 if [ "$STRATEGY" = "2" ]; then
     DEPLOY_MODE="blue-green"

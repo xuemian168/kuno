@@ -5,3 +5,4 @@ blog.db
 backups/
 !/docs/CHANGELOG.md
 .DS_Store
+.deploy-config
