@@ -3,8 +3,11 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
+import remarkMath from 'remark-math'
 import rehypeRaw from 'rehype-raw'
 import rehypeSlug from 'rehype-slug'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
 import YouTubeEmbed from '@/components/youtube-embed'
 import BiliBiliEmbed from '@/components/bilibili-embed'
 import { CodeBlock } from '@/components/code-block'
@@ -83,8 +86,8 @@ export function MarkdownRenderer({ content, className = "", includeStructuredDat
   return (
     <div className={`prose prose-neutral dark:prose-invert max-w-none ${className}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={[rehypeRaw, rehypeSlug]}
+        remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+        rehypePlugins={[rehypeRaw, rehypeSlug, rehypeKatex]}
         components={{
           // Custom component for code blocks
           code({ className, children, ...props }) {
