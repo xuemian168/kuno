@@ -186,13 +186,13 @@ export function MarkdownRenderer({ content, className = "", includeStructuredDat
               {children}
             </TableRow>
           ),
-          th: ({ children }) => (
-            <TableHead>
+          th: ({ children, style }) => (
+            <TableHead align={style?.textAlign as 'left' | 'center' | 'right'}>
               {children}
             </TableHead>
           ),
-          td: ({ children }) => (
-            <TableCell>
+          td: ({ children, style }) => (
+            <TableCell align={style?.textAlign as 'left' | 'center' | 'right'}>
               {children}
             </TableCell>
           ),

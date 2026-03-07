@@ -97,33 +97,21 @@ const TableCell = React.forwardRef<
   HTMLTableCellElement,
   React.TdHTMLAttributes<HTMLTableCellElement> & {
     align?: 'left' | 'center' | 'right'
-    numeric?: boolean
   }
->(({ className, align, numeric, children, ...props }, ref) => {
-  // Auto-detect numeric content if not explicitly set
-  const isNumeric = numeric ?? (
-    typeof children === 'string' && 
-    /^[\d\s,.\-+$€¥£%]+$/.test(children.trim())
-  )
-  
-  const finalAlign = align ?? (isNumeric ? 'right' : 'left')
-  
-  return (
-    <td
-      ref={ref}
-      className={cn(
-        'enhanced-table-cell',
-        finalAlign === 'center' && 'text-center',
-        finalAlign === 'right' && 'text-right',
-        isNumeric && 'font-mono',
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </td>
-  )
-})
+>(({ className, align, children, ...props }, ref) => (
+  <td
+    ref={ref}
+    className={cn(
+      'enhanced-table-cell',
+      align === 'center' && 'text-center',
+      align === 'right' && 'text-right',
+      className
+    )}
+    {...props}
+  >
+    {children}
+  </td>
+))
 TableCell.displayName = "TableCell"
 
 const TableCaption = React.forwardRef<
