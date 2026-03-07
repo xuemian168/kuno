@@ -76,11 +76,12 @@ const TableHead = React.forwardRef<
     sortable?: boolean
     align?: 'left' | 'center' | 'right'
   }
->(({ className, sortable, align = 'left', children, ...props }, ref) => (
+>(({ className, sortable, align, children, ...props }, ref) => (
   <th
     ref={ref}
     className={cn(
       'enhanced-table-head',
+      align === 'left' && 'text-left',
       align === 'center' && 'text-center',
       align === 'right' && 'text-right',
       sortable && 'enhanced-table-head-sortable',

@@ -139,6 +139,25 @@
   list-style-type: square;
 }
 
+/* GFM Task List */
+.prose .task-list-item {
+  list-style-type: none;
+  margin-left: -1.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.prose .task-list-checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: hsl(var(--primary));
+  cursor: default;
+  flex-shrink: 0;
+  position: relative;
+  top: 0.125rem;
+}
+
 /* Paragraphs */
 .prose p {
   @apply leading-relaxed mb-4;

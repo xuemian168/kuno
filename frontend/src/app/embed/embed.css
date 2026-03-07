@@ -4,25 +4,21 @@
   line-height: 1.6;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  color: hsl(var(--foreground));
 }
 
-/* Ensure proper text colors in dark mode */
-.dark .embed-container {
-  color: #e5e7eb;
+.embed-container h1,
+.embed-container h2,
+.embed-container h3,
+.embed-container h4,
+.embed-container h5,
+.embed-container h6 {
+  color: hsl(var(--foreground));
 }
 
-.dark .embed-container h1,
-.dark .embed-container h2,
-.dark .embed-container h3,
-.dark .embed-container h4,
-.dark .embed-container h5,
-.dark .embed-container h6 {
-  color: #f3f4f6;
-}
-
-.dark .embed-container p,
-.dark .embed-container li {
-  color: #d1d5db;
+.embed-container p,
+.embed-container li {
+  color: hsl(var(--muted-foreground));
 }
 
 /* Remove margins for embedded content */
@@ -53,20 +49,13 @@
   padding: 1rem;
   border-radius: 0.375rem;
   font-size: 0.875rem;
-  background-color: #f3f4f6;
-}
-
-.dark .embed-container pre {
-  background-color: #1f2937;
-  color: #e5e7eb;
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
 }
 
 .embed-container code {
   font-size: 0.875rem;
-}
-
-.dark .embed-container code {
-  color: #e5e7eb;
+  color: hsl(var(--foreground));
 }
 
 /* Tables responsive */
@@ -81,21 +70,13 @@
 .embed-container blockquote {
   margin: 1rem 0;
   padding-left: 1rem;
-  border-left: 4px solid #e5e7eb;
-}
-
-.embed-container.dark blockquote {
-  border-left-color: #374151;
+  border-left: 4px solid hsl(var(--border));
 }
 
 /* Links styling */
 .embed-container a {
-  color: #2563eb;
+  color: hsl(var(--primary));
   text-decoration: underline;
-}
-
-.embed-container.dark a {
-  color: #60a5fa;
 }
 
 .embed-container a:hover {
@@ -118,22 +99,22 @@
   .embed-container {
     padding: 1rem;
   }
-  
+
   .embed-container h1 {
     font-size: 1.5rem;
     line-height: 2rem;
   }
-  
+
   .embed-container h2 {
     font-size: 1.25rem;
     line-height: 1.75rem;
   }
-  
+
   .embed-container h3 {
     font-size: 1.125rem;
     line-height: 1.5rem;
   }
-  
+
   .embed-container p {
     font-size: 0.875rem;
     line-height: 1.5rem;
@@ -159,7 +140,7 @@
     color: black;
     background: white;
   }
-  
+
   .embed-container a {
     color: black;
     text-decoration: underline;

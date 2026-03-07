@@ -196,6 +196,43 @@ export function MarkdownRenderer({ content, className = "", includeStructuredDat
               {children}
             </TableCell>
           ),
+          // GFM task list items
+          li: ({ children, className, ...props }) => {
+            if (className?.includes('task-list-item')) {
+              return (
+                <li className="task-list-item" {...props}>
+                  {children}
+                </li>
+              )
+            }
+            return <li className="leading-relaxed" {...props}>{children}</li>
+          },
+          // GFM task list checkbox
+          input: ({ type, checked, ...props }) => {
+            if (type === 'checkbox') {
+              return (
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled
+                  className="task-list-checkbox"
+                  {...props}
+                />
+              )
+            }
+            return <input type={type} checked={checked} {...props} />
+          },
+          // Image with lazy loading
+          img: ({ src, alt, ...props }) => (
+            <img
+              src={src}
+              alt={alt || ''}
+              loading="lazy"
+              decoding="async"
+              className="rounded-lg shadow-sm max-w-full h-auto"
+              {...props}
+            />
+          ),
           // Custom component for blockquotes
           blockquote: ({ children }) => (
             <blockquote className="border-l-4 border-primary pl-4 italic text-muted-foreground">

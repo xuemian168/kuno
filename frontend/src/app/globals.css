@@ -311,7 +311,7 @@
 
   /* Enhanced table styles */
   .enhanced-table-container {
-    @apply relative w-full my-6 overflow-hidden rounded-xl border border-border/50;
+    @apply relative w-full my-6 overflow-x-auto rounded-xl border border-border/50;
     background: hsl(var(--card) / 0.8);
     backdrop-filter: blur(8px);
     box-shadow: 
@@ -338,7 +338,7 @@
   }
 
   .enhanced-table-head {
-    @apply px-4 py-3 text-left font-semibold text-muted-foreground;
+    @apply px-4 py-3 font-semibold text-muted-foreground;
     border-bottom: 1px solid hsl(var(--border) / 0.3);
   }
 
@@ -412,19 +412,6 @@
       @apply px-3 py-2 text-xs;
     }
 
-    /* Hide less important columns on mobile */
-    .enhanced-table-head:nth-child(n+4),
-    .enhanced-table-cell:nth-child(n+4) {
-      @apply hidden;
-    }
-
-    /* Show all columns on larger mobile screens */
-    @media (min-width: 480px) {
-      .enhanced-table-head:nth-child(n+4),
-      .enhanced-table-cell:nth-child(n+4) {
-        @apply table-cell;
-      }
-    }
   }
 
   /* Enhanced scrollbar for table container */
