@@ -82,11 +82,9 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
     languages[loc] = `${siteUrl}${langPath}`
   })
   
-  // Add self-referential alternate link (x-default)
-  const currentLangPath = locale === routing.defaultLocale 
-    ? (canonical || '/') 
-    : `/${locale}${canonical === '/' ? '' : canonical || ''}`
-  languages['x-default'] = `${siteUrl}${currentLangPath}`
+  // x-default 始终指向默认语言版本
+  const defaultLangPath = canonical || '/'
+  languages['x-default'] = `${siteUrl}${defaultLangPath}`
   
   // Build canonical URL - full absolute URL is preferred for SEO
   const canonicalPath = canonical || '/'
@@ -186,19 +184,21 @@ export async function generateArticleMetadata(options: PageMetadataOptions & {
     summary?: string
     seo_title?: string
     seo_description?: string
+    cover_image_url?: string
+    cover_image_alt?: string
     created_at: string
     updated_at: string
   }
 }): Promise<Metadata> {
   const { article, ...baseOptions } = options
-  
+
   if (!article) {
     return generatePageMetadata(baseOptions)
   }
 
   const finalTitle = article.seo_title || article.title
   const finalDescription = article.seo_description || article.summary || ''
-  
+
   const metadata = await generatePageMetadata({
     ...baseOptions,
     title: finalTitle,
@@ -212,6 +212,29 @@ export async function generateArticleMetadata(options: PageMetadataOptions & {
       type: 'article',
       publishedTime: article.created_at,
       modifiedTime: article.updated_at,
+    }
+
+    // Add og:image if cover image exists
+    if (article.cover_image_url) {
+      const siteUrl = getSiteUrl()
+      // 服务端构建完整的图片 URL
+      const imageUrl = article.cover_image_url.startsWith('http')
+        ? article.cover_image_url
+        : article.cover_image_url.startsWith('/uploads/')
+          ? `${siteUrl}/api${article.cover_image_url}`
+          : `${siteUrl}${article.cover_image_url}`
+
+      metadata.openGraph = {
+        ...metadata.openGraph,
+        images: [{
+          url: imageUrl,
+          alt: article.cover_image_alt || article.title,
+        }],
+      }
+      metadata.twitter = {
+        ...metadata.twitter,
+        images: [imageUrl],
+      }
     }
   }
 

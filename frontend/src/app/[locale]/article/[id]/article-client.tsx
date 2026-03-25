@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { notFound } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Calendar, Tag, Eye, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -11,33 +10,37 @@ import { Badge } from '@/components/ui/badge'
 import { MarkdownRenderer } from '@/components/markdown/markdown-renderer'
 import { TableOfContents } from '@/components/table-of-contents'
 import { generateTocFromMarkdown } from '@/lib/markdown-utils'
-import { apiClient, Article } from '@/lib/api'
-import { ArticleStructuredData, BreadcrumbStructuredData } from '@/components/seo/structured-data'
-import { getBaseUrl, getSiteUrl } from '@/lib/utils'
+import { apiClient, Article, SiteSettings } from '@/lib/api'
+import { getSiteUrl } from '@/lib/utils'
 import EmbedCodeGenerator from '@/components/embed-code-generator'
 import SocialShare from '@/components/social-share'
 import ShareBar from '@/components/share-bar'
 import { useAuth } from '@/contexts/auth-context'
-import { Link } from '@/i18n/routing'
+import { Link, routing } from '@/i18n/routing'
 import { useDynamicTheme } from '@/contexts/dynamic-theme-context'
 import { RelatedArticles } from '@/components/related-articles'
 
 interface ArticlePageClientProps {
   id: string
   locale: string
+  initialArticle: Article
+  initialSettings: SiteSettings | null
 }
 
-export default function ArticlePageClient({ id, locale }: ArticlePageClientProps) {
+export default function ArticlePageClient({ id, locale, initialArticle, initialSettings }: ArticlePageClientProps) {
   const t = useTranslations()
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const { analysisResult, isDynamicThemeActive } = useDynamicTheme()
-  const [article, setArticle] = useState<Article | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [siteSettings, setSiteSettings] = useState<{ site_title: string; site_subtitle: string; show_view_count?: boolean } | null>(null)
-  const [tocItems, setTocItems] = useState<any[]>([])
-  
+  const [article] = useState<Article>(initialArticle)
+  const [siteSettings] = useState<{ site_title: string; site_subtitle: string; show_view_count?: boolean } | null>(initialSettings)
+  const [tocItems] = useState<any[]>(() => {
+    if (initialArticle?.content) {
+      return generateTocFromMarkdown(initialArticle.content)
+    }
+    return []
+  })
+
   // Behavior tracking state
   const [startTime] = useState(() => typeof window !== 'undefined' ? Date.now() : 0)
   const [isVisible, setIsVisible] = useState(true)
@@ -45,37 +48,6 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
   const [isMounted, setIsMounted] = useState(false)
   const visibilityTimeRef = useRef(0)
   const lastVisibilityTimeRef = useRef(typeof window !== 'undefined' ? Date.now() : 0)
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        const [articleData, settingsData] = await Promise.all([
-          apiClient.getArticle(parseInt(id), locale),
-          apiClient.getSettings({ lang: locale })
-        ])
-        setArticle(articleData)
-        setSiteSettings(settingsData)
-        
-        // Generate table of contents
-        if (articleData?.content) {
-          const toc = generateTocFromMarkdown(articleData.content)
-          setTocItems(toc)
-        }
-      } catch (err) {
-        console.error('Failed to fetch article:', err)
-        // If it's a 404 error (article not found), trigger the 404 page
-        if (err instanceof Error && (err.message.includes('404') || err.message.includes('Not Found'))) {
-          notFound()
-        }
-        setError(err instanceof Error ? err.message : 'Failed to fetch article')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [id, locale])
 
   // Mount effect to ensure client-side only operations
   useEffect(() => {
@@ -217,45 +189,14 @@ export default function ArticlePageClient({ id, locale }: ArticlePageClientProps
     })
   }
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="text-center">{t('common.loading')}</div>
-      </div>
-    )
-  }
-
-  if (error || !article) {
-    // If we have an error or no article, trigger 404 page
-    notFound()
-  }
-
   const siteUrl = getSiteUrl()
-  // Use default locale from routing config
-  const defaultLocale = 'zh' // Default locale from routing config
-  const articleUrl = locale === defaultLocale 
-    ? `${siteUrl}/article/${id}` 
-    : `${siteUrl}/${locale}/article/${id}`
-  const homeUrl = locale === defaultLocale ? siteUrl : `${siteUrl}/${locale}`
-
-  const breadcrumbItems = [
-    { name: t('nav.home'), url: homeUrl },
-    { name: article.title, url: articleUrl }
-  ]
+  const defaultLocale = routing.defaultLocale
+  const articleUrl = locale === defaultLocale
+    ? `${siteUrl}/article/${article.seo_slug || id}`
+    : `${siteUrl}/${locale}/article/${article.seo_slug || id}`
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <ArticleStructuredData
-        title={article.title}
-        description={article.summary || ''}
-        url={articleUrl}
-        datePublished={article.created_at}
-        dateModified={article.updated_at}
-        author={siteSettings?.site_title || t('site.title')}
-        locale={locale}
-        content={article.content}
-      />
-      <BreadcrumbStructuredData items={breadcrumbItems} />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

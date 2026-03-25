@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Calendar, ArrowRight, Eye, Rss, Pin, ImageIcon } from 'lucide-react'
 import { getMediaUrl } from '@/lib/config'
-import { apiClient, Article, Category } from '@/lib/api'
+import { apiClient, Article, Category, SiteSettings } from '@/lib/api'
 import NextLink from 'next/link'
 import { WebsiteStructuredData } from '@/components/seo/structured-data'
 import { getBaseUrl, truncateText, generateCategoryTheme, getInitialLetter, parseKeywords, formatKeywordDisplay } from '@/lib/utils'
@@ -16,15 +16,18 @@ import { PersonalizedRecommendations } from '@/components/recommendations'
 
 interface HomePageClientProps {
   locale: string
+  initialArticles: Article[]
+  initialCategories: Category[]
+  initialSettings: SiteSettings | null
 }
 
-export default function HomePageClient({ locale }: HomePageClientProps) {
+export default function HomePageClient({ locale, initialArticles, initialCategories, initialSettings }: HomePageClientProps) {
   const t = useTranslations()
-  const [articles, setArticles] = useState<Article[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const [articles, setArticles] = useState<Article[]>(initialArticles)
+  const [categories, setCategories] = useState<Category[]>(initialCategories)
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [siteSettings, setSiteSettings] = useState<{ site_title: string; site_subtitle: string; show_view_count?: boolean } | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [siteSettings, setSiteSettings] = useState<{ site_title: string; site_subtitle: string; show_view_count?: boolean } | null>(initialSettings)
   const [ragAvailable, setRagAvailable] = useState<boolean | null>(null)
 
   // Check RAG availability
@@ -38,27 +41,26 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
     }
   }
 
+  // 仅在分类切换时客户端 refetch
   useEffect(() => {
-    const fetchData = async () => {
+    if (selectedCategory === null) {
+      // 无分类筛选时使用 SSR 数据
+      setArticles(initialArticles)
+      return
+    }
+    const fetchFiltered = async () => {
       try {
         setLoading(true)
-        const [articlesData, categoriesData, settingsData] = await Promise.all([
-          apiClient.getArticles({ categoryId: selectedCategory || undefined, lang: locale }),
-          apiClient.getCategories({ lang: locale }),
-          apiClient.getSettings({ lang: locale })
-        ])
+        const articlesData = await apiClient.getArticles({ categoryId: selectedCategory, lang: locale })
         setArticles(articlesData)
-        setCategories(categoriesData)
-        setSiteSettings(settingsData)
       } catch (error) {
-        console.error('Failed to fetch data:', error)
+        console.error('Failed to fetch filtered articles:', error)
       } finally {
         setLoading(false)
       }
     }
-
-    fetchData()
-  }, [locale, selectedCategory])
+    fetchFiltered()
+  }, [locale, selectedCategory, initialArticles])
 
   // Check RAG availability on component mount
   useEffect(() => {
@@ -69,9 +71,8 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
     setSelectedCategory(categoryId)
   }
 
-  const filteredArticles = selectedCategory
-    ? articles.filter(article => article.category_id === selectedCategory)
-    : articles
+  // articles 已经由 API 或 initialArticles 按分类过滤，无需本地再过滤
+  const filteredArticles = articles
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US', {
@@ -166,7 +167,7 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
                   >
-                    <NextLink href={`/${locale}/article/${article.id}`} className="block h-full">
+                    <NextLink href={`/${locale}/article/${article.seo_slug || article.id}`} className="block h-full">
                       <Card className={`h-full hover:shadow-lg transition-all cursor-pointer group overflow-hidden ${
                         !article.cover_image_url ? 'hover:shadow-xl hover:scale-[1.02]' : ''
                       }`}>
