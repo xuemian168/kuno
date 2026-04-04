@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   const t = await getTranslations({ locale })
 
   try {
-    const article = await fetchArticle(parseInt(id), locale)
+    const article = await fetchArticle(id, locale)
 
     return generateArticleMetadata({
       locale,
@@ -59,7 +59,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   let article, settings
   try {
     ;[article, settings] = await Promise.all([
-      fetchArticle(parseInt(id), locale),
+      fetchArticle(id, locale),
       fetchSettings(locale),
     ])
   } catch (error) {

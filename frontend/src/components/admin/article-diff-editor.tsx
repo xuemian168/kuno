@@ -2839,7 +2839,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           </div>
 
           {/* Content */}
-          <div className="flex-1 relative overflow-hidden">
+          <div className="flex-1 relative overflow-y-auto">
             {renderField(sourceLanguage, sourceTranslation, false, 'source')}
           </div>
         </div>
@@ -2953,7 +2953,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           </div>
 
           {/* Content */}
-          <div className="flex-1 relative overflow-hidden">
+          <div className="flex-1 relative overflow-y-auto">
             {renderField(targetLanguage, targetTranslation, false, 'target')}
           </div>
         </div>

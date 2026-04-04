@@ -20,8 +20,7 @@ export default function ArticlePage() {
   useEffect(() => {
     const fetchArticle = async () => {
       try {
-        const id = parseInt(params.id as string)
-        const articleData = await apiClient.getArticle(id)
+        const articleData = await apiClient.getArticle(params.id as string)
         setArticle(articleData)
       } catch (error) {
         console.error('Failed to fetch article:', error)

@@ -829,7 +829,7 @@ class ApiClient {
     return this.request<Article[]>(`/articles${queryString}`)
   }
 
-  async getArticle(id: number, lang?: string): Promise<Article> {
+  async getArticle(id: string | number, lang?: string): Promise<Article> {
     const params = lang ? `?lang=${lang}` : ''
     return this.request<Article>(`/articles/${id}${params}`)
   }

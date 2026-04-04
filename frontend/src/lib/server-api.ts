@@ -36,7 +36,7 @@ export async function fetchArticles(locale: string, categoryId?: number): Promis
   return serverFetch<Article[]>(`/articles?${params.toString()}`)
 }
 
-export async function fetchArticle(id: number, locale: string): Promise<Article> {
+export async function fetchArticle(id: string | number, locale: string): Promise<Article> {
   return serverFetch<Article>(`/articles/${id}?lang=${locale}`)
 }
 

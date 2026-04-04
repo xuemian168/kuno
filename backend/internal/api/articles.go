@@ -59,16 +59,21 @@ func GetArticles(c *gin.Context) {
 }
 
 func GetArticle(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid article ID"})
-		return
-	}
+	idParam := c.Param("id")
 
 	var article models.Article
-	if err := database.DB.Preload("Category").Preload("Translations").First(&article, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
-		return
+
+	// Try numeric ID first, fall back to seo_slug lookup
+	if id, err := strconv.Atoi(idParam); err == nil {
+		if err := database.DB.Preload("Category").Preload("Translations").First(&article, id).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
+			return
+		}
+	} else {
+		if err := database.DB.Preload("Category").Preload("Translations").Where("seo_slug = ?", idParam).First(&article).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
+			return
+		}
 	}
 
 	// Check if article is scheduled for future publication and request is not from admin
@@ -79,14 +84,14 @@ func GetArticle(c *gin.Context) {
 
 	// Track unique visitor if not an admin request and IP fingerprint is provided
 	if !isAdminRequest(c) {
-		go trackArticleView(uint(id), c)
+		go trackArticleView(article.ID, c)
 	}
 
 	// Clean up any invalid translations for default language (data consistency fix)
 	if article.DefaultLang != "" {
 		database.DB.Where("article_id = ? AND language = ?", article.ID, article.DefaultLang).Delete(&models.ArticleTranslation{})
 		// Reload translations after cleanup
-		database.DB.Preload("Translations").First(&article, id)
+		database.DB.Preload("Translations").First(&article, article.ID)
 	}
 
 	// Apply language filtering if requested
@@ -156,6 +161,16 @@ func CreateArticle(c *gin.Context) {
 	if req.CreatedAt != "" {
 		if parsedTime, err := time.Parse(time.RFC3339, req.CreatedAt); err == nil {
 			article.CreatedAt = parsedTime
+		}
+	}
+
+	// Validate seo_slug uniqueness
+	if article.SEOSlug != "" {
+		var count int64
+		database.DB.Model(&models.Article{}).Where("seo_slug = ?", article.SEOSlug).Count(&count)
+		if count > 0 {
+			c.JSON(http.StatusConflict, gin.H{"error": "SEO slug already in use"})
+			return
 		}
 	}
 
@@ -252,6 +267,15 @@ func UpdateArticle(c *gin.Context) {
 	article.SEOTitle = req.SEOTitle
 	article.SEODescription = req.SEODescription
 	article.SEOKeywords = req.SEOKeywords
+	// Validate seo_slug uniqueness (exclude current article)
+	if req.SEOSlug != "" && req.SEOSlug != article.SEOSlug {
+		var count int64
+		database.DB.Model(&models.Article{}).Where("seo_slug = ? AND id != ?", req.SEOSlug, article.ID).Count(&count)
+		if count > 0 {
+			c.JSON(http.StatusConflict, gin.H{"error": "SEO slug already in use"})
+			return
+		}
+	}
 	article.SEOSlug = req.SEOSlug
 
 	// Update created_at if provided
