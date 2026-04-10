@@ -2,423 +2,288 @@
 
 # KUNO
 
-一个现代化的多语言博客平台，支持一键 Docker 部署。
-
 ![kuno](./docs/kuno.png)
 
-**KUNO** /ˈkuːnoʊ/
+**KUNO** /ˈkuːnoʊ/ — 轻量级、国际化优先的内容管理系统，基于 Go + Next.js 构建。名字取自"坤"（kūn），《易经》中承载万物的大地。
 
-名称灵感源自东方哲学与现代技术理念的融合：
-> - "KUN" 是"坤"（kūn）的拼音，出自《易经》，意为大地，承载万物，象征系统对多语言、多格式内容的全面支持与包容。
-> - "O" 代表 Origin（起源）和 Open（开放），象征内容的开始，也代表系统的开放性、拓展性与现代架构设计理念。
-
-我们的 logo 灵感来自于 "坤卦" ☷ —— 六个阴爻（⚋⚋⚋⚋⚋⚋）大地、顺势、承载、包容，也代表了 KUNO 系统的核心价值。
-
-KUNO 旨在打造一个 轻量、极速、国际化优先 的内容管理系统，让内容创作者与开发者都能如“坤”般自由、有序地构建万象世界。
+全栈博客系统，Docker 容器化一键部署。
 
 ## 测试站
+
 [QUT.EDU.KG](https://qut.edu.kg/)
 
+## 特性
 
-## 🌟 特性
+- Markdown 编辑器，实时预览，支持 Mermaid 图表
+- 70+ 种语言界面切换（基于 next-intl）
+- 深色 / 浅色主题
+- 响应式布局，移动端适配
+- 文章分类管理
+- 管理后台
+- 站点标题、副标题、品牌自定义
+- SEO 优化，支持 LLMs.txt（AI 搜索引擎友好）
+- 使用统计和性能监控
+- Docker 一键部署，蓝绿发布（停机 < 2 秒）
+- 健康检查，部署失败自动回滚
 
-- 📝 支持 Markdown 编辑和实时预览
-- 🌍 多语言国际化支持（70+ 种语言）
-- 🎨 现代化界面设计，支持深色/浅色主题
-- 📱 响应式设计，完美适配移动端
-- 🐳 Docker 容器化部署，开箱即用
-- 🔒 安全的管理后台
-- 📊 文章分类管理
-- 🔍 SEO 优化支持
-- 🔄 **零停机部署**：蓝绿部署策略，停机时间 < 2 秒
-- 🏥 **健康检查**：自动服务健康状态验证
-- 🛡️ **自动回滚**：部署失败时自动恢复到之前版本
-- 🤖 **LLMs.txt 支持**：为AI搜索引擎和语言模型提供友好的内容描述
-- 📊 **使用统计**：全面的使用情况统计和性能监控
+### 支持的语言
 
-### 🌐 支持的语言
+| 地区 | 语言 |
+|------|------|
+| 核心 | 中文、English |
+| 亚洲 | 日本語、한국어、ไทย、Tiếng Việt、Bahasa Indonesia、Bahasa Melayu、Filipino、မြန်မာ、ខ្មែរ、ລາວ |
+| 欧洲 | Español、Français、Deutsch、Русский、Português、Italiano、Nederlands、Svenska、Dansk、Norsk、Suomi、Polski、Čeština、Slovenčina、Magyar、Română、Български、Hrvatski、Српски、Slovenščina、Eesti、Latviešu、Lietuvių、Українська、Беларуская、Türkçe、Ελληνικά、Shqip、Հայերեն、Azərbaycan、ქართული |
+| 中东和非洲 | العربية、עברית、فارسی、اردو、አማርኛ、Kiswahili、isiZulu、Afrikaans |
+| 南亚 | हिन्दी、বাংলা、தமிழ்、తెలుగు、മലയാളം、ಕನ್ನಡ、ગુજરાતી、ਪੰਜਾਬੀ、मराठी、नेपाली、සිංහල |
+| 太平洋及其他 | Te Reo Māori、Gagana Samoa、Lea Fakatonga、Na Vosa Vakaviti、Gaeilge、Íslenska、Malti、Euskera、Català |
 
-系统支持以下 70+ 种语言的界面切换：
+## 快速部署
 
-| 地区 | 支持的语言 |
-|------|-----------|
-| **核心语言** | 🇨🇳 中文 • 🇬🇧 English |
-| **亚洲语言** | 🇯🇵 日本語 • 🇰🇷 한국어 • 🇹🇭 ไทย • 🇻🇳 Tiếng Việt • 🇮🇩 Bahasa Indonesia • 🇲🇾 Bahasa Melayu • 🇵🇭 Filipino • 🇲🇲 မြန်မာ • 🇰🇭 ខ្មែរ • 🇱🇦 ລາວ |
-| **欧洲语言** | 🇪🇸 Español • 🇫🇷 Français • 🇩🇪 Deutsch • 🇷🇺 Русский • 🇵🇹 Português • 🇮🇹 Italiano • 🇳🇱 Nederlands • 🇸🇪 Svenska • 🇩🇰 Dansk • 🇳🇴 Norsk • 🇫🇮 Suomi • 🇵🇱 Polski • 🇨🇿 Čeština • 🇸🇰 Slovenčina • 🇭🇺 Magyar • 🇷🇴 Română • 🇧🇬 Български • 🇭🇷 Hrvatski • 🇷🇸 Српски • 🇸🇮 Slovenščina • 🇪🇪 Eesti • 🇱🇻 Latviešu • 🇱🇹 Lietuvių • 🇺🇦 Українська • 🇧🇾 Беларуская • 🇹🇷 Türkçe • 🇬🇷 Ελληνικά • 🇦🇱 Shqip • 🇦🇲 Հայերեն • 🇦🇿 Azərbaycan • 🇬🇪 ქართული |
-| **中东和非洲语言** | 🇸🇦 العربية • 🇮🇱 עברית • 🇮🇷 فارسی • 🇵🇰 اردو • 🇪🇹 አማርኛ • 🇰🇪 Kiswahili • 🇿🇦 isiZulu • 🇿🇦 Afrikaans |
-| **南亚语言** | 🇮🇳 हिन्दी • 🇧🇩 বাংলা • 🇮🇳 தமிழ் • 🇮🇳 తెలుగు • 🇮🇳 മലയാളം • 🇮🇳 ಕನ್ನಡ • 🇮🇳 ગુજરાતી • 🇮🇳 ਪੰਜਾਬੀ • 🇮🇳 मराठी • 🇳🇵 नेपाली • 🇱🇰 සිංහල |
-| **太平洋及其他地区** | 🇳🇿 Te Reo Māori • 🇼🇸 Gagana Samoa • 🇹🇴 Lea Fakatonga • 🇫🇯 Na Vosa Vakaviti • 🇮🇪 Gaeilge • 🇮🇸 Íslenska • 🇲🇹 Malti • 🇪🇸 Euskera • 🇪🇸 Català |
-
-## 🚀 快速部署
-
-### 方法一：一键部署（推荐）
-
-创建专用目录并部署：
+### 一键部署（推荐）
 
 ```bash
-# 1. 创建专用目录（推荐使用 /opt）
-sudo mkdir -p /opt/kuno
-cd /opt/kuno
+sudo mkdir -p /opt/kuno && cd /opt/kuno
 
-# 2. 下载并执行部署脚本
-curl -sSL "https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh?$(date +%s)" -o deploy.sh && chmod +x deploy.sh && sudo ./deploy.sh
+curl -sSL "https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh?$(date +%s)" \
+  -o deploy.sh && chmod +x deploy.sh && sudo ./deploy.sh
 ```
 
-部署脚本会引导您完成简化的配置：
-1. **选择协议**：HTTP 或 HTTPS（推荐 HTTPS）
-2. **输入域名**：例如 `qut.edu.kg`
-3. **选择部署策略**：
-   - **标准部署**：简单部署，约30秒停机时间
-   - **蓝绿部署**：零停机部署，带健康检查（推荐）
-4. **自动构建 API URL**：系统会自动生成完整的 API URL，如 `https://qut.edu.kg/api`
+脚本会引导你：
+1. 选择 HTTP 或 HTTPS
+2. 输入域名（如 `qut.edu.kg`）
+3. 选择标准部署或蓝绿部署
+4. API URL 自动生成
 
-### ⚡ 快速部署（超快更新）
+> **注意**：不要用 `curl | bash`，先下载再执行。建议部署在 `/opt/kuno` 下。
 
-对于需要快速更新的现有部署：
+### 快速更新（已有部署）
 
 ```bash
-# 超快部署，停机时间 < 2 秒
 ./quick-deploy.sh [镜像] [端口] [容器名]
 
 # 示例：
 ./quick-deploy.sh ictrun/kuno:latest 80 kuno
 ```
 
-> **🎯 部署特色**：
-> - **零停机部署**：蓝绿策略配合健康检查
-> - **滚动更新**：生产环境下停机时间 < 2 秒
-> - **自动回滚**：部署失败时自动恢复之前版本
-> - **健康验证**：确保新容器完全就绪后再切换
-> - **并行处理**：镜像拉取期间服务继续运行
+拉取新镜像时旧容器继续服务，切换停机 < 2 秒。健康检查失败自动回滚。
 
-**重要提示**：
-- 不要使用 `curl | bash` 的方式，这会导致语法错误
-- 建议在 `/opt/kuno` 目录下部署，避免污染用户主目录
-- 新版部署脚本简化了配置流程，用户只需选择协议和输入域名即可
-
-### 方法二：手动部署
+### 手动部署
 
 ```bash
-# 1. 创建专用目录
-sudo mkdir -p /opt/kuno
-cd /opt/kuno
-
-# 2. 创建数据目录
+sudo mkdir -p /opt/kuno && cd /opt/kuno
 mkdir -p ./blog-data
 
-# 3. 运行容器
 docker run -d \
-    --name kuno \
-    --restart unless-stopped \
-    -p 80:80 \
-    -v /opt/kuno/blog-data:/app/data \
-    -e NEXT_PUBLIC_API_URL="http://localhost/api" \
-    -e DB_PATH="/app/data/blog.db" \
-    -e GIN_MODE="release" \
-    -e NODE_ENV="production" \
-    -e JWT_SECRET="your-secure-secret-key" \
-    ictrun/kuno:latest
+  --name kuno \
+  --restart unless-stopped \
+  -p 80:80 \
+  -v /opt/kuno/blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL="http://localhost/api" \
+  -e DB_PATH="/app/data/blog.db" \
+  -e GIN_MODE="release" \
+  -e NODE_ENV="production" \
+  -e JWT_SECRET="your-secure-secret-key" \
+  ictrun/kuno:latest
 ```
 
-**⚠️ 重要配置说明**：
-- `NEXT_PUBLIC_API_URL` - **必须根据你的实际网络环境修改**
-  - 本地访问：`http://localhost/api` 或 `http://127.0.0.1/api`
-  - 局域网访问：`http://192.168.1.100/api`（使用实际 IP）
-  - 公网域名：`https://yourdomain.com/api`
-  - 端口非 80：`http://localhost:8080/api`
-- `JWT_SECRET` - **生产环境强烈建议设置**
-  - 用于签名 JWT 令牌的密钥
-  - 如未设置，系统会自动生成随机密钥（重启后会改变）
-  - 建议使用至少 32 字符的复杂字符串
+⚠️ **`NEXT_PUBLIC_API_URL` 必须根据实际环境修改**：
+- 本地：`http://localhost/api`
+- 局域网：`http://192.168.1.100/api`
+- 公网：`https://yourdomain.com/api`
+- 非 80 端口：`http://localhost:8080/api`
 
-**目录说明**：
-- `/opt/kuno/` - 应用主目录
-- `/opt/kuno/blog-data/` - 统一数据存储目录
-  - `/opt/kuno/blog-data/blog.db` - SQLite 数据库
-  - `/opt/kuno/blog-data/uploads/` - 上传文件目录
-    - `/opt/kuno/blog-data/uploads/images/` - 图片文件
-    - `/opt/kuno/blog-data/uploads/videos/` - 视频文件
-    - `/opt/kuno/blog-data/uploads/branding/` - 品牌文件
-- `/opt/kuno/deploy.sh` - 部署脚本（方法一）
+`JWT_SECRET` — 生产环境建议设置 32 位以上的字符串。不设置的话会自动生成，重启后失效。
 
-## 📋 环境要求
+### Docker Compose
 
-- Docker 已安装并运行
-- 端口 80 可用（或修改为其他端口）
+```bash
+curl -O https://raw.githubusercontent.com/xuemian168/kuno/main/docker-compose.hub.yml
+cp .env.hub.example .env
+# 编辑 .env
+docker-compose -f docker-compose.hub.yml up -d
+```
 
-## 🔧 访问地址
+### 可用镜像标签
 
-部署成功后，可以通过以下地址访问：
+- `ictrun/kuno:latest` — 最新稳定版
+- `ictrun/kuno:v1.0.0` — 指定版本
+- `ictrun/kuno:develop` — 开发分支
 
-- **博客首页**：http://localhost
-- **管理后台**：http://localhost/admin
-- **默认账号**：admin / xuemian168
-
-⚠️ **重要**：首次登录后请立即修改默认密码！
-
-## 🔧 配置参数
+## 配置
 
 ### 环境变量
 
-| 变量名 | 默认值 | 说明 |
-|--------|--------|------|
-| `NEXT_PUBLIC_API_URL` | `https://your-domain.com/api` | API 接口地址 |
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `NEXT_PUBLIC_API_URL` | `https://your-domain.com/api` | API 地址 |
 | `DB_PATH` | `/app/data/blog.db` | SQLite 数据库路径 |
-| `UPLOAD_DIR` | `/app/data/uploads` | 上传文件目录路径 |
-| `GIN_MODE` | `release` | Go Gin 模式（release/debug）|
+| `UPLOAD_DIR` | `/app/data/uploads` | 上传目录 |
+| `GIN_MODE` | `release` | Gin 模式 |
 | `NODE_ENV` | `production` | Node.js 环境 |
 | `RECOVERY_MODE` | `false` | 密码恢复模式 |
-| `JWT_SECRET` | *(自动生成)* | JWT 签名密钥（生产环境建议设置）|
+| `JWT_SECRET` | *(自动生成)* | JWT 签名密钥 |
 
-## 📖 使用说明
+API URL 支持运行时修改，重启容器即可生效，不需要重新构建镜像。
 
-### 管理后台功能
+### 首次登录
 
-1. **文章管理**
-   - 创建、编辑、删除文章
-   - Markdown 编辑器，支持实时预览
-   - 文章分类管理
+- 地址：`http://localhost/admin`
+- 账号：`admin`
+- 密码：`xuemian168`
 
-2. **多语言支持**
-   - 支持中文、英文、日文界面
-   - 自动检测浏览器语言偏好
+⚠️ 首次登录后立即修改默认密码。
 
-3. **系统设置**
-   - 站点基本信息配置
-   - 主题切换设置
+### 目录结构
 
-### 内容创作
-
-- 使用 Markdown 语法编写文章
-- 支持代码高亮显示
-- 支持表格、列表、引用等丰富格式
-- 实时预览功能
-
-## 🛠️ 管理命令
-
-```bash
-# 查看运行状态
-docker ps | grep kuno
-
-# 查看日志
-docker logs kuno
-
-# 停止博客
-docker stop kuno
-
-# 启动博客
-docker start kuno
-
-# 重启博客
-docker restart kuno
-
-# 删除容器（注意：会丢失数据）
-docker rm -f kuno
+```
+/opt/kuno/
+├── blog-data/
+│   ├── blog.db              # SQLite 数据库
+│   └── uploads/
+│       ├── images/
+│       ├── videos/
+│       └── branding/
+└── deploy.sh
 ```
 
-## 📊 数据备份
+## 更新
 
-博客数据统一存储在 `/opt/kuno/blog-data` 目录中，包括数据库和上传文件，建议定期备份：
-
-```bash
-# 进入应用目录
-cd /opt/kuno
-
-# 备份数据
-sudo tar -czf blog-backup-$(date +%Y%m%d).tar.gz ./blog-data
-
-# 恢复数据
-sudo tar -xzf blog-backup-20241201.tar.gz
-```
-
-## 🔄 更新博客
-
-### 🚀 快速更新（零停机，推荐）
-
-最快、最安全的零停机更新方式：
+### 零停机更新（推荐）
 
 ```bash
-# 方法一：使用增强部署脚本（推荐）
 cd /opt/kuno
-./deploy.sh
-# 选择提示时选择"蓝绿部署"
-
-# 方法二：使用快速部署脚本
+./deploy.sh                                    # 选择蓝绿部署
+# 或
 ./quick-deploy.sh ictrun/kuno:latest 80 kuno
 ```
 
-**✨ 优势**：
-- **< 2 秒停机时间**：镜像拉取期间服务继续运行
-- **健康检查**：切换前验证新容器状态
-- **自动回滚**：更新失败时自动恢复之前版本
-- **生产就绪**：适用于生产环境
-
-### 🐳 传统更新方式
+### 传统方式
 
 ```bash
-# 停止当前容器
-docker stop kuno
-docker rm kuno
-
-# 拉取最新镜像
+docker stop kuno && docker rm kuno
 docker pull ictrun/kuno:latest
 
-# 进入应用目录
 cd /opt/kuno
-
-# 重新运行（注意修改 NEXT_PUBLIC_API_URL）
 docker run -d \
-    --name kuno \
-    --restart unless-stopped \
-    -p 80:80 \
-    -v /opt/kuno/blog-data:/app/data \
-    -e NEXT_PUBLIC_API_URL="http://localhost/api" \
-    ictrun/kuno:latest
+  --name kuno \
+  --restart unless-stopped \
+  -p 80:80 \
+  -v /opt/kuno/blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL="http://localhost/api" \
+  ictrun/kuno:latest
 ```
 
-## 🔐 密码重置
+### 更新前备份
 
-### 忘记管理员密码时的处理方法
-
-如果忘记了管理员密码，可以通过以下步骤安全重置：
-
-#### 步骤 1：停止容器
 ```bash
+cd /opt/kuno
+sudo tar -czf blog-backup-$(date +%Y%m%d).tar.gz ./blog-data
+```
+
+### 回滚
+
+```bash
+docker stop kuno && docker rm kuno
+
+# 需要时恢复数据
+sudo tar -xzf blog-backup-YYYYMMDD.tar.gz
+
+# 运行旧版本
+docker run -d --name kuno --restart unless-stopped \
+  -p 80:80 -v /opt/kuno/blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
+  ictrun/kuno:PREVIOUS_TAG
+```
+
+## 密码重置
+
+忘记管理员密码时：
+
+```bash
+# 1. 停止容器
 docker stop kuno
-```
 
-#### 步骤 2：启用恢复模式
-进入应用目录并使用恢复模式重新运行容器：
-```bash
-cd /opt/kuno
+# 2. 启动恢复模式容器
+docker run -d --name kuno_recovery \
+  -p 80:80 \
+  -v /opt/kuno/blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL="http://localhost/api" \
+  -e DB_PATH="/app/data/blog.db" \
+  -e RECOVERY_MODE="true" \
+  ictrun/kuno:latest
 
-docker run -d \
-    --name kuno_recovery \
-    --restart unless-stopped \
-    -p 80:80 \
-    -v /opt/kuno/blog-data:/app/data \
-    -e NEXT_PUBLIC_API_URL="http://localhost/api" \
-    -e DB_PATH="/app/data/blog.db" \
-    -e RECOVERY_MODE="true" \
-    ictrun/kuno:latest
-```
-
-系统会：
-- 重置管理员密码为 `xuemian168`
-- 在日志中显示重置信息
-- **出于安全考虑拒绝启动**
-
-#### 步骤 3：查看重置结果
-```bash
-# 查看日志确认密码已重置
+# 3. 查看日志 — 密码会重置为 xuemian168，然后容器会拒绝启动（这是设计行为）
 docker logs kuno_recovery
-
-# 删除恢复模式容器
 docker rm -f kuno_recovery
+
+# 4. 正常启动
+docker run -d --name kuno --restart unless-stopped \
+  -p 80:80 \
+  -v /opt/kuno/blog-data:/app/data \
+  -e NEXT_PUBLIC_API_URL="http://localhost/api" \
+  -e DB_PATH="/app/data/blog.db" \
+  -e RECOVERY_MODE="false" \
+  ictrun/kuno:latest
+
+# 5. 用 admin / xuemian168 登录，立即修改密码
 ```
 
-#### 步骤 4：正常启动博客
+恢复模式需要服务器访问权限才能设置环境变量，且恢复期间系统不会对外提供服务。
+
+## 开发
+
+### 本地开发（不用 Docker）
+
 ```bash
-# 使用正常模式重新启动
-docker run -d \
-    --name kuno \
-    --restart unless-stopped \
-    -p 80:80 \
-    -v /opt/kuno/blog-data:/app/data \
-    -e NEXT_PUBLIC_API_URL="http://localhost/api" \
-    -e DB_PATH="/app/data/blog.db" \
-    -e RECOVERY_MODE="false" \
-    ictrun/kuno:latest
+# 后端
+cd backend
+go mod download
+go run cmd/server/main.go
+
+# 前端
+cd frontend
+npm install
+npm run dev
 ```
 
-#### 步骤 5：使用新密码登录
-- **用户名**：`admin`
-- **密码**：`xuemian168`
+前端 `http://localhost:3000`，API `http://localhost:8080/api`，管理后台 `http://localhost:3000/admin`。
 
-#### 步骤 6：立即修改密码
-1. 登录管理后台：`http://localhost/admin`
-2. 进入 **设置** → **安全设置**
-3. 修改为安全的新密码
+### Docker 开发
 
-### 安全注意事项
+```bash
+# 开发模式
+docker-compose up --build -d
 
-⚠️ **重要安全提醒**：
-- 恢复模式需要对服务器的**物理访问权限**
-- 系统在恢复模式下**不会正常启动**，防止未授权访问
-- 密码重置后**立即禁用**恢复模式
-- **务必修改**默认密码为安全密码
-- 恢复模式仅供紧急使用
+# 生产模式（带 Nginx）
+docker-compose -f docker-compose.prod.yml up --build -d
+```
 
-## ❓ 常见问题
+## 常用命令
 
-**Q: 端口被占用怎么办？**
-A: 修改 `-p 80:80` 为其他端口，如 `-p 8080:80`，然后通过 http://localhost:8080 访问。
+```bash
+docker ps | grep kuno          # 查看状态
+docker logs kuno               # 查看日志
+docker restart kuno            # 重启
+docker stop kuno               # 停止
+```
 
-**Q: 如何备份文章数据？**
-A: 文章数据保存在 `/opt/kuno/blog-data` 目录中，定期备份此目录即可。
+## 常见问题
 
-**Q: 如何自定义域名？**
-A: 修改 `NEXT_PUBLIC_API_URL` 环境变量为你的域名，如 `https://yourdomain.com/api`。
+- **端口冲突**：把 `-p 80:80` 改成 `-p 8080:80`
+- **API URL 没生效**：重启容器，看日志里有没有 "Setting runtime API URL to: ..."
+- **部署脚本报语法错误**：别用 `curl | bash`，先下载再执行
+- **构建失败**：`docker system prune -f` 清理缓存
 
-**Q: 恢复模式无法重置密码怎么办？**
-A: 确保环境变量设置正确 (`RECOVERY_MODE=true`)，并检查 Docker 日志中的错误信息。
-
-## 📞 技术支持
-
-如果遇到问题，请：
-1. 查看容器日志：`docker logs kuno`
-2. 访问项目主页：https://github.com/xuemian168/kuno
-3. 提交 Issue 获取帮助
-
-## 🤖 LLMs.txt 支持
-
-KUNO 通过 LLMs.txt 标准为 AI 搜索引擎和语言模型提供全面支持，让您的内容更容易被 AI 系统发现和分析。
-
-### 功能特性
-
-- **🌍 多语言生成**：支持8种主要语言（中文、英文、日文、韩文、西班牙文、法文、德文、俄文）的LLMs.txt文件生成
-- **🧠 智能内容分析**：自动提取关键主题、分类和文章摘要
-- **⚡ 智能缓存**：1小时缓存策略，内容变更时自动失效
-- **📈 使用统计**：全面的分析数据包括API调用、响应时间和成功率
-- **🔄 自动刷新**：文章或站点设置变更时缓存自动更新
-
-### 设计优势
-
-1. **AI搜索引擎友好**：为Claude、ChatGPT等AI模型提供结构化的网站内容信息
-2. **SEO增强**：提升在AI驱动搜索系统中的可发现性
-3. **性能优化**：智能缓存减少服务器负载的同时确保内容新鲜度
-4. **多语言支持**：多种语言的本地化内容描述
-5. **丰富元数据**：包含文章数量、查看统计、分类和关键主题
-6. **结构化格式**：遵循LLMs.txt标准，采用标准Markdown格式
-
-### 访问端点
-
-- **公开端点**：`https://yourdomain.com/llms.txt`（支持`?lang=zh`参数）
-- **API端点**：`https://yourdomain.com/api/llms.txt`（支持语言参数）
-- **管理界面**：通过管理后台管理和预览LLMs.txt内容
-
-### 使用情况统计追踪
-
-系统追踪全面的使用指标：
-
-- **📊 API调用统计**：总请求数、成功率和失败分析
-- **⏱️ 性能监控**：平均响应时间和缓存命中率
-- **📅 每日使用报告**：过去30天的历史数据
-- **🌐 语言分布**：按语言划分的使用情况
-- **💾 缓存性能**：缓存条目、过期时间和效率指标
-
-### 管理功能
-
-在管理后台访问LLMs.txt管理器可以：
-- 生成和预览不同语言的内容
-- 查看使用统计和性能指标
-- 管理缓存和清理缓存内容
-- 下载生成的LLMs.txt文件
+健康检查端点：后端 `http://localhost:8080/api/categories`，前端 `http://localhost:3000`。
 
 ## 赞助
+
 本项目由 [TIKHUB.IO](https://tikhub.io/) 提供支持
-> TikHub.io 是一家成立于美国的提供优质数据接口服务供应商。致力于为开发者、创作者及企业提供一站式，海外社交媒体数据 API 和工具服务平台。它面向全球用户，支持自定义扩展并构建社区驱动的生态体系。
+
+> TikHub.io 为开发者、创作者和企业提供社交媒体数据 API 和工具服务。
+
 ![Tikhub_LOGO](./docs/tikhub.png)
 
 ## License
+
 [Apache License 2.0](./LICENSE)
