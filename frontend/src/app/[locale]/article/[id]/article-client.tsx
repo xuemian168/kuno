@@ -73,7 +73,7 @@ export default function ArticlePageClient({ id, locale, initialArticle, initialS
 
         await apiClient.trackUserBehavior({
           session_id: sessionId,
-          article_id: parseInt(id),
+          article_id: initialArticle.id,
           interaction_type: 'view',
           reading_time: 0,
           scroll_depth: 0,
@@ -141,7 +141,7 @@ export default function ArticlePageClient({ id, locale, initialArticle, initialS
             // Track reading time using the API client
             await apiClient.trackUserBehavior({
               session_id: sessionId,
-              article_id: parseInt(id),
+              article_id: initialArticle.id,
               interaction_type: 'view',
               reading_time: readingTime,
               scroll_depth: scrollDepth,
@@ -216,7 +216,7 @@ export default function ArticlePageClient({ id, locale, initialArticle, initialS
             <div className="flex items-center gap-2">
               {/* Admin Edit Button */}
               {isAuthenticated && user && (
-                <Link href={`/admin/articles/${id}`}>
+                <Link href={`/admin/articles/${initialArticle.id}`}>
                   <Button
                     variant="outline"
                     size="sm"
