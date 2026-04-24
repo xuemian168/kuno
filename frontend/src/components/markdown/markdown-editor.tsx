@@ -5,12 +5,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MarkdownRenderer } from "./markdown-renderer"
 import MediaSelector from "@/components/admin/media-selector"
 import YouTubeEmbed from "@/components/youtube-embed"
 import { Eye, Edit3, Image, Video } from "lucide-react"
 import { MediaLibrary } from "@/lib/api"
 import { getMediaUrl } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 
 interface OnlineVideo {
   id: string
@@ -25,13 +27,19 @@ interface MarkdownEditorProps {
   onChange: (value: string) => void
   placeholder?: string
   className?: string
+  language?: string
+  availableLanguages?: { code: string; name: string }[]
+  onLanguageChange?: (language: string) => void
 }
 
 export function MarkdownEditor({ 
   value, 
   onChange, 
   placeholder = "Write your markdown content here...",
-  className = ""
+  className = "",
+  language,
+  availableLanguages,
+  onLanguageChange
 }: MarkdownEditorProps) {
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit")
   const [mediaSelectorOpen, setMediaSelectorOpen] = useState(false)
@@ -174,19 +182,36 @@ export function MarkdownEditor({
   }
 
   return (
-    <div className={className}>
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "edit" | "preview")}>
+    <div className={cn("h-full min-h-0", className)}>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "edit" | "preview")} className="h-full flex flex-col">
         <div className="flex items-center justify-between mb-4">
-          <TabsList>
-            <TabsTrigger value="edit" className="flex items-center gap-2">
-              <Edit3 className="h-4 w-4" />
-              Edit
-            </TabsTrigger>
-            <TabsTrigger value="preview" className="flex items-center gap-2">
-              <Eye className="h-4 w-4" />
-              Preview
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-2">
+            <TabsList>
+              <TabsTrigger value="edit" className="flex items-center gap-2">
+                <Edit3 className="h-4 w-4" />
+                Edit
+              </TabsTrigger>
+              <TabsTrigger value="preview" className="flex items-center gap-2">
+                <Eye className="h-4 w-4" />
+                Preview
+              </TabsTrigger>
+            </TabsList>
+
+            {language && availableLanguages && availableLanguages.length > 0 && onLanguageChange && (
+              <Select value={language} onValueChange={onLanguageChange}>
+                <SelectTrigger className="h-9 w-36 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableLanguages.map((lang) => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
           
           {activeTab === "edit" && (
             <div className="flex flex-wrap gap-1">
@@ -284,7 +309,7 @@ export function MarkdownEditor({
           )}
         </div>
 
-        <TabsContent value="edit" className="mt-0">
+        <TabsContent value="edit" className="mt-0 flex-1 min-h-0 pb-24">
           <Textarea
             ref={textareaRef}
             value={value}
@@ -294,16 +319,16 @@ export function MarkdownEditor({
             onClick={saveSelection}
             onFocus={saveSelection}
             placeholder={placeholder}
-            className="min-h-[400px] font-mono text-sm resize-y"
+            className="h-full min-h-[360px] font-mono text-sm resize-y"
           />
         </TabsContent>
 
-        <TabsContent value="preview" className="mt-0">
-          <Card>
+        <TabsContent value="preview" className="mt-0 flex-1 min-h-0 pb-24">
+          <Card className="h-full min-h-[360px] overflow-hidden">
             <CardHeader>
               <CardTitle className="text-lg">Preview</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="h-full overflow-y-auto">
               {value ? (
                 <MarkdownRenderer content={value} />
               ) : (

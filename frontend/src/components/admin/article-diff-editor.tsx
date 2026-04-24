@@ -9,6 +9,7 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import {
@@ -31,6 +32,7 @@ import {
   ArrowLeft,
   Save,
   Copy,
+  Edit3,
   Eye,
   EyeOff,
   Languages,
@@ -109,6 +111,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const [pasteUploadProgress, setPasteUploadProgress] = useState(0)
   const [isScrollSyncing, setIsScrollSyncing] = useState(false)
   const [editMode, setEditMode] = useState<'single' | 'translation'>('single')
+  const [showSinglePreview, setShowSinglePreview] = useState(false)
+  const [singleEditorLanguage, setSingleEditorLanguage] = useState<SupportedLanguage | null>(null)
   const [showCopyConfirm, setShowCopyConfirm] = useState(false)
   const [showMediaPicker, setShowMediaPicker] = useState(false)
   const [isSelectingCoverImage, setIsSelectingCoverImage] = useState(false)
@@ -523,6 +527,19 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }, 500)
     return () => clearTimeout(timer)
   }, [normalizedLocale])
+
+  useEffect(() => {
+    if (availableLanguages.length === 0) return
+
+    const defaultLang = getDefaultLanguage()
+    const fallbackLanguage = availableLanguages.some((lang) => lang.code === defaultLang)
+      ? defaultLang
+      : sourceLanguage || availableLanguages[0]?.code || null
+
+    if (!singleEditorLanguage || !availableLanguages.some((lang) => lang.code === singleEditorLanguage)) {
+      setSingleEditorLanguage(fallbackLanguage as SupportedLanguage | null)
+    }
+  }, [availableLanguages, sourceLanguage, siteSettings, singleEditorLanguage])
 
   // Set initial category when categories are loaded
   useEffect(() => {
@@ -1461,8 +1478,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     } else if (textarea === targetTextareaRef.current) {
       updateTranslation(targetLanguage, 'content', newText)
     } else if (textarea.id === 'content') {
-      const defaultLang = getDefaultLanguage()
-      updateTranslation(defaultLang, 'content', newText)
+      const activeSingleLanguage = singleEditorLanguage || getDefaultLanguage()
+      updateTranslation(activeSingleLanguage, 'content', newText)
     }
     
     // Set cursor position after update
@@ -1666,10 +1683,10 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     let language = ''
     
     if (editMode === 'single') {
-      const defaultLang = getDefaultLanguage()
-      const translation = getTranslation(defaultLang)
+      const activeSingleLanguage = singleEditorLanguage || getDefaultLanguage()
+      const translation = getTranslation(activeSingleLanguage)
       currentValue = translation.content
-      language = defaultLang
+      language = activeSingleLanguage
     } else {
       if (textarea === 'source') {
         const translation = getTranslation(sourceLanguage!)
@@ -1844,7 +1861,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
 
   const renderSingleEditor = () => {
     const defaultLang = getDefaultLanguage()
-    const currentTranslation = getTranslation(defaultLang)
+    const activeSingleLanguage = singleEditorLanguage || defaultLang
+    const currentTranslation = getTranslation(activeSingleLanguage)
+    const isDefaultSingleLanguage = activeSingleLanguage === defaultLang
     
     // If we're showing SEO, render it directly
     if (activeField === 'seo') {
@@ -1873,15 +1892,49 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }
     
     return (
-      <div className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
-        <div className="space-y-6">
+      <div className="flex-1 overflow-y-auto">
+        <div className="container mx-auto px-4 py-8 pb-28 max-w-4xl">
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm text-muted-foreground">
+                  {normalizedLocale === 'zh' ? '编辑语言' : 'Editing Language'}
+                </Label>
+                <Select
+                  value={activeSingleLanguage}
+                  onValueChange={(value) => setSingleEditorLanguage(value as SupportedLanguage)}
+                >
+                  <SelectTrigger className="h-8 w-40 text-xs">
+                    <SelectValue>{getLanguageDisplayName(activeSingleLanguage)}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableLanguages.map((lang) => (
+                      <SelectItem key={lang.code} value={lang.code}>
+                        {lang.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSinglePreview((prev) => !prev)}
+                className="h-8"
+              >
+                {showSinglePreview ? <Edit3 className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+                {showSinglePreview ? t('common.edit') : t('common.preview')}
+              </Button>
+            </div>
+
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">{t('article.title')}</Label>
             <Input
               id="title"
               value={currentTranslation.title}
-              onChange={(e) => updateTranslation(defaultLang, 'title', e.target.value)}
+              onChange={(e) => updateTranslation(activeSingleLanguage, 'title', e.target.value)}
               placeholder={t('article.enterTitle')}
               className="text-lg font-semibold"
             />
@@ -1893,13 +1946,14 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             <Textarea
               id="summary"
               value={currentTranslation.summary}
-              onChange={(e) => updateTranslation(defaultLang, 'summary', e.target.value)}
+              onChange={(e) => updateTranslation(activeSingleLanguage, 'summary', e.target.value)}
               placeholder={t('article.enterSummary')}
               className="min-h-[100px] resize-none"
             />
           </div>
 
           {/* Publication Time */}
+          {isDefaultSingleLanguage && (
           <div className="space-y-2">
             <Label htmlFor="created_at" className="flex items-center gap-2">
               {normalizedLocale === 'zh' ? '发布时间' : 'Publication Time'}
@@ -1956,36 +2010,55 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
               </p>
             </div>
           </div>
+          )}
 
           {/* Content */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="content">{t('article.content')}</Label>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleMediaButtonClick('single')}
-                className="h-6 px-2"
-                title={t('article.insertMedia')}
-              >
-                <Image className="h-3 w-3 mr-1" />
-                {t('article.insertMedia')}
-              </Button>
+              {!showSinglePreview && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleMediaButtonClick('single')}
+                  className="h-6 px-2"
+                  title={t('article.insertMedia')}
+                >
+                  <Image className="h-3 w-3 mr-1" />
+                  {t('article.insertMedia')}
+                </Button>
+              )}
             </div>
-            <Textarea
-              ref={singleTextareaRef}
-              id="content"
-              value={currentTranslation.content}
-              onChange={(e) => updateTranslation(defaultLang, 'content', e.target.value)}
-              onSelect={(e) => saveTextareaSelection('single', e.currentTarget)}
-              onClick={(e) => saveTextareaSelection('single', e.currentTarget)}
-              onKeyUp={(e) => saveTextareaSelection('single', e.currentTarget)}
-              onFocus={(e) => saveTextareaSelection('single', e.currentTarget)}
-              placeholder={t('article.enterContent')}
-              className="min-h-[calc(100vh-400px)] resize-none font-mono text-sm"
-            />
+            {showSinglePreview ? (
+              <Card className="min-h-[calc(100vh-420px)] max-h-[calc(100vh-240px)] overflow-y-auto">
+                <CardHeader>
+                  <CardTitle className="text-lg">{t('common.preview')}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  {currentTranslation.content ? (
+                    <MarkdownRenderer content={currentTranslation.content} />
+                  ) : (
+                    <p className="text-muted-foreground">{t('article.enterContent')}</p>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <Textarea
+                ref={singleTextareaRef}
+                id="content"
+                value={currentTranslation.content}
+                onChange={(e) => updateTranslation(activeSingleLanguage, 'content', e.target.value)}
+                onSelect={(e) => saveTextareaSelection('single', e.currentTarget)}
+                onClick={(e) => saveTextareaSelection('single', e.currentTarget)}
+                onKeyUp={(e) => saveTextareaSelection('single', e.currentTarget)}
+                onFocus={(e) => saveTextareaSelection('single', e.currentTarget)}
+                placeholder={t('article.enterContent')}
+                className="min-h-[calc(100vh-420px)] resize-none font-mono text-sm"
+              />
+            )}
           </div>
         </div>
+      </div>
       </div>
     )
   }
