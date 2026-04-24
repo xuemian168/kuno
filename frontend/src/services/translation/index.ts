@@ -103,7 +103,7 @@ export class TranslationService {
     let match
     let cacheIndex = 0
     while ((match = codeBlockPattern.exec(text)) !== null) {
-      const cacheId = `CODE_${cacheIndex}`
+      const cacheId = `CODE-${cacheIndex}`
       const codeBlock = match[0]
       
       // Calculate line numbers for this code block
@@ -159,8 +159,8 @@ export class TranslationService {
       const globalPattern = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g')
       
       while ((match = globalPattern.exec(processedText)) !== null) {
-        const cacheId = `PATTERN_${patternIndex}_${matchIndex}`
-        const placeholder = `CACHED_${cacheId}_CACHED`
+        const cacheId = `PATTERN-${patternIndex}-${matchIndex}`
+        const placeholder = `CACHED-${cacheId}-CACHED`
         
         this.contentCache.set(cacheId, {
           id: cacheId,
@@ -196,7 +196,7 @@ export class TranslationService {
     
     // Restore code blocks based on line numbers
     this.contentCache.forEach((cachedItem) => {
-      if (cachedItem.id.startsWith('CODE_') && cachedItem.lineNumbers) {
+      if (cachedItem.id.startsWith('CODE-') && cachedItem.lineNumbers) {
         const startLine = cachedItem.lineNumbers[0] - 1 // Convert to 0-based index
         const endLine = cachedItem.lineNumbers[cachedItem.lineNumbers.length - 1] - 1
         
@@ -212,8 +212,8 @@ export class TranslationService {
 
     // Restore other protected patterns using placeholders
     this.contentCache.forEach((cachedItem) => {
-      if (cachedItem.id.startsWith('PATTERN_')) {
-        const placeholder = `CACHED_${cachedItem.id}_CACHED`
+      if (cachedItem.id.startsWith('PATTERN-')) {
+        const placeholder = `CACHED-${cachedItem.id}-CACHED`
         const placeholderRegex = new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
         restoredText = restoredText.replace(placeholderRegex, cachedItem.originalContent)
       }
@@ -392,6 +392,9 @@ export class TranslationService {
 
     // Remove various placeholder patterns that might have been left behind
     const placeholderPatterns = [
+      // New cache placeholder patterns
+      /CACHED-PATTERN-\d+-\d+-CACHED/gi,
+      /cached-pattern-\d+-\d+-cached/gi,
       // New cache placeholder patterns
       /CACHED_PATTERN_\d+_\d+_CACHED/gi,
       /cached_pattern_\d+_\d+_cached/gi,

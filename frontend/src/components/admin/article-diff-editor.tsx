@@ -365,11 +365,12 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       // Check if this line contains content that should not be translated
       const isNonTranslatableContent = (line: string) => {
         // Skip image markdown: ![alt](src)
-        if (/^!\[.*\]\(.*\)$/.test(line)) return true
+        if (/^!\[.*\]\(.*\)$/.test(line)) return translatedCount
         
         // Skip video HTML tags
-        if (/<video\s+.*?>/.test(line) || line === '</video>') return true
-        if (line === '  Your browser does not support the video tag.') return true
+        if (/<video\s+.*?>/.test(line) || 
+        /.*?<\/video>.*?/.test(line) ||
+        /.*?Your browser does not support the video tag\..*?/.test(line)) return true
         
         // Skip YouTube/Bilibili embed components
         if (/<YouTubeEmbed\s+.*?\/>/.test(line)) return true
@@ -563,8 +564,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         // Image markdown
         /^!\[.*\]\(.*\)$/.test(trimmedLine) ||
         // Video/embed tags
-        /<video\s+.*?>/.test(line) || line === '</video>' ||
-        line === '  Your browser does not support the video tag.' ||
+        /<video\s+.*?>/.test(line) || 
+        /.*?<\/video>.*?/.test(line) ||
+        /.*?Your browser does not support the video tag\..*?/.test(line) ||
         /<YouTubeEmbed\s+.*?\/>/.test(line) ||
         /<BiliBiliEmbed\s+.*?\/>/.test(line)
       ) {

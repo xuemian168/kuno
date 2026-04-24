@@ -76,8 +76,9 @@ export const MonacoTranslationEditor = forwardRef<
         // Image markdown
         /^!\[.*\]\(.*\)$/.test(trimmedLine) ||
         // Video/embed tags
-        /<video\s+.*?>/.test(line) || line === '</video>' ||
-        line === '  Your browser does not support the video tag.' ||
+        /<video\s+.*?>/.test(line) || 
+        /.*?<\/video>.*?/.test(line) ||
+        /.*?Your browser does not support the video tag\..*?/.test(line) ||
         /<YouTubeEmbed\s+.*?\/>/.test(line) ||
         /<BiliBiliEmbed\s+.*?\/>/.test(line)
       ) {
