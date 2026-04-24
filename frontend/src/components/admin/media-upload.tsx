@@ -22,6 +22,7 @@ interface PendingUploadFile {
   id: string
   file: File
   alt: string
+  previewUrl: string
   error?: string
 }
 
@@ -89,7 +90,14 @@ export default function MediaUpload({
     id: crypto.randomUUID(),
     file,
     alt: '',
+    previewUrl: URL.createObjectURL(file),
   })
+
+  const releasePreviewUrls = (files: PendingUploadFile[]) => {
+    files.forEach((item) => {
+      URL.revokeObjectURL(item.previewUrl)
+    })
+  }
 
   const addFiles = (files: File[]) => {
     const validFiles: PendingUploadFile[] = []
@@ -197,6 +205,11 @@ export default function MediaUpload({
       })
 
       if (result.failed.length > 0) {
+        const failedFileIds = new Set(result.failed.map((failed) => filesToUpload[failed.index]?.id).filter(Boolean))
+
+        const succeededFiles = filesToUpload.filter((item) => !failedFileIds.has(item.id))
+        releasePreviewUrls(succeededFiles)
+
         const failedItems = result.failed.reduce<PendingUploadFile[]>((accumulator, failed) => {
           const source = filesToUpload[failed.index]
           if (!source) {
@@ -214,6 +227,7 @@ export default function MediaUpload({
         setSelectedFiles(failedItems)
         setError(`${t('status.uploadFailed')} (${result.failed.length}/${filesToUpload.length})`)
       } else {
+        releasePreviewUrls(filesToUpload)
         setSelectedFiles([])
         setError('')
       }
@@ -300,6 +314,23 @@ export default function MediaUpload({
             <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
               {selectedFiles.map((item) => (
                 <div key={item.id} className="space-y-3 p-4 border rounded-lg">
+                  <div className="rounded-md border bg-muted/20 overflow-hidden">
+                    {item.file.type.startsWith('image/') ? (
+                      <img
+                        src={item.previewUrl}
+                        alt={item.alt || item.file.name}
+                        className="w-full max-h-56 object-contain bg-black/5"
+                      />
+                    ) : item.file.type.startsWith('video/') ? (
+                      <video
+                        src={item.previewUrl}
+                        controls
+                        muted
+                        className="w-full max-h-56 bg-black"
+                      />
+                    ) : null}
+                  </div>
+
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       {getFileIcon(item.file)}
@@ -314,6 +345,7 @@ export default function MediaUpload({
                       variant="ghost"
                       size="sm"
                       onClick={() => {
+                        URL.revokeObjectURL(item.previewUrl)
                         setSelectedFiles((prev) => prev.filter((f) => f.id !== item.id))
                       }}
                       disabled={uploading}
@@ -375,6 +407,7 @@ export default function MediaUpload({
               <Button
                 variant="outline"
                 onClick={() => {
+                  releasePreviewUrls(selectedFiles)
                   setSelectedFiles([])
                   setError('')
                   if (fileInputRef.current) {
