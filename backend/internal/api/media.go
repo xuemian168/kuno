@@ -4,6 +4,7 @@ import (
 	"blog-backend/internal/database"
 	"blog-backend/internal/models"
 	"bytes"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -13,6 +14,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -544,41 +546,104 @@ func sanitizeSVG(content []byte) ([]byte, error) {
 }
 
 func UploadMedia(c *gin.Context) {
-	file, header, err := c.Request.FormFile("file")
+	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No file provided"})
 		return
 	}
+
+	alt := c.PostForm("alt")
+	media, statusCode, uploadErr := processMediaUpload(fileHeader, alt)
+	if uploadErr != nil {
+		c.JSON(statusCode, gin.H{"error": uploadErr.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, media)
+}
+
+func UploadMediaBatch(c *gin.Context) {
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid multipart form"})
+		return
+	}
+
+	files := form.File["files"]
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No files provided"})
+		return
+	}
+
+	var alts []string
+	altsRaw := c.PostForm("alts")
+	if altsRaw != "" {
+		if err := json.Unmarshal([]byte(altsRaw), &alts); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid alts payload"})
+			return
+		}
+	}
+
+	uploaded := make([]models.MediaLibrary, 0, len(files))
+	failed := make([]gin.H, 0)
+
+	for i, fileHeader := range files {
+		alt := ""
+		if i < len(alts) {
+			alt = strings.TrimSpace(alts[i])
+		}
+
+		media, _, uploadErr := processMediaUpload(fileHeader, alt)
+		if uploadErr != nil {
+			failed = append(failed, gin.H{
+				"index":     i,
+				"file_name": fileHeader.Filename,
+				"error":     uploadErr.Error(),
+			})
+			continue
+		}
+
+		uploaded = append(uploaded, media)
+	}
+
+	message := fmt.Sprintf("Uploaded %d of %d files", len(uploaded), len(files))
+	c.JSON(http.StatusOK, gin.H{
+		"uploaded": uploaded,
+		"failed":   failed,
+		"message":  message,
+	})
+}
+
+func processMediaUpload(header *multipart.FileHeader, alt string) (models.MediaLibrary, int, error) {
+	var emptyMedia models.MediaLibrary
+
+	file, err := header.Open()
+	if err != nil {
+		return emptyMedia, http.StatusInternalServerError, fmt.Errorf("failed to open file")
+	}
 	defer file.Close()
 
-	// Check file size
 	if header.Size > MaxFileSize {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File size exceeds 100MB limit"})
-		return
+		return emptyMedia, http.StatusBadRequest, fmt.Errorf("file size exceeds 100MB limit")
 	}
 
-	// Read file content for security validation
 	fileContent, err := io.ReadAll(file)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file content"})
-		return
+		return emptyMedia, http.StatusInternalServerError, fmt.Errorf("failed to read file content")
 	}
 
-	// Security Layer 0: Explicitly reject SVG files with friendly error message
 	contentType := header.Header.Get("Content-Type")
-	fileExt := strings.ToLower(filepath.Ext(header.Filename))
-
-	if contentType == "image/svg+xml" || fileExt == ".svg" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "SVG 文件由于安全原因不允许上传。请使用 PNG、JPEG、WebP 或 GIF 格式代替。",
-		})
-		return
+	if contentType == "" {
+		contentType = http.DetectContentType(fileContent)
 	}
 
-	// Check content type
+	fileExt := strings.ToLower(filepath.Ext(header.Filename))
+	if contentType == "image/svg+xml" || fileExt == ".svg" {
+		return emptyMedia, http.StatusBadRequest, fmt.Errorf("SVG 文件由于安全原因不允许上传。请使用 PNG、JPEG、WebP 或 GIF 格式代替。")
+	}
+
 	var mediaType models.MediaType
 	var subDir string
-
 	if allowedImageTypes[contentType] {
 		mediaType = models.MediaTypeImage
 		subDir = "images"
@@ -586,107 +651,81 @@ func UploadMedia(c *gin.Context) {
 		mediaType = models.MediaTypeVideo
 		subDir = "videos"
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported file type"})
-		return
+		return emptyMedia, http.StatusBadRequest, fmt.Errorf("unsupported file type")
 	}
 
-	// Security Layer 1: Validate file content matches declared MIME type (prevent Content-Type spoofing)
 	if !validateFileContent(fileContent, contentType) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File content does not match declared type. Possible Content-Type spoofing detected."})
-		return
+		return emptyMedia, http.StatusBadRequest, fmt.Errorf("file content does not match declared type. Possible Content-Type spoofing detected")
 	}
 
-	// Security Layer 2: Perform comprehensive file integrity check
 	if err := validateFileIntegrity(fileContent, contentType); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("File integrity check failed: %v", err)})
-		return
+		return emptyMedia, http.StatusBadRequest, fmt.Errorf("file integrity check failed: %v", err)
 	}
 
-	// Security Layer 3: Detect polyglot files (files valid in multiple formats)
 	if detectPolyglot(fileContent) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Suspicious file detected: file contains multiple format signatures or executable content"})
-		return
+		return emptyMedia, http.StatusBadRequest, fmt.Errorf("suspicious file detected: file contains multiple format signatures or executable content")
 	}
 
-	// Validate file extension with whitelist
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	allowedExtensions := map[string]bool{
 		".jpg": true, ".jpeg": true, ".png": true, ".gif": true,
-		// ".webp": 已禁止
-		// ".svg": 已禁止 (安全原因)
 		".mp4": true, ".avi": true, ".mov": true,
-		// ".webm": 已禁止
-		// ".ogg": 已禁止
 	}
 	if !allowedExtensions[ext] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File extension not allowed"})
-		return
+		return emptyMedia, http.StatusBadRequest, fmt.Errorf("file extension not allowed")
 	}
 
-	// Security Layer 4: Strip metadata from images to prevent XSS via EXIF/tEXt/Comment blocks
 	if mediaType == models.MediaTypeImage && contentType != "image/svg+xml" {
 		cleanContent, err := stripImageMetadata(fileContent, contentType)
 		if err != nil {
 			fmt.Printf("Warning: Failed to strip metadata from %s: %v (uploading original)\n", header.Filename, err)
-			// Continue with original content if stripping fails (graceful degradation)
 		} else {
 			fileContent = cleanContent
 			fmt.Printf("Metadata stripped from image: %s (JPEG EXIF/PNG tEXt/GIF Comment removed)\n", header.Filename)
 		}
 	}
 
-	// Security Layer 5: Sanitize SVG content if it's an SVG file
 	isSVG := contentType == "image/svg+xml"
 	if isSVG {
 		sanitized, err := sanitizeSVG(fileContent)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Failed to sanitize SVG: %v", err)})
-			return
+			return emptyMedia, http.StatusBadRequest, fmt.Errorf("failed to sanitize SVG: %v", err)
 		}
 		fileContent = sanitized
 		fmt.Printf("SVG file sanitized: %s\n", header.Filename)
 	}
 
-	// Generate unique filename with validated extension
 	fileName := fmt.Sprintf("%s%s", uuid.New().String(), ext)
 	filePath := filepath.Join(UploadDir, subDir, fileName)
 
-	// Ensure directory exists
 	dir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		fmt.Printf("Failed to create directory %s: %v\n", dir, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
-		return
+		return emptyMedia, http.StatusInternalServerError, fmt.Errorf("failed to create upload directory")
 	}
 
-	// Write sanitized content to file
 	if err := os.WriteFile(filePath, fileContent, 0644); err != nil {
 		fmt.Printf("Failed to write file %s: %v\n", filePath, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
-		return
+		return emptyMedia, http.StatusInternalServerError, fmt.Errorf("failed to save file")
 	}
 
-	// Create database record
-	alt := c.PostForm("alt")
 	media := models.MediaLibrary{
 		FileName:     fileName,
 		OriginalName: header.Filename,
 		FilePath:     filePath,
-		FileSize:     int64(len(fileContent)), // Use actual file size after sanitization
+		FileSize:     int64(len(fileContent)),
 		MimeType:     contentType,
 		MediaType:    mediaType,
 		URL:          fmt.Sprintf("/uploads/%s/%s", subDir, fileName),
-		Alt:          alt,
+		Alt:          strings.TrimSpace(alt),
 	}
 
 	if err := database.DB.Create(&media).Error; err != nil {
-		// Delete the file if database save fails
 		os.Remove(filePath)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save media record"})
-		return
+		return emptyMedia, http.StatusInternalServerError, fmt.Errorf("failed to save media record")
 	}
 
-	c.JSON(http.StatusOK, media)
+	return media, http.StatusOK, nil
 }
 
 func GetMediaList(c *gin.Context) {

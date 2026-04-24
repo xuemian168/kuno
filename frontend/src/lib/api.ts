@@ -293,6 +293,18 @@ export interface MediaLibrary {
   updated_at: string
 }
 
+export interface MediaBatchUploadFailure {
+  index: number
+  file_name: string
+  error: string
+}
+
+export interface MediaBatchUploadResponse {
+  uploaded: MediaLibrary[]
+  failed: MediaBatchUploadFailure[]
+  message: string
+}
+
 export interface ArticleViewStats {
   id: number
   title: string
@@ -1143,6 +1155,35 @@ class ApiClient {
     }
 
     const response = await fetch(`${this.getBaseUrl()}/media/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': this.token ? `Bearer ${this.token}` : '',
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        this.clearToken()
+        if (typeof window !== 'undefined') {
+          window.location.href = '/admin/login'
+        }
+      }
+      throw new Error(`Upload failed: ${response.status} ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async uploadMediaBatch(files: File[], alts?: string[]): Promise<MediaBatchUploadResponse> {
+    const formData = new FormData()
+    files.forEach((file) => formData.append('files', file))
+
+    if (alts && alts.length > 0) {
+      formData.append('alts', JSON.stringify(alts))
+    }
+
+    const response = await fetch(`${this.getBaseUrl()}/media/upload/batch`, {
       method: 'POST',
       headers: {
         'Authorization': this.token ? `Bearer ${this.token}` : '',

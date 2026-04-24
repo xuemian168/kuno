@@ -18,6 +18,13 @@ interface MediaUploadProps {
   maxSize?: number // in MB
 }
 
+interface PendingUploadFile {
+  id: string
+  file: File
+  alt: string
+  error?: string
+}
+
 export default function MediaUpload({ 
   onUploadComplete, 
   acceptedTypes = 'all',
@@ -28,8 +35,7 @@ export default function MediaUpload({
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState('')
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [alt, setAlt] = useState('')
+  const [selectedFiles, setSelectedFiles] = useState<PendingUploadFile[]>([])
   const [pasteHint, setPasteHint] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -74,26 +80,45 @@ export default function MediaUpload({
     e.stopPropagation()
     setDragActive(false)
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileSelect(e.dataTransfer.files[0])
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addFiles(Array.from(e.dataTransfer.files))
     }
   }
 
-  const handleFileSelect = (file: File) => {
-    const error = validateFile(file)
-    if (error) {
-      setError(error)
-      return
+  const createPendingFile = (file: File): PendingUploadFile => ({
+    id: crypto.randomUUID(),
+    file,
+    alt: '',
+  })
+
+  const addFiles = (files: File[]) => {
+    const validFiles: PendingUploadFile[] = []
+    const validationErrors: string[] = []
+
+    files.forEach((file) => {
+      const validationError = validateFile(file)
+      if (validationError) {
+        validationErrors.push(`${file.name}: ${validationError}`)
+        return
+      }
+      validFiles.push(createPendingFile(file))
+    })
+
+    if (validFiles.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...validFiles])
     }
 
-    setSelectedFile(file)
-    setError('')
-    setAlt('')
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join(' | '))
+    } else {
+      setError('')
+    }
   }
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFileSelect(e.target.files[0])
+    if (e.target.files && e.target.files.length > 0) {
+      addFiles(Array.from(e.target.files))
+      e.target.value = ''
     }
   }
 
@@ -118,7 +143,7 @@ export default function MediaUpload({
           lastModified: Date.now()
         })
         
-        handleFileSelect(namedFile)
+        addFiles([namedFile])
         setPasteHint(false)
       }
     }
@@ -145,7 +170,9 @@ export default function MediaUpload({
   }, [])
 
   const handleUpload = async () => {
-    if (!selectedFile) return
+    if (selectedFiles.length === 0) return
+
+    const filesToUpload = selectedFiles
 
     setUploading(true)
     setUploadProgress(0)
@@ -157,19 +184,43 @@ export default function MediaUpload({
         setUploadProgress(prev => Math.min(prev + 10, 90))
       }, 100)
 
-      const media = await apiClient.uploadMedia(selectedFile, alt)
+      const result = await apiClient.uploadMediaBatch(
+        filesToUpload.map(item => item.file),
+        filesToUpload.map(item => item.alt.trim())
+      )
       
       clearInterval(progressInterval)
       setUploadProgress(100)
 
-      // Reset form
-      setSelectedFile(null)
-      setAlt('')
+      result.uploaded.forEach((media) => {
+        onUploadComplete?.(media)
+      })
+
+      if (result.failed.length > 0) {
+        const failedItems = result.failed.reduce<PendingUploadFile[]>((accumulator, failed) => {
+          const source = filesToUpload[failed.index]
+          if (!source) {
+            return accumulator
+          }
+
+          accumulator.push({
+            ...source,
+            error: failed.error,
+          })
+
+          return accumulator
+        }, [])
+
+        setSelectedFiles(failedItems)
+        setError(`${t('status.uploadFailed')} (${result.failed.length}/${filesToUpload.length})`)
+      } else {
+        setSelectedFiles([])
+        setError('')
+      }
+
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
-
-      onUploadComplete?.(media)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('status.uploadFailed'))
     } finally {
@@ -204,7 +255,7 @@ export default function MediaUpload({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!selectedFile ? (
+        {selectedFiles.length === 0 ? (
           <motion.div
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
               dragActive 
@@ -235,48 +286,64 @@ export default function MediaUpload({
               ref={fileInputRef}
               type="file"
               className="hidden"
+              multiple
               accept={getAcceptString()}
               onChange={handleFileInputChange}
             />
           </motion.div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center gap-3">
-                {getFileIcon(selectedFile)}
-                <div>
-                  <p className="font-medium">{selectedFile.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {formatFileSize(selectedFile.size)}
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSelectedFile(null)
-                  setAlt('')
-                  if (fileInputRef.current) {
-                    fileInputRef.current.value = ''
-                  }
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <p className="text-sm font-medium text-muted-foreground">
+              {t('media.selectedCount', { count: selectedFiles.length })}
+            </p>
 
-            {selectedFile.type.startsWith('image/') && (
-              <div className="space-y-2">
-                <Label htmlFor="alt">{t('common.altText')}</Label>
-                <Input
-                  id="alt"
-                  placeholder={t('placeholder.describeImage')}
-                  value={alt}
-                  onChange={(e) => setAlt(e.target.value)}
-                />
-              </div>
-            )}
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+              {selectedFiles.map((item) => (
+                <div key={item.id} className="space-y-3 p-4 border rounded-lg">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {getFileIcon(item.file)}
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{item.file.name}</p>
+                        <p className="text-sm text-gray-500">
+                          {formatFileSize(item.file.size)}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedFiles((prev) => prev.filter((f) => f.id !== item.id))
+                      }}
+                      disabled={uploading}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`alt-${item.id}`}>{t('common.altText')}</Label>
+                    <Input
+                      id={`alt-${item.id}`}
+                      placeholder={t('placeholder.describeImage')}
+                      value={item.alt}
+                      onChange={(e) => {
+                        const nextAlt = e.target.value
+                        setSelectedFiles((prev) =>
+                          prev.map((f) => (f.id === item.id ? { ...f, alt: nextAlt } : f))
+                        )
+                      }}
+                      disabled={uploading}
+                    />
+                  </div>
+
+                  {item.error && (
+                    <p className="text-sm text-destructive">{item.error}</p>
+                  )}
+                </div>
+              ))}
+            </div>
 
             {uploading && (
               <div className="space-y-2">
@@ -291,10 +358,12 @@ export default function MediaUpload({
             <div className="flex gap-2">
               <Button
                 onClick={handleUpload}
-                disabled={uploading}
+                disabled={uploading || selectedFiles.length === 0}
                 className="flex-1"
               >
-                {uploading ? t('common.uploading') + '...' : t('common.uploadFile')}
+                {uploading
+                  ? `${t('common.uploading')}...`
+                  : `${t('common.uploadFile')} (${selectedFiles.length})`}
               </Button>
               <Button
                 variant="outline"
@@ -303,7 +372,28 @@ export default function MediaUpload({
               >
                 {t('common.changeFile')}
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedFiles([])
+                  setError('')
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = ''
+                  }
+                }}
+                disabled={uploading}
+              >
+                {t('common.clearSelection')}
+              </Button>
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              multiple
+              accept={getAcceptString()}
+              onChange={handleFileInputChange}
+            />
           </div>
         )}
 

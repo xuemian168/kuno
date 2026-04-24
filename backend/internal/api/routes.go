@@ -168,6 +168,7 @@ func SetupRoutes() *gin.Engine {
 				adminMedia := admin.Group("/media")
 				{
 					adminMedia.POST("/upload", UploadMedia)
+					adminMedia.POST("/upload/batch", UploadMediaBatch)
 					adminMedia.GET("", GetMediaList)
 					adminMedia.GET("/:id", GetMedia)
 					adminMedia.PUT("/:id", UpdateMedia)
