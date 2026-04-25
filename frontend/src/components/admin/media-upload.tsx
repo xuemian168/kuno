@@ -287,6 +287,15 @@ export default function MediaUpload({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          multiple
+          accept={getAcceptString()}
+          onChange={handleFileInputChange}
+        />
+
         {selectedFiles.length === 0 && (
           <motion.div
             className="border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors border-gray-300 hover:border-primary/50 p-8"
@@ -310,14 +319,6 @@ export default function MediaUpload({
           }`}>
             💡 {t('media.pasteImageTip')}
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            multiple
-            accept={getAcceptString()}
-            onChange={handleFileInputChange}
-          />
           </motion.div>
         )}
 
@@ -413,6 +414,7 @@ export default function MediaUpload({
                 <p className="font-medium text-gray-700 dark:text-gray-300 text-sm mb-1">
                   {t('common.changeFile')}
                 </p>
+                <p className="text-xs text-primary mb-1">or click to browse</p>
                 <p className="text-xs text-gray-500">
                   {t('media.supportsUpTo100MB')}
                 </p>
