@@ -15,7 +15,7 @@ import { useTranslations } from 'next-intl'
 interface MediaUploadProps {
   onUploadComplete?: (media: MediaLibrary) => void
   acceptedTypes?: 'image' | 'video' | 'all'
-  maxSize?: number // in MB
+  maxSize?: number // max cumulative size in MB
 }
 
 interface PendingUploadFile {
@@ -39,6 +39,7 @@ export default function MediaUpload({
   const [selectedFiles, setSelectedFiles] = useState<PendingUploadFile[]>([])
   const [pasteHint, setPasteHint] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const maxTotalBytes = maxSize * 1024 * 1024
 
   const getAcceptString = () => {
     switch (acceptedTypes) {
@@ -102,6 +103,8 @@ export default function MediaUpload({
   const addFiles = (files: File[]) => {
     const validFiles: PendingUploadFile[] = []
     const validationErrors: string[] = []
+    const selectedTotalBytes = selectedFiles.reduce((sum, item) => sum + item.file.size, 0)
+    let incomingAcceptedBytes = 0
 
     files.forEach((file) => {
       const validationError = validateFile(file)
@@ -109,6 +112,15 @@ export default function MediaUpload({
         validationErrors.push(`${file.name}: ${validationError}`)
         return
       }
+
+      if (selectedTotalBytes + incomingAcceptedBytes + file.size > maxTotalBytes) {
+        validationErrors.push(
+          `${file.name}: Total selected files cannot exceed ${maxSize} MB`
+        )
+        return
+      }
+
+      incomingAcceptedBytes += file.size
       validFiles.push(createPendingFile(file))
     })
 
@@ -181,6 +193,12 @@ export default function MediaUpload({
     if (selectedFiles.length === 0) return
 
     const filesToUpload = selectedFiles
+    const totalUploadBytes = filesToUpload.reduce((sum, item) => sum + item.file.size, 0)
+
+    if (totalUploadBytes > maxTotalBytes) {
+      setError(`Total selected files cannot exceed ${maxSize} MB`)
+      return
+    }
 
     setUploading(true)
     setUploadProgress(0)
@@ -269,46 +287,49 @@ export default function MediaUpload({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {selectedFiles.length === 0 ? (
-          <motion.div
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              dragActive 
-                ? 'border-primary bg-primary/5' 
-                : 'border-gray-300 hover:border-primary/50'
-            }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('media.dropFilesHere')}
-            </p>
-            <p className="text-sm text-gray-500 mb-2">
-              {t('media.supportsUpTo100MB')}
-            </p>
-            <div className={`text-xs text-muted-foreground transition-opacity duration-300 ${
-              pasteHint ? 'opacity-100' : 'opacity-50'
-            }`}>
-              💡 {t('media.pasteImageTip')}
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              multiple
-              accept={getAcceptString()}
-              onChange={handleFileInputChange}
-            />
-          </motion.div>
-        ) : (
+        <motion.div
+          className={`border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${
+            dragActive 
+              ? 'border-primary bg-primary/5' 
+              : 'border-gray-300 hover:border-primary/50'
+          } ${selectedFiles.length > 0 ? 'p-4' : 'p-8'}`}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+        >
+          <Upload className={`mx-auto text-gray-400 mb-3 ${selectedFiles.length > 0 ? 'h-8 w-8' : 'h-12 w-12'}`} />
+          <p className={`font-medium text-gray-700 dark:text-gray-300 mb-1 ${selectedFiles.length > 0 ? 'text-sm' : 'text-lg'}`}>
+            {selectedFiles.length > 0 ? t('common.changeFile') : t('media.dropFilesHere')}
+          </p>
+          <p className="text-sm text-gray-500 mb-2">
+            {t('media.supportsUpTo100MB')}
+          </p>
+          <div className={`text-xs text-muted-foreground transition-opacity duration-300 ${
+            pasteHint ? 'opacity-100' : 'opacity-50'
+          }`}>
+            💡 {t('media.pasteImageTip')}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            multiple
+            accept={getAcceptString()}
+            onChange={handleFileInputChange}
+          />
+        </motion.div>
+
+        {selectedFiles.length > 0 && (
           <div className="space-y-4">
             <p className="text-sm font-medium text-muted-foreground">
               {t('media.selectedCount', { count: selectedFiles.length })}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Total size: {formatFileSize(selectedFiles.reduce((sum, item) => sum + item.file.size, 0))} / {maxSize} MB
             </p>
 
             <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
@@ -419,14 +440,6 @@ export default function MediaUpload({
                 {t('common.clearSelection')}
               </Button>
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              multiple
-              accept={getAcceptString()}
-              onChange={handleFileInputChange}
-            />
           </div>
         )}
 
