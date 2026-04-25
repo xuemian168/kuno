@@ -1895,39 +1895,6 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       <div className="flex-1 overflow-y-auto">
         <div className="container mx-auto px-4 py-8 pb-28 max-w-4xl">
           <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm text-muted-foreground">
-                  {normalizedLocale === 'zh' ? '编辑语言' : 'Editing Language'}
-                </Label>
-                <Select
-                  value={activeSingleLanguage}
-                  onValueChange={(value) => setSingleEditorLanguage(value as SupportedLanguage)}
-                >
-                  <SelectTrigger className="h-8 w-40 text-xs">
-                    <SelectValue>{getLanguageDisplayName(activeSingleLanguage)}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableLanguages.map((lang) => (
-                      <SelectItem key={lang.code} value={lang.code}>
-                        {lang.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowSinglePreview((prev) => !prev)}
-                className="h-8"
-              >
-                {showSinglePreview ? <Edit3 className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
-                {showSinglePreview ? t('common.edit') : t('common.preview')}
-              </Button>
-            </div>
-
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">{t('article.title')}</Label>
@@ -2014,20 +1981,54 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
 
           {/* Content */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <Label htmlFor="content">{t('article.content')}</Label>
-              {!showSinglePreview && (
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">
+                    {normalizedLocale === 'zh' ? '编辑语言' : 'Editing Language'}
+                  </Label>
+                  <Select
+                    value={activeSingleLanguage}
+                    onValueChange={(value) => setSingleEditorLanguage(value as SupportedLanguage)}
+                  >
+                    <SelectTrigger className="h-8 w-40 text-xs">
+                      <SelectValue>{getLanguageDisplayName(activeSingleLanguage)}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableLanguages.map((lang) => (
+                        <SelectItem key={lang.code} value={lang.code}>
+                          {lang.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => handleMediaButtonClick('single')}
-                  className="h-6 px-2"
-                  title={t('article.insertMedia')}
+                  onClick={() => setShowSinglePreview((prev) => !prev)}
+                  className="h-8"
                 >
-                  <Image className="h-3 w-3 mr-1" />
-                  {t('article.insertMedia')}
+                  {showSinglePreview ? <Edit3 className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+                  {showSinglePreview ? t('common.edit') : t('common.preview')}
                 </Button>
-              )}
+
+                {!showSinglePreview && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleMediaButtonClick('single')}
+                    className="h-8 px-2"
+                    title={t('article.insertMedia')}
+                  >
+                    <Image className="h-3 w-3 mr-1" />
+                    {t('article.insertMedia')}
+                  </Button>
+                )}
+              </div>
             </div>
             {showSinglePreview ? (
               <Card className="min-h-[calc(100vh-420px)] max-h-[calc(100vh-240px)] overflow-y-auto">

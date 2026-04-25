@@ -345,7 +345,7 @@ export default function MediaSelector({
             </div>
           </TabsContent>
 
-          <TabsContent value="upload" className="flex-1 min-h-0 overflow-y-auto pr-1">
+          <TabsContent value="upload" className="flex-1 min-h-0 overflow-y-auto pr-2 [scrollbar-width:auto] [scrollbar-color:hsl(var(--muted-foreground))_hsl(var(--muted))]" style={{ scrollbarWidth: 'auto' }}>
             <MediaUpload 
               onUploadComplete={handleUploadComplete}
               acceptedTypes={acceptedTypes}

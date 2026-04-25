@@ -287,24 +287,21 @@ export default function MediaUpload({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <motion.div
-          className={`border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${
-            dragActive 
-              ? 'border-primary bg-primary/5' 
-              : 'border-gray-300 hover:border-primary/50'
-          } ${selectedFiles.length > 0 ? 'p-4' : 'p-8'}`}
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.99 }}
-        >
-          <Upload className={`mx-auto text-gray-400 mb-3 ${selectedFiles.length > 0 ? 'h-8 w-8' : 'h-12 w-12'}`} />
-          <p className={`font-medium text-gray-700 dark:text-gray-300 mb-1 ${selectedFiles.length > 0 ? 'text-sm' : 'text-lg'}`}>
-            {selectedFiles.length > 0 ? t('common.changeFile') : t('media.dropFilesHere')}
-          </p>
+        {selectedFiles.length === 0 && (
+          <motion.div
+            className="border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors border-gray-300 hover:border-primary/50 p-8"
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+          >
+            <Upload className="mx-auto text-gray-400 mb-3 h-12 w-12" />
+            <p className="font-medium text-gray-700 dark:text-gray-300 mb-1 text-lg">
+              {t('media.dropFilesHere')}
+            </p>
           <p className="text-sm text-gray-500 mb-2">
             {t('media.supportsUpTo100MB')}
           </p>
@@ -321,7 +318,8 @@ export default function MediaUpload({
             accept={getAcceptString()}
             onChange={handleFileInputChange}
           />
-        </motion.div>
+          </motion.div>
+        )}
 
         {selectedFiles.length > 0 && (
           <div className="space-y-4">
@@ -332,7 +330,7 @@ export default function MediaUpload({
               Total size: {formatFileSize(selectedFiles.reduce((sum, item) => sum + item.file.size, 0))} / {maxSize} MB
             </p>
 
-            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-2 [scrollbar-width:auto] [scrollbar-color:hsl(var(--muted-foreground))_hsl(var(--muted))]" style={{ scrollbarWidth: 'auto' }}>
               {selectedFiles.map((item) => (
                 <div key={item.id} className="space-y-3 p-4 border rounded-lg">
                   <div className="rounded-md border bg-muted/20 overflow-hidden">
@@ -396,6 +394,29 @@ export default function MediaUpload({
                   )}
                 </div>
               ))}
+
+              <motion.div
+                className={`border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${
+                  dragActive 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-gray-300 hover:border-primary/50'
+                } p-4`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+              >
+                <Upload className="mx-auto text-gray-400 mb-2 h-6 w-6" />
+                <p className="font-medium text-gray-700 dark:text-gray-300 text-sm mb-1">
+                  {t('common.changeFile')}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {t('media.supportsUpTo100MB')}
+                </p>
+              </motion.div>
             </div>
 
             {uploading && (
