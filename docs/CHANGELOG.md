@@ -5,6 +5,48 @@ All notable changes to KUNO Blog Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-05-14
+
+### Added
+- **Centralized AI model catalog**
+  - Added shared model definitions for OpenAI, Claude, Gemini, and Volcano Engine providers.
+  - Updated default model selections to GPT-5.4 Mini, Gemini 2.5 Flash, Doubao Seed 2.0 Lite, and Claude Sonnet 4.6.
+  - Preserved support for custom model names in translation, AI summary, SEO analysis, and global AI configuration workflows.
+- **Shared AI provider request utilities**
+  - Added OpenAI Chat Completions request helpers with reasoning-model handling.
+  - Added Claude Messages API request and response parsing helpers.
+
+### Changed
+- **Refreshed AI provider support**
+  - Updated built-in model options for OpenAI GPT-5.5/GPT-5.4, Gemini 2.5, Claude 4, and Doubao Seed 2.0 model families.
+  - Reused shared provider helpers across translation, AI summary, and SEO analysis adapters for more consistent behavior.
+- **Improved SEO locale and indexing behavior**
+  - Added shared SEO locale utilities for localized paths, canonical URLs, hreflang alternates, and sitemap generation.
+  - Limited sitemap and metadata alternates to meaningful site and article translations.
+  - Improved robots and sitemap behavior when search indexing is disabled.
+- **Frontend dependency remediation**
+  - Upgraded key frontend packages including Next.js, next-intl, Mermaid, Tailwind CSS, ESLint, and related tooling.
+  - Added package overrides for PostCSS, uuid, flatted, tinyglobby/picomatch, minimatch, and brace-expansion advisory remediation.
+
+### Fixed
+- **Frontend production build stability**
+  - Fixed locale array typing in localized layout metadata generation.
+  - Fixed nullable settings handling in sitemap generation.
+  - Removed duplicate markdown stylesheet import from the embed layout.
+  - Restored missing AI model selector helper scope in the settings form.
+  - Corrected escaped Tailwind hover selectors in global styles.
+- **AI adapter compatibility**
+  - Used `developer` instructions and `max_completion_tokens` for OpenAI reasoning-model requests.
+  - Improved OpenAI and Claude response text extraction for string and structured content responses.
+  - Hardened JSON extraction paths used by SEO and summary providers.
+
+### Technical Details
+- Previous published release on the mainline: `v1.3.29`
+- Release tag: `v1.4.0`
+- Release commit: `88aa707`
+- Full comparison: `https://github.com/xuemian168/kuno/compare/v1.3.29...v1.4.0`
+- Zero breaking changes expected for existing configuration.
+
 ## [1.3.18] - 2025-12-16
 
 ### Fixed
