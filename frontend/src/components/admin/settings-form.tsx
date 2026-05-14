@@ -230,6 +230,35 @@ export function SettingsForm({ locale }: SettingsFormProps) {
   // About dialog state
   const [showAboutDialog, setShowAboutDialog] = useState(false)
 
+  const getModelOptionsWithCurrentValue = (provider: string, currentModel?: string) => {
+    const options = getAIModelOptions(provider)
+
+    if (currentModel && !isBuiltInAIModel(provider, currentModel)) {
+      return [
+        {
+          value: currentModel,
+          label: `${currentModel} (${locale === 'zh' ? '当前值' : 'Current'})`
+        },
+        ...options
+      ]
+    }
+
+    return options
+  }
+
+  const renderModelSelectItems = (provider: string, currentModel?: string, allowCustom = true) => (
+    <>
+      {getModelOptionsWithCurrentValue(provider, currentModel).map((model) => (
+        <SelectItem key={model.value} value={model.value}>
+          {model.label}
+        </SelectItem>
+      ))}
+      {allowCustom && (
+        <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
+      )}
+    </>
+  )
+
   useEffect(() => {
     const fetchSettings = async () => {
       setLoading(true)

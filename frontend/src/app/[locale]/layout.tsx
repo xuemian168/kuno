@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   let faviconConfig = generateFaviconUrl(undefined) // Default favicon config
   let blockSearchEngines = false
   let blockAITraining = false
-  let availableLocales = [...routing.locales]
+  let availableLocales: string[] = [...routing.locales]
   
   try {
     // Try to fetch site settings

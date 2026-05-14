@@ -530,7 +530,7 @@
     transition: color 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .enhanced-container-inline.dynamic-theme-active .hover\\:text-foreground:hover {
+  .enhanced-container-inline.dynamic-theme-active .hover\:text-foreground:hover {
     color: var(--dynamic-text-color, hsl(var(--foreground)));
   }
 
@@ -539,7 +539,7 @@
     transition: background-color 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .enhanced-container-inline.dynamic-theme-active .hover\\:bg-accent:hover {
+  .enhanced-container-inline.dynamic-theme-active .hover\:bg-accent:hover {
     background-color: hsl(var(--dynamic-accent-color, var(--accent)) / 0.3);
   }
 
