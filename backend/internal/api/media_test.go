@@ -2,6 +2,8 @@ package api
 
 import (
 	"bytes"
+	"mime/multipart"
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -9,10 +11,10 @@ import (
 // Test SVG sanitization
 func TestSanitizeSVG(t *testing.T) {
 	tests := []struct {
-		name        string
-		input       string
-		shouldPass  bool
-		shouldContain []string
+		name             string
+		input            string
+		shouldPass       bool
+		shouldContain    []string
 		shouldNotContain []string
 	}{
 		{
@@ -22,8 +24,8 @@ func TestSanitizeSVG(t *testing.T) {
   <script>alert('XSS')</script>
   <circle cx="50" cy="50" r="40" fill="red"/>
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<circle", "<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<circle", "<svg"},
 			shouldNotContain: []string{"<script", "alert"},
 		},
 		{
@@ -32,8 +34,8 @@ func TestSanitizeSVG(t *testing.T) {
   <image href="x" onerror="alert('XSS')" />
   <rect width="100" height="100" fill="blue"/>
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<rect", "<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<rect", "<svg"},
 			shouldNotContain: []string{"onerror", "alert"},
 		},
 		{
@@ -41,8 +43,8 @@ func TestSanitizeSVG(t *testing.T) {
 			input: `<svg xmlns="http://www.w3.org/2000/svg" onload="alert('XSS')">
   <circle cx="50" cy="50" r="40"/>
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<circle", "<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<circle", "<svg"},
 			shouldNotContain: []string{"onload=", "alert"},
 		},
 		{
@@ -53,8 +55,8 @@ func TestSanitizeSVG(t *testing.T) {
   </a>
 </svg>`,
 			// After enhanced fix: entire <a> tag is removed (including nested content)
-			shouldPass: true,
-			shouldContain: []string{"<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<svg"},
 			shouldNotContain: []string{"<a", "<text", "href", "javascript", "alert", "Click me"},
 		},
 		{
@@ -67,8 +69,8 @@ func TestSanitizeSVG(t *testing.T) {
   </foreignObject>
   <circle cx="50" cy="50" r="40"/>
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<circle", "<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<circle", "<svg"},
 			shouldNotContain: []string{"<foreignObject", "<script", "alert"},
 		},
 		{
@@ -77,8 +79,8 @@ func TestSanitizeSVG(t *testing.T) {
      xmlns:xlink="http://www.w3.org/1999/xlink">
   <image xlink:href="http://xxx.xxx.xxx.xxx:2333" />
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<svg"},
 			shouldNotContain: []string{"<image", "xlink:href=", "xxx.xxx.xxx.xxx"},
 		},
 		{
@@ -86,22 +88,22 @@ func TestSanitizeSVG(t *testing.T) {
 			input: `<svg xmlns="http://www.w3.org/2000/svg">
   <image href="https://evil.com/malicious.svg" />
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<svg"},
 			shouldNotContain: []string{"<image", "href=", "evil.com"},
 		},
 		{
-			name: "SVG with style tag (Mutation XSS)",
-			input: `<svg><style>/*<img src onerror=alert(origin)>*/</style><circle cx="50" cy="50" r="40"/></svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<circle", "<svg"},
+			name:             "SVG with style tag (Mutation XSS)",
+			input:            `<svg><style>/*<img src onerror=alert(origin)>*/</style><circle cx="50" cy="50" r="40"/></svg>`,
+			shouldPass:       true,
+			shouldContain:    []string{"<circle", "<svg"},
 			shouldNotContain: []string{"<style", "onerror", "alert"},
 		},
 		{
-			name: "SVG with a tag clickjacking",
-			input: `<svg><a href="javascript:alert(1)"><text x="0" y="15">Click</text></a></svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<svg"},
+			name:             "SVG with a tag clickjacking",
+			input:            `<svg><a href="javascript:alert(1)"><text x="0" y="15">Click</text></a></svg>`,
+			shouldPass:       true,
+			shouldContain:    []string{"<svg"},
 			shouldNotContain: []string{"<a", "<text", "href", "javascript", "Click"},
 		},
 		{
@@ -110,8 +112,8 @@ func TestSanitizeSVG(t *testing.T) {
 <animate xlink:href=#xss attributeName=href values="javascript:alert(1)" />
 <a id=xss><text>XSS</text></a>
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<svg"},
 			shouldNotContain: []string{"<animate", "attributeName", "values", "javascript", "<a", "<text", "XSS"},
 		},
 		{
@@ -122,8 +124,8 @@ func TestSanitizeSVG(t *testing.T) {
 </filter>
 <rect filter="url(#f1)" width="100" height="100"/>
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<rect", "<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<rect", "<svg"},
 			shouldNotContain: []string{"<filter", "<feImage", "xlink:href", "evil.com"},
 		},
 		{
@@ -134,8 +136,8 @@ func TestSanitizeSVG(t *testing.T) {
 </pattern>
 <rect fill="url(#p1)" width="100" height="100"/>
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<rect", "<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<rect", "<svg"},
 			shouldNotContain: []string{"<pattern", "<image", "attacker.com"},
 		},
 		{
@@ -147,8 +149,8 @@ func TestSanitizeSVG(t *testing.T) {
 <svg xmlns="http://www.w3.org/2000/svg">
   <text>&xxe;</text>
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<text", "<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<text", "<svg"},
 			shouldNotContain: []string{"<!DOCTYPE", "<!ENTITY", "SYSTEM", "file://", "&xxe;"},
 		},
 		{
@@ -161,8 +163,8 @@ func TestSanitizeSVG(t *testing.T) {
 </metadata>
 <circle cx="50" cy="50" r="40"/>
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<circle", "<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<circle", "<svg"},
 			shouldNotContain: []string{"<metadata", "rdf:RDF", "<script"},
 		},
 		{
@@ -170,8 +172,8 @@ func TestSanitizeSVG(t *testing.T) {
 			input: `<svg>
 <use xlink:href="http://evil.com/malicious.svg#fragment"/>
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<svg"},
 			shouldNotContain: []string{"<use", "xlink:href", "evil.com"},
 		},
 		{
@@ -185,8 +187,8 @@ func TestSanitizeSVG(t *testing.T) {
 </clipPath>
 <circle cx="50" cy="50" r="40"/>
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<circle", "<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<circle", "<svg"},
 			shouldNotContain: []string{"<mask", "<clipPath", "<image", "<use", "track.com"},
 		},
 		{
@@ -195,8 +197,8 @@ func TestSanitizeSVG(t *testing.T) {
 <handler event="click" script="alert(1)"/>
 <circle cx="50" cy="50" r="40"/>
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<circle", "<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<circle", "<svg"},
 			shouldNotContain: []string{"<handler", "event", "script"},
 		},
 		{
@@ -205,8 +207,8 @@ func TestSanitizeSVG(t *testing.T) {
 <discard begin="5s" xlink:href="#target"/>
 <circle id="target" cx="50" cy="50" r="40"/>
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<circle", "<svg"},
+			shouldPass:       true,
+			shouldContain:    []string{"<circle", "<svg"},
 			shouldNotContain: []string{"<discard", "xlink:href"},
 		},
 		{
@@ -218,8 +220,8 @@ func TestSanitizeSVG(t *testing.T) {
   <path d="M10 10 L50 50" stroke="black"/>
   <ellipse cx="50" cy="50" rx="30" ry="20" fill="green"/>
 </svg>`,
-			shouldPass: true,
-			shouldContain: []string{"<circle", "<rect", "<path", "<ellipse", "<svg", "<?xml"},
+			shouldPass:       true,
+			shouldContain:    []string{"<circle", "<rect", "<path", "<ellipse", "<svg", "<?xml"},
 			shouldNotContain: []string{},
 		},
 	}
@@ -259,49 +261,125 @@ func TestSanitizeSVG(t *testing.T) {
 	}
 }
 
+func TestValidateMediaBatchUpload(t *testing.T) {
+	tests := []struct {
+		name       string
+		files      []*multipart.FileHeader
+		wantStatus int
+		wantErr    string
+	}{
+		{
+			name:       "no files",
+			files:      nil,
+			wantStatus: http.StatusBadRequest,
+			wantErr:    "No files provided",
+		},
+		{
+			name:       "too many files",
+			files:      makeFileHeaders(MaxBatchFiles+1, 1),
+			wantStatus: http.StatusBadRequest,
+			wantErr:    "too many files",
+		},
+		{
+			name: "total size exceeds limit",
+			files: []*multipart.FileHeader{
+				{Filename: "first.jpg", Size: MaxBatchTotalSize},
+				{Filename: "second.jpg", Size: 1},
+			},
+			wantStatus: http.StatusRequestEntityTooLarge,
+			wantErr:    "total upload size exceeds 100MB limit",
+		},
+		{
+			name: "at file count and total size limits",
+			files: append(
+				makeFileHeaders(MaxBatchFiles-1, 1),
+				&multipart.FileHeader{Filename: "last.jpg", Size: MaxBatchTotalSize - int64(MaxBatchFiles-1)},
+			),
+			wantStatus: http.StatusOK,
+			wantErr:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotStatus, err := validateMediaBatchUpload(tt.files)
+			if gotStatus != tt.wantStatus {
+				t.Fatalf("validateMediaBatchUpload() status = %d, want %d", gotStatus, tt.wantStatus)
+			}
+
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("validateMediaBatchUpload() unexpected error: %v", err)
+				}
+				return
+			}
+
+			if err == nil {
+				t.Fatalf("validateMediaBatchUpload() expected error containing %q", tt.wantErr)
+			}
+
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("validateMediaBatchUpload() error = %q, want substring %q", err.Error(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func makeFileHeaders(count int, size int64) []*multipart.FileHeader {
+	files := make([]*multipart.FileHeader, count)
+	for i := 0; i < count; i++ {
+		files[i] = &multipart.FileHeader{
+			Filename: "file.jpg",
+			Size:     size,
+		}
+	}
+
+	return files
+}
+
 // Test file content validation
 func TestValidateFileContent(t *testing.T) {
 	tests := []struct {
-		name        string
-		content     []byte
+		name         string
+		content      []byte
 		declaredType string
-		shouldPass  bool
+		shouldPass   bool
 	}{
 		{
-			name:        "Valid JPEG file",
-			content:     []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10},
+			name:         "Valid JPEG file",
+			content:      []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10},
 			declaredType: "image/jpeg",
-			shouldPass:  true,
+			shouldPass:   true,
 		},
 		{
-			name:        "Valid PNG file",
-			content:     []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A},
+			name:         "Valid PNG file",
+			content:      []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A},
 			declaredType: "image/png",
-			shouldPass:  true,
+			shouldPass:   true,
 		},
 		{
-			name:        "Invalid JPEG (wrong magic number)",
-			content:     []byte{0x00, 0x00, 0x00, 0x00},
+			name:         "Invalid JPEG (wrong magic number)",
+			content:      []byte{0x00, 0x00, 0x00, 0x00},
 			declaredType: "image/jpeg",
-			shouldPass:  false,
+			shouldPass:   false,
 		},
 		{
-			name:        "SVG with XML declaration",
-			content:     []byte("<?xml version=\"1.0\"?>\n<svg></svg>"),
+			name:         "SVG with XML declaration",
+			content:      []byte("<?xml version=\"1.0\"?>\n<svg></svg>"),
 			declaredType: "image/svg+xml",
-			shouldPass:  true,
+			shouldPass:   true,
 		},
 		{
-			name:        "SVG starting with svg tag",
-			content:     []byte("<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>"),
+			name:         "SVG starting with svg tag",
+			content:      []byte("<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>"),
 			declaredType: "image/svg+xml",
-			shouldPass:  true,
+			shouldPass:   true,
 		},
 		{
-			name:        "Content-Type spoofing: PNG claimed as JPEG",
-			content:     []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A},
+			name:         "Content-Type spoofing: PNG claimed as JPEG",
+			content:      []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A},
 			declaredType: "image/jpeg",
-			shouldPass:  false,
+			shouldPass:   false,
 		},
 	}
 

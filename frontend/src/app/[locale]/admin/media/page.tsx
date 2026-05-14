@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Image as ImageIcon, Video, Trash2, Edit2, Search, Filter, Youtube, Play, ExternalLink, MoreVertical, CheckSquare, Square, Minus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -42,6 +42,7 @@ export default function MediaPage({ params }: MediaPageProps) {
   const [selectedType, setSelectedType] = useState<'all' | 'image' | 'video' | 'online'>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMedia, setSelectedMedia] = useState<MediaLibrary | null>(null)
+  const [mediaDialogMode, setMediaDialogMode] = useState<'view' | 'edit-alt'>('view')
   const [editingAlt, setEditingAlt] = useState('')
   const [error, setError] = useState('')
   const [editingVideo, setEditingVideo] = useState<OnlineVideo | null>(null)
@@ -71,6 +72,7 @@ export default function MediaPage({ params }: MediaPageProps) {
 
   // Tab state for automatic switching on paste
   const [activeTab, setActiveTab] = useState('upload')
+  const editAltInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     params.then(({ locale: paramLocale }) => {
@@ -117,6 +119,17 @@ export default function MediaPage({ params }: MediaPageProps) {
       document.removeEventListener('paste', handleGlobalPaste)
     }
   }, [activeTab])
+
+  useEffect(() => {
+    if (selectedMedia && mediaDialogMode === 'edit-alt' && selectedMedia.media_type === 'image') {
+      const timer = setTimeout(() => {
+        editAltInputRef.current?.focus()
+        editAltInputRef.current?.select()
+      }, 0)
+
+      return () => clearTimeout(timer)
+    }
+  }, [selectedMedia, mediaDialogMode])
 
   const fetchMedia = async () => {
     try {
@@ -433,6 +446,9 @@ export default function MediaPage({ params }: MediaPageProps) {
           <TabsTrigger value="online">{t('media.addOnlineVideo')}</TabsTrigger>
         </TabsList>
         <TabsContent value="upload" className="mt-4">
+          <div className="mb-3 rounded-md border border-dashed bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+            You can keep adding files while editing alt text.
+          </div>
           <MediaUpload onUploadComplete={handleUploadComplete} />
         </TabsContent>
         <TabsContent value="online" className="mt-4">
@@ -720,6 +736,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           onClick={(e) => {
                             e.stopPropagation()
                             setContextMenuOpen(null)
+                            setMediaDialogMode('view')
                             setSelectedMedia(item)
                             setEditingAlt(item.alt)
                           }}
@@ -757,6 +774,7 @@ export default function MediaPage({ params }: MediaPageProps) {
                           onClick={(e) => {
                             e.stopPropagation()
                             setContextMenuOpen(null)
+                            setMediaDialogMode('edit-alt')
                             setSelectedMedia(item)
                             setEditingAlt(item.alt)
                           }}
@@ -782,6 +800,9 @@ export default function MediaPage({ params }: MediaPageProps) {
                     )}
                   </div>
                   <div className="space-y-1 text-xs text-muted-foreground">
+                    <p className="truncate">
+                      {t('common.altText')}: {item.alt?.trim() ? item.alt : '-'}
+                    </p>
                     <p>{formatFileSize(item.file_size)}</p>
                     <p>{formatDate(item.created_at)}</p>
                   </div>
@@ -908,10 +929,15 @@ export default function MediaPage({ params }: MediaPageProps) {
       )}
 
       {/* Media Detail Dialog */}
-      <Dialog open={!!selectedMedia} onOpenChange={() => setSelectedMedia(null)}>
+      <Dialog open={!!selectedMedia} onOpenChange={() => {
+        setSelectedMedia(null)
+        setMediaDialogMode('view')
+      }}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>{t('media.selectMedia')}</DialogTitle>
+            <DialogTitle>
+              {mediaDialogMode === 'edit-alt' ? t('media.editAltText') : t('media.viewDetails')}
+            </DialogTitle>
           </DialogHeader>
           {selectedMedia && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -962,20 +988,19 @@ export default function MediaPage({ params }: MediaPageProps) {
                   <Label>{t('common.uploaded')}</Label>
                   <p className="text-sm">{formatDate(selectedMedia.created_at)}</p>
                 </div>
-                {selectedMedia.media_type === 'image' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-alt">{t('common.altText')}</Label>
-                    <Input
-                      id="edit-alt"
-                      value={editingAlt}
-                      onChange={(e) => setEditingAlt(e.target.value)}
-                      placeholder={t('placeholder.describeImage')}
-                    />
-                    <Button onClick={handleUpdateAlt} size="sm">
-                      {t('common.updateAltText')}
-                    </Button>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="edit-alt">{t('common.altText')}</Label>
+                  <Input
+                    ref={editAltInputRef}
+                    id="edit-alt"
+                    value={editingAlt}
+                    onChange={(e) => setEditingAlt(e.target.value)}
+                    placeholder={t('placeholder.describeImage')}
+                  />
+                  <Button onClick={handleUpdateAlt} size="sm">
+                    {t('common.updateAltText')}
+                  </Button>
+                </div>
               </div>
             </div>
           )}

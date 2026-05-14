@@ -236,6 +236,9 @@ export default function MediaSelector({
                           <p className="text-xs font-medium truncate">
                             {item.original_name}
                           </p>
+                          <p className="text-[11px] text-muted-foreground truncate mt-1">
+                            Alt: {item.alt?.trim() ? item.alt : 'No alt text'}
+                          </p>
                         </CardContent>
                       </Card>
                     </motion.div>
@@ -342,7 +345,7 @@ export default function MediaSelector({
             </div>
           </TabsContent>
 
-          <TabsContent value="upload" className="flex-1">
+          <TabsContent value="upload" className="flex-1 min-h-0 overflow-y-auto pr-2 [scrollbar-width:auto] [scrollbar-color:hsl(var(--muted-foreground))_hsl(var(--muted))]" style={{ scrollbarWidth: 'auto' }}>
             <MediaUpload 
               onUploadComplete={handleUploadComplete}
               acceptedTypes={acceptedTypes}

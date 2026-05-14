@@ -1,16 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MarkdownRenderer } from "./markdown-renderer"
 import MediaSelector from "@/components/admin/media-selector"
 import YouTubeEmbed from "@/components/youtube-embed"
 import { Eye, Edit3, Image, Video } from "lucide-react"
 import { MediaLibrary } from "@/lib/api"
 import { getMediaUrl } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 
 interface OnlineVideo {
   id: string
@@ -25,24 +27,88 @@ interface MarkdownEditorProps {
   onChange: (value: string) => void
   placeholder?: string
   className?: string
+  language?: string
+  availableLanguages?: { code: string; name: string }[]
+  onLanguageChange?: (language: string) => void
 }
 
 export function MarkdownEditor({ 
   value, 
   onChange, 
   placeholder = "Write your markdown content here...",
-  className = ""
+  className = "",
+  language,
+  availableLanguages,
+  onLanguageChange
 }: MarkdownEditorProps) {
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit")
   const [mediaSelectorOpen, setMediaSelectorOpen] = useState(false)
   const [mediaSelectorType, setMediaSelectorType] = useState<'image' | 'video' | 'all'>('all')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [savedSelection, setSavedSelection] = useState({ start: 0, end: 0 })
 
-  const insertMarkdown = (syntax: string, placeholder: string = "") => {
-    const textarea = document.querySelector('textarea') as HTMLTextAreaElement
+  const saveSelection = () => {
+    const textarea = textareaRef.current
     if (!textarea) return
 
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
+    setSavedSelection({
+      start: textarea.selectionStart,
+      end: textarea.selectionEnd,
+    })
+  }
+
+  const getSelectionRange = () => {
+    const textarea = textareaRef.current
+    if (!textarea) {
+      return savedSelection
+    }
+
+    if (document.activeElement === textarea) {
+      return {
+        start: textarea.selectionStart,
+        end: textarea.selectionEnd,
+      }
+    }
+
+    return savedSelection
+  }
+
+  const insertBlockAtCursor = (blockText: string) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const { start, end } = getSelectionRange()
+    const beforeSelection = value.slice(0, start)
+    const afterSelection = value.slice(end)
+    const linePrefix = beforeSelection.slice(beforeSelection.lastIndexOf("\n") + 1)
+    const nextLineBreakIndex = afterSelection.indexOf("\n")
+    const lineSuffix = nextLineBreakIndex === -1 ? afterSelection : afterSelection.slice(0, nextLineBreakIndex)
+    const contentBeforeLine = beforeSelection.slice(0, beforeSelection.length - linePrefix.length)
+    const contentAfterLine = afterSelection.slice(lineSuffix.length)
+
+    const segments = [linePrefix, blockText, lineSuffix].filter((segment) => segment.length > 0)
+    const replacement = segments.join("\n")
+    const newValue = contentBeforeLine + replacement + contentAfterLine
+    const cursorOffset = linePrefix.length > 0 ? linePrefix.length + 1 + blockText.length : blockText.length
+
+    onChange(newValue)
+    setSavedSelection({
+      start: contentBeforeLine.length + cursorOffset,
+      end: contentBeforeLine.length + cursorOffset,
+    })
+
+    setTimeout(() => {
+      textarea.focus()
+      const newCursorPos = contentBeforeLine.length + cursorOffset
+      textarea.setSelectionRange(newCursorPos, newCursorPos)
+    }, 0)
+  }
+
+  const insertMarkdown = (syntax: string, placeholder: string = "") => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const { start, end } = getSelectionRange()
     const selectedText = value.substring(start, end)
     const replacement = selectedText || placeholder
     
@@ -69,26 +135,27 @@ export function MarkdownEditor({
     }
     
     onChange(newText)
+    setSavedSelection({ start, end })
     
     // Restore focus and cursor position
     setTimeout(() => {
       textarea.focus()
       const newCursorPos = start + syntax.length + (replacement ? 0 : placeholder.length)
       textarea.setSelectionRange(newCursorPos, newCursorPos)
+      setSavedSelection({ start: newCursorPos, end: newCursorPos })
     }, 0)
   }
 
   const openMediaSelector = (type: 'image' | 'video' | 'all') => {
+    saveSelection()
     setMediaSelectorType(type)
     setMediaSelectorOpen(true)
   }
 
   const handleMediaSelect = (item: MediaLibrary | OnlineVideo, type: 'media' | 'online') => {
-    const textarea = document.querySelector('textarea') as HTMLTextAreaElement
+    const textarea = textareaRef.current
     if (!textarea) return
 
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
     let insertText = ""
 
     if (type === 'media') {
@@ -109,33 +176,42 @@ export function MarkdownEditor({
       }
     }
 
-    const newText = value.substring(0, start) + insertText + value.substring(end)
-    onChange(newText)
+    insertBlockAtCursor(insertText.trim())
     
     setMediaSelectorOpen(false)
-    
-    // Restore focus
-    setTimeout(() => {
-      textarea.focus()
-      const newCursorPos = start + insertText.length
-      textarea.setSelectionRange(newCursorPos, newCursorPos)
-    }, 0)
   }
 
   return (
-    <div className={className}>
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "edit" | "preview")}>
+    <div className={cn("h-full min-h-0", className)}>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "edit" | "preview")} className="h-full flex flex-col">
         <div className="flex items-center justify-between mb-4">
-          <TabsList>
-            <TabsTrigger value="edit" className="flex items-center gap-2">
-              <Edit3 className="h-4 w-4" />
-              Edit
-            </TabsTrigger>
-            <TabsTrigger value="preview" className="flex items-center gap-2">
-              <Eye className="h-4 w-4" />
-              Preview
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-2">
+            <TabsList>
+              <TabsTrigger value="edit" className="flex items-center gap-2">
+                <Edit3 className="h-4 w-4" />
+                Edit
+              </TabsTrigger>
+              <TabsTrigger value="preview" className="flex items-center gap-2">
+                <Eye className="h-4 w-4" />
+                Preview
+              </TabsTrigger>
+            </TabsList>
+
+            {language && availableLanguages && availableLanguages.length > 0 && onLanguageChange && (
+              <Select value={language} onValueChange={onLanguageChange}>
+                <SelectTrigger className="h-9 w-36 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableLanguages.map((lang) => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
           
           {activeTab === "edit" && (
             <div className="flex flex-wrap gap-1">
@@ -233,21 +309,26 @@ export function MarkdownEditor({
           )}
         </div>
 
-        <TabsContent value="edit" className="mt-0">
+        <TabsContent value="edit" className="mt-0 flex-1 min-h-0 pb-24">
           <Textarea
+            ref={textareaRef}
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            onSelect={saveSelection}
+            onKeyUp={saveSelection}
+            onClick={saveSelection}
+            onFocus={saveSelection}
             placeholder={placeholder}
-            className="min-h-[400px] font-mono text-sm resize-y"
+            className="h-full min-h-[360px] font-mono text-sm resize-y"
           />
         </TabsContent>
 
-        <TabsContent value="preview" className="mt-0">
-          <Card>
+        <TabsContent value="preview" className="mt-0 flex-1 min-h-0 pb-24">
+          <Card className="h-full min-h-[360px] overflow-hidden">
             <CardHeader>
               <CardTitle className="text-lg">Preview</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="h-full overflow-y-auto">
               {value ? (
                 <MarkdownRenderer content={value} />
               ) : (

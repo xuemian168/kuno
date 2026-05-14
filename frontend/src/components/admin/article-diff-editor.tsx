@@ -9,6 +9,7 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import {
@@ -31,6 +32,7 @@ import {
   ArrowLeft,
   Save,
   Copy,
+  Edit3,
   Eye,
   EyeOff,
   Languages,
@@ -108,7 +110,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const [isUploadingPastedImage, setIsUploadingPastedImage] = useState(false)
   const [pasteUploadProgress, setPasteUploadProgress] = useState(0)
   const [isScrollSyncing, setIsScrollSyncing] = useState(false)
-  const [editMode, setEditMode] = useState<'single' | 'translation'>('translation')
+  const [editMode, setEditMode] = useState<'single' | 'translation'>('single')
+  const [showSinglePreview, setShowSinglePreview] = useState(false)
+  const [singleEditorLanguage, setSingleEditorLanguage] = useState<SupportedLanguage | null>(null)
   const [showCopyConfirm, setShowCopyConfirm] = useState(false)
   const [showMediaPicker, setShowMediaPicker] = useState(false)
   const [isSelectingCoverImage, setIsSelectingCoverImage] = useState(false)
@@ -117,6 +121,11 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const [isTranslating, setIsTranslating] = useState(false)
   const [currentTranslatingLanguage, setCurrentTranslatingLanguage] = useState<SupportedLanguage | null>(null)
   const [hasTranslationProvider, setHasTranslationProvider] = useState(false)
+  const [savedCursorSelection, setSavedCursorSelection] = useState<{
+    textarea: 'source' | 'target' | 'single'
+    start: number
+    end: number
+  }>({ textarea: 'source', start: 0, end: 0 })
   const [availableLanguages, setAvailableLanguages] = useState(() => {
     // Initialize with enabled language options from language manager
     return languageManager.getEnabledLanguageOptions()
@@ -133,6 +142,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   
   const sourceTextareaRef = useRef<HTMLTextAreaElement>(null)
   const targetTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const singleTextareaRef = useRef<HTMLTextAreaElement>(null)
   const dualLanguageEditorRef = useRef<DualLanguageEditorRef>(null)
 
   // Get the site's default language
@@ -368,8 +378,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         if (/^!\[.*\]\(.*\)$/.test(line)) return true
         
         // Skip video HTML tags
-        if (/<video\s+.*?>/.test(line) || line === '</video>') return true
-        if (line === '  Your browser does not support the video tag.') return true
+        if (/<video\s+.*?>/.test(line) || 
+        /.*?<\/video>.*?/.test(line) ||
+        /.*?Your browser does not support the video tag\..*?/.test(line)) return true
         
         // Skip YouTube/Bilibili embed components
         if (/<YouTubeEmbed\s+.*?\/>/.test(line)) return true
@@ -517,6 +528,19 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     return () => clearTimeout(timer)
   }, [normalizedLocale])
 
+  useEffect(() => {
+    if (availableLanguages.length === 0) return
+
+    const defaultLang = getDefaultLanguage()
+    const fallbackLanguage = availableLanguages.some((lang) => lang.code === defaultLang)
+      ? defaultLang
+      : sourceLanguage || availableLanguages[0]?.code || null
+
+    if (!singleEditorLanguage || !availableLanguages.some((lang) => lang.code === singleEditorLanguage)) {
+      setSingleEditorLanguage(fallbackLanguage as SupportedLanguage | null)
+    }
+  }, [availableLanguages, sourceLanguage, siteSettings, singleEditorLanguage])
+
   // Set initial category when categories are loaded
   useEffect(() => {
     if (categories.length > 0 && formData.category_id === 0) {
@@ -563,8 +587,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         // Image markdown
         /^!\[.*\]\(.*\)$/.test(trimmedLine) ||
         // Video/embed tags
-        /<video\s+.*?>/.test(line) || line === '</video>' ||
-        line === '  Your browser does not support the video tag.' ||
+        /<video\s+.*?>/.test(line) || 
+        /.*?<\/video>.*?/.test(line) ||
+        /.*?Your browser does not support the video tag\..*?/.test(line) ||
         /<YouTubeEmbed\s+.*?\/>/.test(line) ||
         /<BiliBiliEmbed\s+.*?\/>/.test(line)
       ) {
@@ -1453,8 +1478,8 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     } else if (textarea === targetTextareaRef.current) {
       updateTranslation(targetLanguage, 'content', newText)
     } else if (textarea.id === 'content') {
-      const defaultLang = getDefaultLanguage()
-      updateTranslation(defaultLang, 'content', newText)
+      const activeSingleLanguage = singleEditorLanguage || getDefaultLanguage()
+      updateTranslation(activeSingleLanguage, 'content', newText)
     }
     
     // Set cursor position after update
@@ -1565,40 +1590,65 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }
   }
 
+  const saveTextareaSelection = (textarea: 'source' | 'target' | 'single', element: HTMLTextAreaElement | null) => {
+    if (!element) return
+
+    setSavedCursorSelection({
+      textarea,
+      start: element.selectionStart,
+      end: element.selectionEnd,
+    })
+
+    setActiveTextarea(textarea)
+  }
+
+  const insertBlockIntoContent = (content: string, start: number, end: number, text: string) => {
+    const beforeSelection = content.slice(0, start)
+    const afterSelection = content.slice(end)
+    const linePrefix = beforeSelection.slice(beforeSelection.lastIndexOf('\n') + 1)
+    const nextLineBreakIndex = afterSelection.indexOf('\n')
+    const lineSuffix = nextLineBreakIndex === -1 ? afterSelection : afterSelection.slice(0, nextLineBreakIndex)
+    const contentBeforeLine = beforeSelection.slice(0, beforeSelection.length - linePrefix.length)
+    const contentAfterLine = afterSelection.slice(lineSuffix.length)
+    const segments = [linePrefix, text, lineSuffix].filter((segment) => segment.length > 0)
+    const replacement = segments.join('\n')
+    const cursorOffset = linePrefix.length > 0 ? linePrefix.length + 1 + text.length : text.length
+
+    return {
+      newContent: contentBeforeLine + replacement + contentAfterLine,
+      newCursorPosition: contentBeforeLine.length + cursorOffset,
+    }
+  }
+
   const insertTextAtSamePosition = (text: string) => {
-    // Get the current cursor position from whichever textarea is focused
-    let cursorPosition = 0
-    let activeTextarea: 'source' | 'target' = 'source'
     const sourceTextarea = sourceTextareaRef.current
     const targetTextarea = targetTextareaRef.current
-    
-    // Determine which textarea has focus and get its cursor position
+    let cursorPosition = savedCursorSelection.start
+    let selectionEnd = savedCursorSelection.end
+    let insertionSide: 'source' | 'target' = savedCursorSelection.textarea === 'target' ? 'target' : 'source'
+
     if (sourceTextarea && document.activeElement === sourceTextarea) {
       cursorPosition = sourceTextarea.selectionStart
-      activeTextarea = 'source'
+      selectionEnd = sourceTextarea.selectionEnd
+      insertionSide = 'source'
     } else if (targetTextarea && document.activeElement === targetTextarea) {
       cursorPosition = targetTextarea.selectionStart
-      activeTextarea = 'target'
-    } else {
-      // If neither has focus, use the source textarea cursor position as default
-      cursorPosition = sourceTextarea?.selectionStart || 0
-      activeTextarea = 'source'
+      selectionEnd = targetTextarea.selectionEnd
+      insertionSide = 'target'
     }
     
-    // Get the content of the active textarea to calculate line/column position
-    const activeLanguage = activeTextarea === 'source' ? sourceLanguage : targetLanguage
+    const activeLanguage = insertionSide === 'source' ? sourceLanguage : targetLanguage
     const activeTranslation = getTranslation(activeLanguage)
     const beforeCursor = activeTranslation.content.substring(0, cursorPosition)
     const lines = beforeCursor.split('\n')
     const lineIndex = lines.length - 1
     const columnIndex = lines[lines.length - 1].length
     
-    // Insert text at the same relative position in both textareas
-    insertTextAtPosition('source', text, lineIndex, columnIndex)
-    insertTextAtPosition('target', text, lineIndex, columnIndex)
+    insertTextAtPosition('source', text, lineIndex, columnIndex, insertionSide === 'source' ? selectionEnd : cursorPosition)
+    insertTextAtPosition('target', text, lineIndex, columnIndex, insertionSide === 'target' ? selectionEnd : cursorPosition)
   }
 
-  const insertTextAtPosition = (textarea: 'source' | 'target', text: string, lineIndex: number, columnIndex: number) => {
+  const insertTextAtPosition = (textarea: 'source' | 'target', text: string, lineIndex: number, columnIndex: number, selectionEnd?: number) => {
     const language = textarea === 'source' ? sourceLanguage : targetLanguage
     const translation = getTranslation(language)
     const lines = translation.content.split('\n')
@@ -1608,26 +1658,19 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       lines.push('')
     }
     
-    // Insert text at the specified position
     const targetLine = lines[lineIndex]
     const safeColumnIndex = Math.min(columnIndex, targetLine.length)
-    lines[lineIndex] = targetLine.slice(0, safeColumnIndex) + text + targetLine.slice(safeColumnIndex)
+    const lineStartOffset = lines.slice(0, lineIndex).join('\n').length + (lineIndex > 0 ? 1 : 0)
+    const startOffset = lineStartOffset + safeColumnIndex
+    const endOffset = typeof selectionEnd === 'number' && selectionEnd >= startOffset ? selectionEnd : startOffset
+    const { newContent, newCursorPosition } = insertBlockIntoContent(translation.content, startOffset, endOffset, text)
     
-    const newContent = lines.join('\n')
     updateTranslation(language, 'content', newContent)
     
-    // Set cursor position after insertion - focus on the originally active textarea
     setTimeout(() => {
       const textareaElement = textarea === 'source' ? sourceTextareaRef.current : targetTextareaRef.current
       if (textareaElement) {
-        // Calculate new cursor position
-        const newCursorPosition = lines.slice(0, lineIndex).join('\n').length + 
-          (lineIndex > 0 ? 1 : 0) + safeColumnIndex + text.length
-        
-        // Only focus and set cursor if this is the originally active textarea
-        const activeElement = document.activeElement
-        if (activeElement === sourceTextareaRef.current && textarea === 'source' ||
-            activeElement === targetTextareaRef.current && textarea === 'target') {
+        if (savedCursorSelection.textarea === textarea) {
           textareaElement.focus()
           textareaElement.setSelectionRange(newCursorPosition, newCursorPosition)
         }
@@ -1640,10 +1683,10 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     let language = ''
     
     if (editMode === 'single') {
-      const defaultLang = getDefaultLanguage()
-      const translation = getTranslation(defaultLang)
+      const activeSingleLanguage = singleEditorLanguage || getDefaultLanguage()
+      const translation = getTranslation(activeSingleLanguage)
       currentValue = translation.content
-      language = defaultLang
+      language = activeSingleLanguage
     } else {
       if (textarea === 'source') {
         const translation = getTranslation(sourceLanguage!)
@@ -1657,37 +1700,43 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }
 
     // Get cursor position
-    let cursorPosition = 0
+    let cursorPosition = textarea === savedCursorSelection.textarea ? savedCursorSelection.start : 0
+    let selectionEnd = textarea === savedCursorSelection.textarea ? savedCursorSelection.end : cursorPosition
     const textareaElement = editMode === 'single' 
-      ? document.querySelector('#content') as HTMLTextAreaElement
+      ? singleTextareaRef.current
       : (textarea === 'source' ? sourceTextareaRef.current : targetTextareaRef.current)
     
-    if (textareaElement) {
+    if (textareaElement && document.activeElement === textareaElement) {
       cursorPosition = textareaElement.selectionStart
+      selectionEnd = textareaElement.selectionEnd
     }
 
-    // Insert text at cursor position
-    const newValue = currentValue.slice(0, cursorPosition) + text + currentValue.slice(cursorPosition)
+    const { newContent, newCursorPosition } = insertBlockIntoContent(currentValue, cursorPosition, selectionEnd, text)
     
-    // Update the content
-    updateTranslation(language, 'content', newValue)
+    updateTranslation(language, 'content', newContent)
 
-    // Set cursor position after insertion
     setTimeout(() => {
       if (textareaElement) {
         textareaElement.focus()
-        textareaElement.setSelectionRange(cursorPosition + text.length, cursorPosition + text.length)
+        textareaElement.setSelectionRange(newCursorPosition, newCursorPosition)
       }
     }, 10)
   }
 
   const handleMediaButtonClick = (textareaType: 'source' | 'target' | 'single') => {
-    // In translation mode, we don't need to track which textarea since we insert to both
-    if (editMode === 'translation') {
-      setActiveTextarea('source') // Set default, but will insert to both anyway
+    const singleTextarea = singleTextareaRef.current
+    const sourceTextarea = sourceTextareaRef.current
+    const targetTextarea = targetTextareaRef.current
+
+    if (editMode === 'single') {
+      saveTextareaSelection('single', singleTextarea)
+    } else if (targetTextarea && document.activeElement === targetTextarea) {
+      saveTextareaSelection('target', targetTextarea)
     } else {
-      setActiveTextarea(textareaType)
+      saveTextareaSelection('source', sourceTextarea)
     }
+
+    setActiveTextarea(editMode === 'translation' ? savedCursorSelection.textarea === 'target' ? 'target' : 'source' : textareaType)
     setShowMediaPicker(true)
   }
 
@@ -1812,7 +1861,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
 
   const renderSingleEditor = () => {
     const defaultLang = getDefaultLanguage()
-    const currentTranslation = getTranslation(defaultLang)
+    const activeSingleLanguage = singleEditorLanguage || defaultLang
+    const currentTranslation = getTranslation(activeSingleLanguage)
+    const isDefaultSingleLanguage = activeSingleLanguage === defaultLang
     
     // If we're showing SEO, render it directly
     if (activeField === 'seo') {
@@ -1841,15 +1892,16 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     }
     
     return (
-      <div className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
-        <div className="space-y-6">
+      <div className="flex-1 overflow-y-auto">
+        <div className="container mx-auto px-4 py-8 pb-28 max-w-4xl">
+          <div className="space-y-6">
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">{t('article.title')}</Label>
             <Input
               id="title"
               value={currentTranslation.title}
-              onChange={(e) => updateTranslation(defaultLang, 'title', e.target.value)}
+              onChange={(e) => updateTranslation(activeSingleLanguage, 'title', e.target.value)}
               placeholder={t('article.enterTitle')}
               className="text-lg font-semibold"
             />
@@ -1861,13 +1913,14 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
             <Textarea
               id="summary"
               value={currentTranslation.summary}
-              onChange={(e) => updateTranslation(defaultLang, 'summary', e.target.value)}
+              onChange={(e) => updateTranslation(activeSingleLanguage, 'summary', e.target.value)}
               placeholder={t('article.enterSummary')}
               className="min-h-[100px] resize-none"
             />
           </div>
 
           {/* Publication Time */}
+          {isDefaultSingleLanguage && (
           <div className="space-y-2">
             <Label htmlFor="created_at" className="flex items-center gap-2">
               {normalizedLocale === 'zh' ? '发布时间' : 'Publication Time'}
@@ -1924,31 +1977,89 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
               </p>
             </div>
           </div>
+          )}
 
           {/* Content */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <Label htmlFor="content">{t('article.content')}</Label>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleMediaButtonClick('single')}
-                className="h-6 px-2"
-                title={t('article.insertMedia')}
-              >
-                <Image className="h-3 w-3 mr-1" />
-                {t('article.insertMedia')}
-              </Button>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">
+                    {normalizedLocale === 'zh' ? '编辑语言' : 'Editing Language'}
+                  </Label>
+                  <Select
+                    value={activeSingleLanguage}
+                    onValueChange={(value) => setSingleEditorLanguage(value as SupportedLanguage)}
+                  >
+                    <SelectTrigger className="h-8 w-40 text-xs">
+                      <SelectValue>{getLanguageDisplayName(activeSingleLanguage)}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableLanguages.map((lang) => (
+                        <SelectItem key={lang.code} value={lang.code}>
+                          {lang.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSinglePreview((prev) => !prev)}
+                  className="h-8"
+                >
+                  {showSinglePreview ? <Edit3 className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+                  {showSinglePreview ? t('common.edit') : t('common.preview')}
+                </Button>
+
+                {!showSinglePreview && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleMediaButtonClick('single')}
+                    className="h-8 px-2"
+                    title={t('article.insertMedia')}
+                  >
+                    <Image className="h-3 w-3 mr-1" />
+                    {t('article.insertMedia')}
+                  </Button>
+                )}
+              </div>
             </div>
-            <Textarea
-              id="content"
-              value={currentTranslation.content}
-              onChange={(e) => updateTranslation(defaultLang, 'content', e.target.value)}
-              placeholder={t('article.enterContent')}
-              className="min-h-[calc(100vh-400px)] resize-none font-mono text-sm"
-            />
+            {showSinglePreview ? (
+              <Card className="min-h-[calc(100vh-420px)] max-h-[calc(100vh-240px)] overflow-y-auto">
+                <CardHeader>
+                  <CardTitle className="text-lg">{t('common.preview')}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  {currentTranslation.content ? (
+                    <MarkdownRenderer content={currentTranslation.content} />
+                  ) : (
+                    <p className="text-muted-foreground">{t('article.enterContent')}</p>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <Textarea
+                ref={singleTextareaRef}
+                id="content"
+                value={currentTranslation.content}
+                onChange={(e) => updateTranslation(activeSingleLanguage, 'content', e.target.value)}
+                onSelect={(e) => saveTextareaSelection('single', e.currentTarget)}
+                onClick={(e) => saveTextareaSelection('single', e.currentTarget)}
+                onKeyUp={(e) => saveTextareaSelection('single', e.currentTarget)}
+                onFocus={(e) => saveTextareaSelection('single', e.currentTarget)}
+                placeholder={t('article.enterContent')}
+                className="min-h-[calc(100vh-420px)] resize-none font-mono text-sm"
+              />
+            )}
           </div>
         </div>
+      </div>
       </div>
     )
   }
@@ -2298,7 +2409,13 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
               value={translation.content}
               onChange={(e) => updateTranslation(language, 'content', e.target.value)}
               onScroll={(e) => handleTextareaScroll(side, e)}
-              onClick={(e) => handleTextareaClick(side, e)}
+              onClick={(e) => {
+                handleTextareaClick(side, e)
+                saveTextareaSelection(side, e.currentTarget)
+              }}
+              onSelect={(e) => saveTextareaSelection(side, e.currentTarget)}
+              onKeyUp={(e) => saveTextareaSelection(side, e.currentTarget)}
+              onFocus={(e) => saveTextareaSelection(side, e.currentTarget)}
               placeholder={t('article.enterContent')}
               className="pl-14 pr-4 py-4 border-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm w-full h-full bg-transparent overflow-auto relative"
               style={{
@@ -2384,8 +2501,9 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
           size="sm"
           onClick={() => setEditMode(editMode === 'single' ? 'translation' : 'single')}
           className="h-8 gap-2"
-          disabled={editMode === 'translation'}
-          title={editMode === 'translation' ? (normalizedLocale === 'zh' ? '简单编辑器暂时不可用' : 'Simple editor temporarily unavailable') : ''}
+          title={editMode === 'single'
+            ? (normalizedLocale === 'zh' ? '切换到翻译双栏模式' : 'Switch to translation two-column mode')
+            : (normalizedLocale === 'zh' ? '切换到全屏单栏写作模式' : 'Switch to fullscreen single-column writing mode')}
         >
           {editMode === 'single' ? (
             <>

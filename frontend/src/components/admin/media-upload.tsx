@@ -15,7 +15,15 @@ import { useTranslations } from 'next-intl'
 interface MediaUploadProps {
   onUploadComplete?: (media: MediaLibrary) => void
   acceptedTypes?: 'image' | 'video' | 'all'
-  maxSize?: number // in MB
+  maxSize?: number // max size in MB, used for both individual files and the total selection
+}
+
+interface PendingUploadFile {
+  id: string
+  file: File
+  alt: string
+  previewUrl: string
+  error?: string
 }
 
 export default function MediaUpload({ 
@@ -28,10 +36,12 @@ export default function MediaUpload({
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState('')
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [alt, setAlt] = useState('')
+  const [selectedFiles, setSelectedFiles] = useState<PendingUploadFile[]>([])
   const [pasteHint, setPasteHint] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const selectedFilesRef = useRef<PendingUploadFile[]>([])
+  const progressResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const maxTotalBytes = maxSize * 1024 * 1024
 
   const getAcceptString = () => {
     switch (acceptedTypes) {
@@ -74,26 +84,69 @@ export default function MediaUpload({
     e.stopPropagation()
     setDragActive(false)
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileSelect(e.dataTransfer.files[0])
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addFiles(Array.from(e.dataTransfer.files))
     }
   }
 
-  const handleFileSelect = (file: File) => {
-    const error = validateFile(file)
-    if (error) {
-      setError(error)
-      return
+  const createPendingFile = (file: File): PendingUploadFile => ({
+    id: crypto.randomUUID(),
+    file,
+    alt: '',
+    previewUrl: URL.createObjectURL(file),
+  })
+
+  const releasePreviewUrls = (files: PendingUploadFile[]) => {
+    files.forEach((item) => {
+      URL.revokeObjectURL(item.previewUrl)
+    })
+  }
+
+  const updateSelectedFiles = (files: PendingUploadFile[]) => {
+    selectedFilesRef.current = files
+    setSelectedFiles(files)
+  }
+
+  const addFiles = (files: File[]) => {
+    const currentFiles = selectedFilesRef.current
+    const validFiles: PendingUploadFile[] = []
+    const validationErrors: string[] = []
+    const selectedTotalBytes = currentFiles.reduce((sum, item) => sum + item.file.size, 0)
+    let incomingAcceptedBytes = 0
+
+    files.forEach((file) => {
+      const validationError = validateFile(file)
+      if (validationError) {
+        validationErrors.push(`${file.name}: ${validationError}`)
+        return
+      }
+
+      if (selectedTotalBytes + incomingAcceptedBytes + file.size > maxTotalBytes) {
+        validationErrors.push(
+          `${file.name}: Total selected files cannot exceed ${maxSize} MB`
+        )
+        return
+      }
+
+      incomingAcceptedBytes += file.size
+      validFiles.push(createPendingFile(file))
+    })
+
+    if (validFiles.length > 0) {
+      updateSelectedFiles([...currentFiles, ...validFiles])
     }
 
-    setSelectedFile(file)
-    setError('')
-    setAlt('')
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join(' | '))
+    } else {
+      setError('')
+    }
   }
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFileSelect(e.target.files[0])
+    if (e.target.files && e.target.files.length > 0) {
+      addFiles(Array.from(e.target.files))
+      e.target.value = ''
     }
   }
 
@@ -118,11 +171,24 @@ export default function MediaUpload({
           lastModified: Date.now()
         })
         
-        handleFileSelect(namedFile)
+        addFiles([namedFile])
         setPasteHint(false)
       }
     }
   }
+
+  useEffect(() => {
+    selectedFilesRef.current = selectedFiles
+  }, [selectedFiles])
+
+  useEffect(() => {
+    return () => {
+      releasePreviewUrls(selectedFilesRef.current)
+      if (progressResetTimeoutRef.current) {
+        clearTimeout(progressResetTimeoutRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     // Add paste event listener to document
@@ -145,36 +211,80 @@ export default function MediaUpload({
   }, [])
 
   const handleUpload = async () => {
-    if (!selectedFile) return
+    if (selectedFilesRef.current.length === 0) return
+
+    const filesToUpload = selectedFilesRef.current
+    const totalUploadBytes = filesToUpload.reduce((sum, item) => sum + item.file.size, 0)
+
+    if (totalUploadBytes > maxTotalBytes) {
+      setError(`Total selected files cannot exceed ${maxSize} MB`)
+      return
+    }
 
     setUploading(true)
     setUploadProgress(0)
     setError('')
 
+    let progressInterval: ReturnType<typeof setInterval> | null = null
     try {
       // Simulate progress for user experience
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setUploadProgress(prev => Math.min(prev + 10, 90))
       }, 100)
 
-      const media = await apiClient.uploadMedia(selectedFile, alt)
+      const result = await apiClient.uploadMediaBatch(
+        filesToUpload.map(item => item.file),
+        filesToUpload.map(item => item.alt.trim())
+      )
       
-      clearInterval(progressInterval)
       setUploadProgress(100)
 
-      // Reset form
-      setSelectedFile(null)
-      setAlt('')
+      result.uploaded.forEach((media) => {
+        onUploadComplete?.(media)
+      })
+
+      if (result.failed.length > 0) {
+        const failedFileIds = new Set(result.failed.map((failed) => filesToUpload[failed.index]?.id).filter(Boolean))
+
+        const succeededFiles = filesToUpload.filter((item) => !failedFileIds.has(item.id))
+        releasePreviewUrls(succeededFiles)
+
+        const failedItems = result.failed.reduce<PendingUploadFile[]>((accumulator, failed) => {
+          const source = filesToUpload[failed.index]
+          if (!source) {
+            return accumulator
+          }
+
+          accumulator.push({
+            ...source,
+            error: failed.error,
+          })
+
+          return accumulator
+        }, [])
+
+        updateSelectedFiles(failedItems)
+        setError(`${t('status.uploadFailed')} (${result.failed.length}/${filesToUpload.length})`)
+      } else {
+        releasePreviewUrls(filesToUpload)
+        updateSelectedFiles([])
+        setError('')
+      }
+
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
-
-      onUploadComplete?.(media)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('status.uploadFailed'))
     } finally {
+      if (progressInterval) {
+        clearInterval(progressInterval)
+      }
       setUploading(false)
-      setTimeout(() => setUploadProgress(0), 1000)
+      if (progressResetTimeoutRef.current) {
+        clearTimeout(progressResetTimeoutRef.current)
+      }
+      progressResetTimeoutRef.current = setTimeout(() => setUploadProgress(0), 1000)
     }
   }
 
@@ -204,79 +314,139 @@ export default function MediaUpload({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!selectedFile ? (
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          multiple
+          accept={getAcceptString()}
+          onChange={handleFileInputChange}
+        />
+
+        {selectedFiles.length === 0 && (
           <motion.div
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              dragActive 
-                ? 'border-primary bg-primary/5' 
-                : 'border-gray-300 hover:border-primary/50'
-            }`}
+            className="border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors border-gray-300 hover:border-primary/50 p-8"
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
           >
-            <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <Upload className="mx-auto text-gray-400 mb-3 h-12 w-12" />
+            <p className="font-medium text-gray-700 dark:text-gray-300 mb-1 text-lg">
               {t('media.dropFilesHere')}
             </p>
-            <p className="text-sm text-gray-500 mb-2">
-              {t('media.supportsUpTo100MB')}
-            </p>
-            <div className={`text-xs text-muted-foreground transition-opacity duration-300 ${
-              pasteHint ? 'opacity-100' : 'opacity-50'
-            }`}>
-              💡 {t('media.pasteImageTip')}
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept={getAcceptString()}
-              onChange={handleFileInputChange}
-            />
+          <p className="text-sm text-gray-500 mb-2">
+            {t('media.supportsUpTo100MB')}
+          </p>
+          <div className={`text-xs text-muted-foreground transition-opacity duration-300 ${
+            pasteHint ? 'opacity-100' : 'opacity-50'
+          }`}>
+            💡 {t('media.pasteImageTip')}
+          </div>
           </motion.div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center gap-3">
-                {getFileIcon(selectedFile)}
-                <div>
-                  <p className="font-medium">{selectedFile.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {formatFileSize(selectedFile.size)}
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSelectedFile(null)
-                  setAlt('')
-                  if (fileInputRef.current) {
-                    fileInputRef.current.value = ''
-                  }
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+        )}
 
-            {selectedFile.type.startsWith('image/') && (
-              <div className="space-y-2">
-                <Label htmlFor="alt">{t('common.altText')}</Label>
-                <Input
-                  id="alt"
-                  placeholder={t('placeholder.describeImage')}
-                  value={alt}
-                  onChange={(e) => setAlt(e.target.value)}
-                />
-              </div>
-            )}
+        {selectedFiles.length > 0 && (
+          <div className="space-y-4">
+            <p className="text-sm font-medium text-muted-foreground">
+              {t('media.selectedCount', { count: selectedFiles.length })}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Total size: {formatFileSize(selectedFiles.reduce((sum, item) => sum + item.file.size, 0))} / {maxSize} MB
+            </p>
+
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-2 [scrollbar-width:auto] [scrollbar-color:hsl(var(--muted-foreground))_hsl(var(--muted))]" style={{ scrollbarWidth: 'auto' }}>
+              {selectedFiles.map((item) => (
+                <div key={item.id} className="space-y-3 p-4 border rounded-lg">
+                  <div className="rounded-md border bg-muted/20 overflow-hidden">
+                    {item.file.type.startsWith('image/') ? (
+                      <img
+                        src={item.previewUrl}
+                        alt={item.alt || item.file.name}
+                        className="w-full max-h-56 object-contain bg-black/5"
+                      />
+                    ) : item.file.type.startsWith('video/') ? (
+                      <video
+                        src={item.previewUrl}
+                        controls
+                        muted
+                        className="w-full max-h-56 bg-black"
+                      />
+                    ) : null}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {getFileIcon(item.file)}
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{item.file.name}</p>
+                        <p className="text-sm text-gray-500">
+                          {formatFileSize(item.file.size)}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        URL.revokeObjectURL(item.previewUrl)
+                        updateSelectedFiles(selectedFilesRef.current.filter((f) => f.id !== item.id))
+                      }}
+                      disabled={uploading}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`alt-${item.id}`}>{t('common.altText')}</Label>
+                    <Input
+                      id={`alt-${item.id}`}
+                      placeholder={t('placeholder.describeImage')}
+                      value={item.alt}
+                      onChange={(e) => {
+                        const nextAlt = e.target.value
+                        setSelectedFiles((prev) =>
+                          prev.map((f) => (f.id === item.id ? { ...f, alt: nextAlt } : f))
+                        )
+                      }}
+                      disabled={uploading}
+                    />
+                  </div>
+
+                  {item.error && (
+                    <p className="text-sm text-destructive">{item.error}</p>
+                  )}
+                </div>
+              ))}
+
+              <motion.div
+                className={`border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${
+                  dragActive 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-gray-300 hover:border-primary/50'
+                } p-4`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+              >
+                <Upload className="mx-auto text-gray-400 mb-2 h-6 w-6" />
+                <p className="font-medium text-gray-700 dark:text-gray-300 text-sm mb-1">
+                  {t('common.changeFile')}
+                </p>
+                <p className="text-xs text-primary mb-1">or click to browse</p>
+                <p className="text-xs text-gray-500">
+                  {t('media.supportsUpTo100MB')}
+                </p>
+              </motion.div>
+            </div>
 
             {uploading && (
               <div className="space-y-2">
@@ -291,10 +461,12 @@ export default function MediaUpload({
             <div className="flex gap-2">
               <Button
                 onClick={handleUpload}
-                disabled={uploading}
+                disabled={uploading || selectedFiles.length === 0}
                 className="flex-1"
               >
-                {uploading ? t('common.uploading') + '...' : t('common.uploadFile')}
+                {uploading
+                  ? `${t('common.uploading')}...`
+                  : `${t('common.uploadFile')} (${selectedFiles.length})`}
               </Button>
               <Button
                 variant="outline"
@@ -302,6 +474,20 @@ export default function MediaUpload({
                 disabled={uploading}
               >
                 {t('common.changeFile')}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  releasePreviewUrls(selectedFilesRef.current)
+                  updateSelectedFiles([])
+                  setError('')
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = ''
+                  }
+                }}
+                disabled={uploading}
+              >
+                {t('common.clearSelection')}
               </Button>
             </div>
           </div>
