@@ -23,7 +23,15 @@ import {
   Calendar,
   Hash,
   Zap,
-  RefreshCw
+  RefreshCw,
+  Palette,
+  Languages,
+  FileText,
+  ImageIcon,
+  Search,
+  Smartphone,
+  ShieldCheck,
+  Rocket
 } from "lucide-react"
 import { getAppVersion, APP_INFO } from "@/lib/version"
 import { apiClient } from "@/lib/api"
@@ -77,6 +85,17 @@ export function AboutDialog({ open, onOpenChange, locale }: AboutDialogProps) {
     commit: systemInfo.git_commit || fallbackVersionInfo.commit,
     branch: systemInfo.git_branch || fallbackVersionInfo.branch
   } : fallbackVersionInfo
+
+  const featureIcons = [
+    Palette,
+    Languages,
+    FileText,
+    ImageIcon,
+    Search,
+    Smartphone,
+    ShieldCheck,
+    Rocket
+  ]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,18 +181,22 @@ export function AboutDialog({ open, onOpenChange, locale }: AboutDialogProps) {
               {t ? '主要功能' : 'Key Features'}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {(t ? APP_INFO.features.zh : APP_INFO.features.en).map((feature, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-center gap-3 p-3 bg-white/80 dark:bg-slate-700/60 rounded-lg border border-violet-200/60 dark:border-slate-600/60"
-                >
-                  <span className="text-lg">{feature.split(' ')[0]}</span>
-                  <span className="text-sm text-muted-foreground">{feature.substring(feature.indexOf(' ') + 1)}</span>
-                </motion.div>
-              ))}
+              {(t ? APP_INFO.features.zh : APP_INFO.features.en).map((feature, index) => {
+                const FeatureIcon = featureIcons[index] || Star
+
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex items-center gap-3 p-3 bg-white/80 dark:bg-slate-700/60 rounded-lg border border-violet-200/60 dark:border-slate-600/60"
+                  >
+                    <FeatureIcon className="h-4 w-4 shrink-0 text-violet-600 dark:text-violet-300" />
+                    <span className="text-sm text-muted-foreground">{feature}</span>
+                  </motion.div>
+                )
+              })}
             </div>
           </div>
 
@@ -232,7 +255,7 @@ export function AboutDialog({ open, onOpenChange, locale }: AboutDialogProps) {
             <div className="flex items-center justify-center gap-2 text-muted-foreground">
               <Heart className="h-4 w-4 text-red-500" />
               <span>
-                {t ? '由' : 'Made with'} <span className="text-red-500">❤️</span> {t ? '制作' : 'by'} <span className="font-medium text-violet-600 dark:text-violet-400">{APP_INFO.author}</span>
+                {t ? '由' : 'Made by'} <span className="font-medium text-violet-600 dark:text-violet-400">{APP_INFO.author}</span>{t ? '制作' : ''}
               </span>
             </div>
             

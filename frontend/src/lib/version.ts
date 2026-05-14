@@ -55,24 +55,24 @@ export const APP_INFO = {
   },
   features: {
     zh: [
-      "🎨 现代化的界面设计",
-      "🌐 多语言支持",
-      "📝 Markdown编辑器",
-      "🖼️ 媒体库管理", 
-      "🔍 SEO优化",
-      "📱 响应式设计",
-      "🔐 安全认证",
-      "🚀 高性能部署"
+      "现代化的界面设计",
+      "多语言支持",
+      "Markdown编辑器",
+      "媒体库管理",
+      "SEO优化",
+      "响应式设计",
+      "安全认证",
+      "高性能部署"
     ],
     en: [
-      "🎨 Modern UI Design",
-      "🌐 Multi-language Support", 
-      "📝 Markdown Editor",
-      "🖼️ Media Library",
-      "🔍 SEO Optimization",
-      "📱 Responsive Design",
-      "🔐 Secure Authentication", 
-      "🚀 High Performance"
+      "Modern UI Design",
+      "Multi-language Support",
+      "Markdown Editor",
+      "Media Library",
+      "SEO Optimization",
+      "Responsive Design",
+      "Secure Authentication",
+      "High Performance"
     ]
   },
   techStack: {

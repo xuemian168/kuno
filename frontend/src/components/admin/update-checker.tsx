@@ -22,9 +22,9 @@ import {
   Copy,
   Check,
   Terminal,
-  ChevronRight,
   Server,
-  Layers
+  Layers,
+  ExternalLink
 } from 'lucide-react'
 
 interface SystemInfo {
@@ -55,6 +55,7 @@ interface UpdateInfo {
   image_size?: number
   update_command?: string
   changelog?: string[]
+  release_url?: string
 }
 
 export function UpdateChecker() {
@@ -87,6 +88,7 @@ export function UpdateChecker() {
     try {
       const data = await apiClient.checkUpdates()
       setUpdateInfo(data)
+      setShowUpdateCommand(Boolean(data?.has_update))
     } catch (err) {
       setError(err instanceof Error ? err.message : t('system.failedToCheckUpdates'))
     } finally {
@@ -147,7 +149,7 @@ docker run --rm \\
   -v $(pwd)/backups/$(date +%Y%m%d_%H%M%S):/backup \\
   alpine sh -c "cd /data && tar czf /backup/blog-data-backup.tar.gz ."
 
-echo "✅ Backup completed"`
+echo "Backup completed"`
         },
         {
           step: 2,
@@ -156,7 +158,7 @@ echo "✅ Backup completed"`
           command: `# Pull latest image
 docker pull ictrun/kuno:latest
 
-echo "✅ Latest image pulled"`
+echo "Latest image pulled"`
         },
         {
           step: 3,
@@ -166,15 +168,15 @@ echo "✅ Latest image pulled"`
 docker stop kuno 2>/dev/null || echo "Container not running"
 docker rm kuno 2>/dev/null || echo "Container not found"
 
-echo "✅ Old container removed"`
+echo "Old container removed"`
         },
         {
           step: 4,
           title: 'verifyDataVolume',
           description: 'verifyDataVolumeDesc',
           command: `# Verify data volume before upgrade
-echo "📊 Checking data volume..."
-docker run --rm -v blog-data:/data alpine sh -c "ls -la /data/ && if [ -f /data/blog.db ]; then echo '✅ Database file exists'; else echo '❌ Database file missing'; fi"`
+echo "Checking data volume..."
+docker run --rm -v blog-data:/data alpine sh -c "ls -la /data/ && if [ -f /data/blog.db ]; then echo 'Database file exists'; else echo 'Database file missing'; fi"`
         },
         {
           step: 5,
@@ -190,7 +192,7 @@ docker run -d \\
   -e DB_PATH=/app/data/blog.db \\
   ictrun/kuno:latest
 
-echo "✅ New container started"`
+echo "New container started"`
         },
         {
           step: 6,
@@ -203,11 +205,11 @@ sleep 15
 docker ps | grep kuno
 
 # Check container logs
-echo "📋 Container logs:"
+echo "Container logs:"
 docker logs --tail=20 kuno
 
 # Verify data is accessible
-echo "📊 Verifying data:"
+echo "Verifying data:"
 docker exec kuno ls -la /app/data/`
         }
       ],
@@ -231,7 +233,7 @@ docker run --rm \\
 # Start services back up
 docker-compose start
 
-echo "✅ Backup completed"`
+echo "Backup completed"`
         },
         {
           step: 2,
@@ -240,7 +242,7 @@ echo "✅ Backup completed"`
           command: `# Pull latest images
 docker-compose pull
 
-echo "✅ Latest images pulled"`
+echo "Latest images pulled"`
         },
         {
           step: 3,
@@ -249,7 +251,7 @@ echo "✅ Latest images pulled"`
           command: `# Upgrade with zero downtime
 docker-compose up -d --force-recreate --remove-orphans
 
-echo "✅ Services upgraded"`
+echo "Services upgraded"`
         },
         {
           step: 4,
@@ -258,7 +260,7 @@ echo "✅ Services upgraded"`
           command: `# Clean up old images (optional)
 docker image prune -f
 
-echo "✅ Old images cleaned up"`
+echo "Old images cleaned up"`
         },
         {
           step: 5,
@@ -451,19 +453,32 @@ docker-compose logs -f --tail=50`
                     </Badge>
                   </div>
                 </div>
-                {updateInfo.release_date && updateInfo.image_size && (
+                {(updateInfo.release_date || updateInfo.image_size) && (
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">{t('system.releaseDate')}:</span>
-                      <span className="text-sm">{formatDate(updateInfo.release_date)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">{t('system.imageSize')}:</span>
-                      <span className="text-sm">{formatFileSize(updateInfo.image_size)}</span>
-                    </div>
+                    {updateInfo.release_date && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">{t('system.releaseDate')}:</span>
+                        <span className="text-sm">{formatDate(updateInfo.release_date)}</span>
+                      </div>
+                    )}
+                    {updateInfo.image_size && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">{t('system.imageSize')}:</span>
+                        <span className="text-sm">{formatFileSize(updateInfo.image_size)}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
+
+              {updateInfo.release_url && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={updateInfo.release_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2">
+                    <ExternalLink className="h-3 w-3" />
+                    {t('system.releaseNotes')}
+                  </a>
+                </Button>
+              )}
 
               {updateInfo.has_update && updateInfo.changelog && updateInfo.changelog.length > 0 && (
                 <div className="space-y-2">

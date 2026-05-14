@@ -963,6 +963,7 @@
     "currentVersion": "当前版本",
     "latestVersion": "最新版本",
     "releaseDate": "发布日期",
+    "releaseNotes": "查看发布说明",
     "imageSize": "镜像大小",
     "whatsNew": "更新内容：",
     "showUpdateCommands": "显示更新命令",

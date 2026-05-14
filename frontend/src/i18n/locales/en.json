@@ -962,6 +962,7 @@
     "currentVersion": "Current Version",
     "latestVersion": "Latest Version",
     "releaseDate": "Release Date",
+    "releaseNotes": "View release notes",
     "imageSize": "Image Size",
     "whatsNew": "What's New:",
     "showUpdateCommands": "Show Update Commands",

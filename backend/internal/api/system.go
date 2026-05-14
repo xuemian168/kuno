@@ -33,6 +33,17 @@ type DockerHubTag struct {
 	ImageSize   int64     `json:"full_size"`
 }
 
+// GitHubRelease represents the response from the GitHub Releases API
+type GitHubRelease struct {
+	TagName     string    `json:"tag_name"`
+	Name        string    `json:"name"`
+	Body        string    `json:"body"`
+	PublishedAt time.Time `json:"published_at"`
+	HTMLURL     string    `json:"html_url"`
+	Draft       bool      `json:"draft"`
+	Prerelease  bool      `json:"prerelease"`
+}
+
 // UpdateInfo represents update information
 type UpdateInfo struct {
 	HasUpdate      bool      `json:"has_update"`
@@ -42,6 +53,7 @@ type UpdateInfo struct {
 	ImageSize      int64     `json:"image_size,omitempty"`
 	UpdateCommand  string    `json:"update_command,omitempty"`
 	Changelog      []string  `json:"changelog,omitempty"`
+	ReleaseURL     string    `json:"release_url,omitempty"`
 }
 
 // SystemInfo represents current system information
@@ -59,6 +71,7 @@ var (
 	cacheDuration   = 1 * time.Hour // Cache for 1 hour
 	dockerHubAPIURL = "https://hub.docker.com/v2/repositories/ictrun/kuno/tags"
 	dockerImageName = "ictrun/kuno"
+	gitHubAPIURL    = "https://api.github.com/repos/xuemian168/kuno/releases/latest"
 )
 
 // GetSystemInfo returns current system information
@@ -105,12 +118,68 @@ func CheckUpdates(c *gin.Context) {
 
 // fetchLatestVersion fetches the latest version from Docker Hub
 func fetchLatestVersion(currentVersion string) (*UpdateInfo, error) {
+	release, err := fetchLatestGitHubRelease()
+	if err == nil {
+		updateInfo, err := createGitHubReleaseUpdateInfo(currentVersion, release)
+		if err == nil {
+			return updateInfo, nil
+		}
+	}
+
+	// Fall back to Docker Hub if GitHub Releases are unavailable.
+	return fetchLatestDockerVersion(currentVersion)
+}
+
+// fetchLatestGitHubRelease fetches the latest published GitHub Release.
+func fetchLatestGitHubRelease() (GitHubRelease, error) {
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	req, err := http.NewRequest(http.MethodGet, gitHubAPIURL, nil)
+	if err != nil {
+		return GitHubRelease{}, err
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", "kuno-update-checker")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return GitHubRelease{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return GitHubRelease{}, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
+	}
+
+	var release GitHubRelease
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return GitHubRelease{}, err
+	}
+
+	if release.TagName == "" || release.Draft || release.Prerelease {
+		return GitHubRelease{}, fmt.Errorf("latest GitHub release is not a stable release")
+	}
+
+	return release, nil
+}
+
+// fetchLatestDockerVersion fetches the latest semantic Docker tag as a fallback.
+func fetchLatestDockerVersion(currentVersion string) (*UpdateInfo, error) {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
 	// Fetch tags from Docker Hub REST API
-	resp, err := client.Get(dockerHubAPIURL)
+	req, err := http.NewRequest(http.MethodGet, dockerHubAPIURL+"?page_size=100", nil)
+	if err != nil {
+		latestVersion := simulateLatestVersion()
+		return createUpdateInfo(currentVersion, latestVersion, true)
+	}
+	req.Header.Set("User-Agent", "kuno-update-checker")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		// Fallback to simulation if API call fails
 		latestVersion := simulateLatestVersion()
@@ -142,6 +211,36 @@ func fetchLatestVersion(currentVersion string) (*UpdateInfo, error) {
 	return createUpdateInfo(currentVersion, latestVersion, false)
 }
 
+// fetchDockerTagInfo fetches metadata for a specific Docker Hub tag.
+func fetchDockerTagInfo(tagName string) (DockerHubTag, error) {
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	req, err := http.NewRequest(http.MethodGet, dockerHubAPIURL+"/"+tagName, nil)
+	if err != nil {
+		return DockerHubTag{}, err
+	}
+	req.Header.Set("User-Agent", "kuno-update-checker")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return DockerHubTag{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return DockerHubTag{}, fmt.Errorf("Docker Hub API returned status %d", resp.StatusCode)
+	}
+
+	var tag DockerHubTag
+	if err := json.NewDecoder(resp.Body).Decode(&tag); err != nil {
+		return DockerHubTag{}, err
+	}
+
+	return tag, nil
+}
+
 // findLatestVersion finds the latest semantic version from Docker tags
 func findLatestVersion(tags []DockerHubTag) string {
 	var versions []Version
@@ -168,6 +267,45 @@ func findLatestVersion(tags []DockerHubTag) string {
 	})
 
 	return versions[0].Raw
+}
+
+// createGitHubReleaseUpdateInfo creates UpdateInfo from GitHub Release metadata.
+func createGitHubReleaseUpdateInfo(currentVersion string, release GitHubRelease) (*UpdateInfo, error) {
+	currentVer, err := parseVersion(currentVersion)
+	if err != nil {
+		return nil, fmt.Errorf("invalid current version: %v", err)
+	}
+
+	latestVer, err := parseVersion(release.TagName)
+	if err != nil {
+		return nil, fmt.Errorf("invalid latest release version: %v", err)
+	}
+
+	hasUpdate := compareVersions(latestVer, currentVer) > 0
+	updateInfo := &UpdateInfo{
+		HasUpdate:      hasUpdate,
+		CurrentVersion: currentVer.Raw,
+		LatestVersion:  latestVer.Raw,
+		ReleaseDate:    release.PublishedAt,
+		ReleaseURL:     release.HTMLURL,
+	}
+
+	if tag, err := fetchDockerTagInfo(release.TagName); err == nil {
+		updateInfo.ImageSize = tag.ImageSize
+		if updateInfo.ReleaseDate.IsZero() {
+			updateInfo.ReleaseDate = tag.LastUpdated
+		}
+	}
+
+	if hasUpdate {
+		updateInfo.UpdateCommand = generateUpdateCommand()
+		updateInfo.Changelog = extractReleaseChangelog(release.Body)
+		if len(updateInfo.Changelog) == 0 {
+			updateInfo.Changelog = generateChangelog(currentVer, latestVer)
+		}
+	}
+
+	return updateInfo, nil
 }
 
 // createUpdateInfo creates UpdateInfo struct
@@ -198,14 +336,14 @@ func createUpdateInfo(currentVersion, latestVersion string, isSimulated bool) (*
 
 		// Add note if this is simulated data
 		if isSimulated {
-			updateInfo.Changelog = append([]string{"📝 Note: Update check uses 'latest' tag - version-based updates not available"}, updateInfo.Changelog...)
+			updateInfo.Changelog = append([]string{"Note: Update check uses the latest Docker tag because GitHub release data is unavailable"}, updateInfo.Changelog...)
 		}
 	} else if isSimulated {
 		// Show information about the current setup when no updates
 		updateInfo.Changelog = []string{
-			"ℹ️ Currently using 'latest' Docker tag",
-			"🔄 To enable version-based updates, push tagged releases (e.g., v1.0.0, v1.1.0)",
-			"📋 Current setup pulls the latest image automatically",
+			"Currently using the latest Docker tag",
+			"To enable version-based updates, publish tagged GitHub releases such as v1.0.0 or v1.1.0",
+			"Current setup pulls the latest image automatically",
 		}
 	}
 
@@ -222,7 +360,7 @@ func simulateLatestVersion() string {
 
 // generateUpdateCommand generates the Docker update command
 func generateUpdateCommand() string {
-	return fmt.Sprintf(`## 🐳 Docker Deployment (Single Container)
+	return fmt.Sprintf(`## Docker Deployment (Single Container)
 
 # 1. Backup your data
 mkdir -p ./backups/$(date +%%Y%%m%%d_%%H%%M%%S)
@@ -249,7 +387,7 @@ docker run -d \
 docker ps | grep kuno
 docker logs kuno
 
-## 🐳 Docker Compose Deployment
+## Docker Compose Deployment
 
 # 1. Backup your data
 mkdir -p ./backups/$(date +%%Y%%m%%d_%%H%%M%%S)
@@ -276,21 +414,76 @@ func generateChangelog(current, latest Version) []string {
 	changelog := []string{}
 
 	if latest.Major > current.Major {
-		changelog = append(changelog, "🚀 Major version update with new features and improvements")
+		changelog = append(changelog, "Major version update with new features and improvements")
 	}
 	if latest.Minor > current.Minor {
-		changelog = append(changelog, "✨ New features and enhancements")
-		changelog = append(changelog, "🐛 Bug fixes and stability improvements")
+		changelog = append(changelog, "New features and enhancements")
+		changelog = append(changelog, "Bug fixes and stability improvements")
 	}
 	if latest.Patch > current.Patch {
-		changelog = append(changelog, "🔧 Bug fixes and minor improvements")
+		changelog = append(changelog, "Bug fixes and minor improvements")
 	}
 
 	if len(changelog) == 0 {
-		changelog = append(changelog, "📝 Minor updates and improvements")
+		changelog = append(changelog, "Minor updates and improvements")
 	}
 
 	return changelog
+}
+
+// extractReleaseChangelog converts GitHub release notes into short UI changelog items.
+func extractReleaseChangelog(body string) []string {
+	if body == "" {
+		return nil
+	}
+
+	skipSections := map[string]bool{
+		"docker image":        true,
+		"quick deploy":        true,
+		"build information":   true,
+		"version information": true,
+		"links":               true,
+	}
+
+	var items []string
+	skipSection := false
+
+	for _, line := range strings.Split(body, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+
+		if strings.HasPrefix(trimmed, "##") {
+			heading := strings.TrimSpace(strings.TrimLeft(trimmed, "#"))
+			heading = strings.ToLower(strings.TrimSuffix(heading, ":"))
+			skipSection = skipSections[heading]
+			continue
+		}
+
+		if skipSection || !strings.HasPrefix(trimmed, "- ") {
+			continue
+		}
+
+		item := cleanReleaseNoteItem(strings.TrimSpace(strings.TrimPrefix(trimmed, "- ")))
+		if item != "" {
+			items = append(items, item)
+		}
+		if len(items) >= 12 {
+			break
+		}
+	}
+
+	return items
+}
+
+func cleanReleaseNoteItem(item string) string {
+	replacements := []string{"**", "__", "`"}
+	for _, replacement := range replacements {
+		item = strings.ReplaceAll(item, replacement, "")
+	}
+
+	return strings.TrimSpace(item)
 }
 
 // parseVersion parses a version string into a Version struct

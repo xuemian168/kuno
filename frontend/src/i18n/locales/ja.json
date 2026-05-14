@@ -578,6 +578,7 @@
     "currentVersion": "現在のバージョン",
     "latestVersion": "最新バージョン",
     "releaseDate": "リリース日",
+    "releaseNotes": "リリースノートを表示",
     "imageSize": "イメージサイズ",
     "whatsNew": "新機能：",
     "showUpdateCommands": "更新コマンドを表示",
