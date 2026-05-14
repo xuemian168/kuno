@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { getTranslations } from 'next-intl/server'
-import { getSiteUrl, getApiUrl } from '@/lib/config'
+import { getSiteUrl, getApiUrl, getPublicApiUrl } from '@/lib/config'
 import { generateIconsMetadata } from '@/lib/favicon-utils'
 import { routing } from '@/i18n/routing'
+import { buildLocalizedPath, getSiteAvailableLocales, normalizeSeoLocales } from '@/lib/seo-locale-utils'
 
 export interface SiteSettings {
   site_title?: string
@@ -10,6 +11,12 @@ export interface SiteSettings {
   favicon_url?: string
   logo_url?: string
   show_site_title?: boolean
+  default_language?: string
+  translations?: Array<{
+    language: string
+    site_title?: string
+    site_subtitle?: string
+  }>
 }
 
 export interface PageMetadataOptions {
@@ -19,6 +26,7 @@ export interface PageMetadataOptions {
   canonical?: string
   customSettings?: SiteSettings
   includeRSS?: boolean
+  availableLocales?: string[]
   robots?: {
     index?: boolean
     follow?: boolean
@@ -56,6 +64,7 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
     canonical,
     customSettings,
     includeRSS = true,
+    availableLocales,
     robots = { index: true, follow: true }
   } = options
 
@@ -71,26 +80,30 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
   
   const finalTitle = customTitle ? `${customTitle} - ${siteTitle}` : siteTitle
   const finalDescription = customDescription || siteDescription
+
+  const seoLocales = normalizeSeoLocales(
+    availableLocales && availableLocales.length > 0
+      ? availableLocales
+      : getSiteAvailableLocales(settings),
+    routing.defaultLocale
+  )
+  const defaultLocale = routing.defaultLocale
+  const isCurrentLocaleIndexable = seoLocales.includes(locale)
+  const canonicalLocale = isCurrentLocaleIndexable ? locale : defaultLocale
+  const shouldIndex = Boolean(robots.index && isCurrentLocaleIndexable)
   
   // Generate alternate language links including self-referential
   const languages: Record<string, string> = {}
-  routing.locales.forEach(loc => {
-    const path = canonical || '/'
-    const langPath = loc === routing.defaultLocale 
-      ? path 
-      : `/${loc}${path === '/' ? '' : path}`
-    languages[loc] = `${siteUrl}${langPath}`
+  const canonicalPath = canonical || '/'
+  seoLocales.forEach(loc => {
+    languages[loc] = `${siteUrl}${buildLocalizedPath(canonicalPath, loc, defaultLocale)}`
   })
   
   // x-default 始终指向默认语言版本
-  const defaultLangPath = canonical || '/'
-  languages['x-default'] = `${siteUrl}${defaultLangPath}`
+  languages['x-default'] = `${siteUrl}${buildLocalizedPath(canonicalPath, defaultLocale, defaultLocale)}`
   
   // Build canonical URL - full absolute URL is preferred for SEO
-  const canonicalPath = canonical || '/'
-  const fullCanonicalPath = locale === routing.defaultLocale 
-    ? canonicalPath 
-    : `/${locale}${canonicalPath === '/' ? '' : canonicalPath}`
+  const fullCanonicalPath = buildLocalizedPath(canonicalPath, canonicalLocale, defaultLocale)
   const fullCanonicalUrl = `${siteUrl}${fullCanonicalPath}`
 
   // Build metadata object
@@ -107,7 +120,7 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
       description: finalDescription,
       url: fullCanonicalUrl,
       siteName: siteTitle,
-      locale: locale,
+      locale: canonicalLocale,
       type: 'website',
     },
     twitter: {
@@ -116,10 +129,10 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
       description: finalDescription,
     },
     robots: {
-      index: robots.index,
+      index: shouldIndex,
       follow: robots.follow,
       googleBot: {
-        index: robots.index,
+        index: shouldIndex,
         follow: robots.follow,
         'max-image-preview': 'large',
         'max-snippet': -1,
@@ -134,7 +147,7 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
       types: {
         'application/rss+xml': [
           {
-            url: `${getApiUrl()}/rss?lang=${locale}`,
+            url: `${getPublicApiUrl()}/rss?lang=${canonicalLocale}`,
             title: `${siteTitle} RSS Feed`,
           },
         ],
@@ -188,6 +201,13 @@ export async function generateArticleMetadata(options: PageMetadataOptions & {
     cover_image_alt?: string
     created_at: string
     updated_at: string
+    default_lang?: string
+    translations?: Array<{
+      language: string
+      title?: string
+      summary?: string
+      content?: string
+    }>
   }
 }): Promise<Metadata> {
   const { article, ...baseOptions } = options

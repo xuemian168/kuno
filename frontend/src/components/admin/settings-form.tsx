@@ -1461,8 +1461,14 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                   <Select
                     value={translationConfig.provider}
                     onValueChange={(value) => {
-                      const newConfig = { ...translationConfig, provider: value as any }
+                      const isAIProvider = ['openai', 'claude', 'gemini', 'volcano'].includes(value)
+                      const newConfig = {
+                        ...translationConfig,
+                        provider: value as any,
+                        model: isAIProvider ? getDefaultModel(value) : translationConfig.model
+                      }
                       setTranslationConfig(newConfig)
+                      setCustomTranslationModel(false)
                       try {
                         translationService.configureFromSettings(newConfig)
                         setHasTranslationProvider(translationService.isConfigured())
@@ -1616,7 +1622,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="bearer">Bearer Token (OpenAI, Claude)</SelectItem>
+                        <SelectItem value="bearer">Bearer Token</SelectItem>
                         <SelectItem value="x-api-key">x-api-key</SelectItem>
                         <SelectItem value="x-goog-api-key">x-goog-api-key (TikHub AI)</SelectItem>
                         <SelectItem value="api-key">api-key</SelectItem>
@@ -1643,8 +1649,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     )}
                     <p className="text-xs text-muted-foreground">
                       {locale === 'zh'
-                        ? '不同的 API 提供商使用不同的认证方式。TikHub AI 使用 x-goog-api-key，OpenAI 使用 Bearer Token。'
-                        : 'Different API providers use different authentication methods. TikHub AI uses x-goog-api-key, OpenAI uses Bearer Token.'
+                        ? '不同的 API 提供商使用不同的认证方式。OpenAI 通常使用 Bearer Token，Anthropic Claude 使用 x-api-key，Gemini 官方接口会将 key 放在 URL 中。'
+                        : 'Different providers use different authentication styles. OpenAI usually uses Bearer Token, Anthropic Claude uses x-api-key, and the official Gemini API passes the key in the URL.'
                       }
                     </p>
                   </div>
@@ -2113,8 +2119,13 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                   <Select
                     value={aiSummaryConfig.provider}
                     onValueChange={(value) => {
-                      const newConfig = { ...aiSummaryConfig, provider: value as any }
+                      const newConfig = {
+                        ...aiSummaryConfig,
+                        provider: value as any,
+                        model: getDefaultModel(value),
+                      }
                       setAISummaryConfig(newConfig)
+                      setCustomAISummaryModel(false)
                       try {
                         aiSummaryService.configureFromSettings(newConfig)
                         setHasAISummaryProvider(aiSummaryService.isConfigured())
@@ -2282,7 +2293,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="bearer">Bearer Token (OpenAI, Claude)</SelectItem>
+                        <SelectItem value="bearer">Bearer Token</SelectItem>
                         <SelectItem value="x-api-key">x-api-key</SelectItem>
                         <SelectItem value="x-goog-api-key">x-goog-api-key (TikHub AI)</SelectItem>
                         <SelectItem value="api-key">api-key</SelectItem>
@@ -2309,8 +2320,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     )}
                     <p className="text-xs text-muted-foreground">
                       {locale === 'zh'
-                        ? '不同的 API 提供商使用不同的认证方式。TikHub AI 使用 x-goog-api-key，OpenAI 使用 Bearer Token。'
-                        : 'Different API providers use different authentication methods. TikHub AI uses x-goog-api-key, OpenAI uses Bearer Token.'
+                        ? '不同的 API 提供商使用不同的认证方式。OpenAI 通常使用 Bearer Token，Anthropic Claude 使用 x-api-key，Gemini 官方接口会将 key 放在 URL 中。'
+                        : 'Different providers use different authentication styles. OpenAI usually uses Bearer Token, Anthropic Claude uses x-api-key, and the official Gemini API passes the key in the URL.'
                       }
                     </p>
                   </div>
@@ -3067,6 +3078,7 @@ function AIConfigurationPanel({ aiConfig, setAIConfig, locale, originalMaskedKey
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="openai">OpenAI</SelectItem>
+                <SelectItem value="claude">Claude (Anthropic)</SelectItem>
                 <SelectItem value="gemini">Google Gemini</SelectItem>
                 <SelectItem value="volcano">Volcano Engine (豆包)</SelectItem>
               </SelectContent>

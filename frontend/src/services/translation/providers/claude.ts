@@ -1,6 +1,7 @@
 import { BaseTranslationProvider } from './base'
 import { TranslationResult } from '../types'
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
+import { buildClaudeMessagesRequestBody, getClaudeResponseText } from '../../ai-providers/claude-messages'
 import { formatErrorMessage } from '../error-messages'
 import { getClaudeEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
@@ -41,22 +42,16 @@ export class ClaudeProvider extends BaseTranslationProvider {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildClaudeMessagesRequestBody({
           model: this.model,
-          max_tokens: 4096,
-          messages: [
-            {
-              role: 'user',
-              content: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}.
+          systemPrompt: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}.
 Maintain the original formatting, tone, and style.
-Only provide the translation without any explanation or additional text.
-
-Text to translate:
-${text}`
-            }
-          ],
+Only provide the translation without any explanation or additional text.`,
+          userPrompt: `Text to translate:
+${text}`,
           temperature: 0.3,
-        })
+          maxOutputTokens: 4096,
+        }))
       })
 
       if (!response.ok) {
@@ -79,12 +74,13 @@ ${text}`
 
       const data = await response.json()
 
-      // Claude returns content as an array
-      if (!data.content || data.content.length === 0) {
+      const translatedText = getClaudeResponseText(data)
+
+      if (!translatedText) {
         throw this.createError('No translation result returned', 'NO_RESULT')
       }
 
-      return data.content[0].text.trim()
+      return translatedText
     } catch (error) {
       if (error instanceof Error && 'code' in error) {
         throw error
@@ -109,22 +105,16 @@ ${text}`
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildClaudeMessagesRequestBody({
           model: this.model,
-          max_tokens: 4096,
-          messages: [
-            {
-              role: 'user',
-              content: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}.
+          systemPrompt: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}.
 Maintain the original formatting, tone, and style.
-Only provide the translation without any explanation or additional text.
-
-Text to translate:
-${text}`
-            }
-          ],
+Only provide the translation without any explanation or additional text.`,
+          userPrompt: `Text to translate:
+${text}`,
           temperature: 0.3,
-        })
+          maxOutputTokens: 4096,
+        }))
       })
 
       if (!response.ok) {
@@ -147,7 +137,9 @@ ${text}`
 
       const data = await response.json()
 
-      if (!data.content || data.content.length === 0) {
+      const translatedText = getClaudeResponseText(data)
+
+      if (!translatedText) {
         throw this.createError('No translation result returned', 'NO_RESULT')
       }
 
@@ -164,6 +156,7 @@ ${text}`
         'claude-opus-4-7': { input: 5.00, output: 25.00 },
         'claude-sonnet-4-6': { input: 3.00, output: 15.00 },
         'claude-haiku-4-5': { input: 1.00, output: 5.00 },
+        'claude-haiku-4-5-20251001': { input: 1.00, output: 5.00 },
         'claude-3-5-sonnet-20241022': { input: 3.00, output: 15.00 },
         'claude-3-5-sonnet-20240620': { input: 3.00, output: 15.00 },
         'claude-3-5-haiku-20241022': { input: 0.80, output: 4.00 },
@@ -176,7 +169,7 @@ ${text}`
       estimatedCost = (inputTokens / 1000000) * modelPricing.input + (outputTokens / 1000000) * modelPricing.output
 
       return {
-        translatedText: data.content[0].text.trim(),
+        translatedText,
         usage: {
           inputTokens,
           outputTokens,
@@ -212,22 +205,16 @@ ${text}`
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildClaudeMessagesRequestBody({
           model: this.model,
-          max_tokens: 4096,
-          messages: [
-            {
-              role: 'user',
-              content: `You are a professional translator. Translate the following numbered texts from ${fromLang} to ${toLang}.
+          systemPrompt: `You are a professional translator. Translate the following numbered texts from ${fromLang} to ${toLang}.
 Maintain the original formatting, tone, and style for each text.
 Keep the same numbering format in your response.
-Only provide the translations without any explanation.
-
-${numberedTexts}`
-            }
-          ],
+Only provide the translations without any explanation.`,
+          userPrompt: numberedTexts,
           temperature: 0.3,
-        })
+          maxOutputTokens: 4096,
+        }))
       })
 
       if (!response.ok) {
@@ -250,11 +237,11 @@ ${numberedTexts}`
 
       const data = await response.json()
 
-      if (!data.content || data.content.length === 0) {
+      const translatedText = getClaudeResponseText(data)
+
+      if (!translatedText) {
         throw this.createError('No translation result returned', 'NO_RESULT')
       }
-
-      const translatedText = data.content[0].text.trim()
 
       // Parse the numbered response
       const translations = translatedText

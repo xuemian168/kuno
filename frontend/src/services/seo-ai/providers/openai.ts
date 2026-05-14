@@ -9,6 +9,7 @@ import {
   KeywordOptions,
   AuthHeaderType
 } from '../types'
+import { buildOpenAIChatRequestBody, getOpenAIResponseText } from '../../ai-providers/openai-chat'
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
@@ -124,21 +125,14 @@ Respond in JSON format:
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.buildAuthHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildOpenAIChatRequestBody({
           model: this.model,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert SEO specialist who creates optimized titles for better search engine rankings.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
+          systemPrompt: 'You are an expert SEO specialist who creates optimized titles for better search engine rankings.',
+          userPrompt: prompt,
           temperature: 0.7,
-          max_tokens: 500
-        })
+          maxOutputTokens: 500,
+          jsonObjectResponse: true
+        }))
       })
 
       if (!response.ok) {
@@ -150,7 +144,10 @@ Respond in JSON format:
       }
 
       const data = await response.json()
-      const result = JSON.parse(data.choices[0].message.content)
+      const result = JSON.parse(getOpenAIResponseText(data))
+      const inputTokens = data.usage?.prompt_tokens || 0
+      const outputTokens = data.usage?.completion_tokens || 0
+      const totalTokens = data.usage?.total_tokens || inputTokens + outputTokens
 
       return {
         content: result.primary_title,
@@ -158,10 +155,10 @@ Respond in JSON format:
         alternatives: result.alternatives || [],
         suggestions: result.suggestions || [],
         usage: {
-          inputTokens: data.usage?.prompt_tokens || 0,
-          outputTokens: data.usage?.completion_tokens || 0,
-          totalTokens: data.usage?.total_tokens || 0,
-          estimatedCost: this.calculateCost(data.usage?.total_tokens || 0),
+          inputTokens,
+          outputTokens,
+          totalTokens,
+          estimatedCost: this.calculateCost(inputTokens, outputTokens),
           currency: 'USD'
         }
       }
@@ -227,21 +224,14 @@ Respond in JSON format:
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.buildAuthHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildOpenAIChatRequestBody({
           model: this.model,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert SEO specialist who creates optimized meta descriptions for better search engine rankings and click-through rates.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
+          systemPrompt: 'You are an expert SEO specialist who creates optimized meta descriptions for better search engine rankings and click-through rates.',
+          userPrompt: prompt,
           temperature: 0.7,
-          max_tokens: 300
-        })
+          maxOutputTokens: 300,
+          jsonObjectResponse: true
+        }))
       })
 
       if (!response.ok) {
@@ -253,7 +243,10 @@ Respond in JSON format:
       }
 
       const data = await response.json()
-      const result = JSON.parse(data.choices[0].message.content)
+      const result = JSON.parse(getOpenAIResponseText(data))
+      const inputTokens = data.usage?.prompt_tokens || 0
+      const outputTokens = data.usage?.completion_tokens || 0
+      const totalTokens = data.usage?.total_tokens || inputTokens + outputTokens
 
       return {
         content: result.description,
@@ -261,10 +254,10 @@ Respond in JSON format:
         alternatives: result.alternatives || [],
         suggestions: result.suggestions || [],
         usage: {
-          inputTokens: data.usage?.prompt_tokens || 0,
-          outputTokens: data.usage?.completion_tokens || 0,
-          totalTokens: data.usage?.total_tokens || 0,
-          estimatedCost: this.calculateCost(data.usage?.total_tokens || 0),
+          inputTokens,
+          outputTokens,
+          totalTokens,
+          estimatedCost: this.calculateCost(inputTokens, outputTokens),
           currency: 'USD'
         }
       }
@@ -339,21 +332,14 @@ Respond in JSON format:
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.buildAuthHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildOpenAIChatRequestBody({
           model: this.model,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert SEO keyword researcher who identifies optimal keywords for content optimization.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
+          systemPrompt: 'You are an expert SEO keyword researcher who identifies optimal keywords for content optimization.',
+          userPrompt: prompt,
           temperature: 0.3,
-          max_tokens: 800
-        })
+          maxOutputTokens: 800,
+          jsonObjectResponse: true
+        }))
       })
 
       if (!response.ok) {
@@ -365,7 +351,10 @@ Respond in JSON format:
       }
 
       const data = await response.json()
-      const result = JSON.parse(data.choices[0].message.content)
+      const result = JSON.parse(getOpenAIResponseText(data))
+      const inputTokens = data.usage?.prompt_tokens || 0
+      const outputTokens = data.usage?.completion_tokens || 0
+      const totalTokens = data.usage?.total_tokens || inputTokens + outputTokens
 
       return {
         primary_keywords: result.primary_keywords || [],
@@ -373,10 +362,10 @@ Respond in JSON format:
         long_tail_keywords: result.long_tail_keywords || [],
         suggestions: result.suggestions || [],
         usage: {
-          inputTokens: data.usage?.prompt_tokens || 0,
-          outputTokens: data.usage?.completion_tokens || 0,
-          totalTokens: data.usage?.total_tokens || 0,
-          estimatedCost: this.calculateCost(data.usage?.total_tokens || 0),
+          inputTokens,
+          outputTokens,
+          totalTokens,
+          estimatedCost: this.calculateCost(inputTokens, outputTokens),
           currency: 'USD'
         }
       }
@@ -488,9 +477,25 @@ Respond in JSON format:
     ]
   }
 
-  private calculateCost(tokens: number): number {
-    // GPT-3.5-turbo pricing (as of 2024)
-    const costPer1000Tokens = 0.002 // $0.002 per 1K tokens
-    return (tokens / 1000) * costPer1000Tokens
+  private calculateCost(inputTokens: number, outputTokens: number): number {
+    const pricing: Record<string, { input: number, output: number }> = {
+      'gpt-5.5': { input: 0.005, output: 0.03 },
+      'gpt-5.4': { input: 0.0025, output: 0.015 },
+      'gpt-5.4-mini': { input: 0.00075, output: 0.0045 },
+      'gpt-5.4-nano': { input: 0.0002, output: 0.00125 },
+      'gpt-5': { input: 0.00125, output: 0.01 },
+      'gpt-5-mini': { input: 0.00025, output: 0.002 },
+      'gpt-5-nano': { input: 0.00005, output: 0.0004 },
+      'gpt-4.1': { input: 0.002, output: 0.008 },
+      'gpt-4.1-mini': { input: 0.0004, output: 0.0016 },
+      'gpt-4.1-nano': { input: 0.0001, output: 0.0004 },
+      'gpt-4o': { input: 0.005, output: 0.015 },
+      'gpt-4o-mini': { input: 0.00015, output: 0.0006 },
+      'o3': { input: 0.002, output: 0.008 },
+      'o4-mini': { input: 0.0011, output: 0.0044 },
+    }
+
+    const modelPricing = pricing[this.model] || pricing[DEFAULT_AI_MODELS.openai]
+    return (inputTokens / 1000) * modelPricing.input + (outputTokens / 1000) * modelPricing.output
   }
 }

@@ -80,6 +80,15 @@ export class AISummaryService {
     this.usageStats.sessionStats.cost += usage.cost
   }
 
+  private getActiveProviderName(): 'openai' | 'claude' | 'gemini' | 'volcano' {
+    const providerName = this.activeProvider?.name.toLowerCase() || ''
+
+    if (providerName.includes('openai')) return 'openai'
+    if (providerName.includes('claude')) return 'claude'
+    if (providerName.includes('volcano')) return 'volcano'
+    return 'gemini'
+  }
+
   async generateSummary(articleContent: ArticleContent): Promise<AISummaryResult> {
     if (!this.activeProvider) {
       throw new Error('No active AI summary provider')
@@ -89,8 +98,7 @@ export class AISummaryService {
       throw new Error(`AI summary provider '${this.activeProvider.name}' is not configured`)
     }
 
-    const providerName = this.activeProvider.name.toLowerCase().includes('openai') ? 'openai' 
-      : this.activeProvider.name.toLowerCase().includes('volcano') ? 'volcano' : 'gemini'
+    const providerName = this.getActiveProviderName()
     const model = (this.activeProvider as any).model || 'unknown'
     
     try {
@@ -149,8 +157,7 @@ export class AISummaryService {
       throw new Error(`AI summary provider '${this.activeProvider.name}' is not configured`)
     }
 
-    const providerName = this.activeProvider.name.toLowerCase().includes('openai') ? 'openai' 
-      : this.activeProvider.name.toLowerCase().includes('volcano') ? 'volcano' : 'gemini'
+    const providerName = this.getActiveProviderName()
     
     return await trackSEOGeneration(
       () => this.activeProvider!.generateSEOKeywords(content, language),
@@ -170,8 +177,7 @@ export class AISummaryService {
       throw new Error(`AI summary provider '${this.activeProvider.name}' is not configured`)
     }
 
-    const providerName = this.activeProvider.name.toLowerCase().includes('openai') ? 'openai' 
-      : this.activeProvider.name.toLowerCase().includes('volcano') ? 'volcano' : 'gemini'
+    const providerName = this.getActiveProviderName()
     
     return await trackSEOGeneration(
       () => this.activeProvider!.generateTitle(content, language),

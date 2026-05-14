@@ -14,8 +14,9 @@ import { CustomCSSInjector } from '@/components/custom-css-injector'
 import { CustomJSInjector } from '@/components/custom-js-injector'
 import { LayoutBackground } from '@/components/layout-background'
 import '../globals.css'
-import { getSiteUrl, getApiUrl } from '@/lib/config'
+import { getSiteUrl, getApiUrl, getPublicApiUrl } from '@/lib/config'
 import { generateFaviconUrl } from '@/lib/favicon-utils'
+import { buildLocalizedPath, getSiteAvailableLocales } from '@/lib/seo-locale-utils'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,6 +45,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   let faviconConfig = generateFaviconUrl(undefined) // Default favicon config
   let blockSearchEngines = false
   let blockAITraining = false
+  let availableLocales = [...routing.locales]
   
   try {
     // Try to fetch site settings
@@ -55,6 +57,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       siteDescription = settings.site_subtitle || siteDescription
       blockSearchEngines = settings.block_search_engines || false
       blockAITraining = settings.block_ai_training || false
+      availableLocales = getSiteAvailableLocales(settings)
       
       // Generate favicon config using unified utility
       faviconConfig = generateFaviconUrl(settings.favicon_url)
@@ -65,25 +68,25 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   
   // Generate alternate language links including self-referential (use relative paths)
   const languages: Record<string, string> = {}
-  routing.locales.forEach(loc => {
-    languages[loc] = loc === routing.defaultLocale 
-      ? `/` 
-      : `/${loc}/`
+  availableLocales.forEach(loc => {
+    languages[loc] = buildLocalizedPath('/', loc)
   })
   
   // Add self-referential alternate link (x-default) - should point to default locale
-  languages['x-default'] = `/`
+  languages['x-default'] = buildLocalizedPath('/', routing.defaultLocale)
+  const canonicalPath = buildLocalizedPath('/', locale)
   
   const metadata: Metadata = {
     title: siteTitle,
     description: siteDescription,
+    metadataBase: new URL(siteUrl),
     alternates: {
-      canonical: locale === routing.defaultLocale ? `/` : `/${locale}/`,
+      canonical: canonicalPath,
       languages,
       types: {
         'application/rss+xml': [
           {
-            url: `${getApiUrl()}/rss?lang=${locale}`,
+            url: `${getPublicApiUrl()}/rss?lang=${locale}`,
             title: `${siteTitle} RSS Feed`,
           },
         ],
@@ -92,7 +95,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     openGraph: {
       title: siteTitle,
       description: siteDescription,
-      url: locale === routing.defaultLocale ? `${siteUrl}/` : `${siteUrl}/${locale}/`,
+      url: `${siteUrl}${canonicalPath}`,
       siteName: siteTitle,
       locale: locale,
       type: 'website',

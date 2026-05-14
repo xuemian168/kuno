@@ -9,6 +9,7 @@ import {
   KeywordOptions
 } from '../types'
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
+import { buildClaudeMessagesRequestBody, getClaudeResponseText } from '../../ai-providers/claude-messages'
 import { getClaudeEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
 export class ClaudeSEOProvider extends BaseSEOAIProvider {
@@ -78,12 +79,13 @@ Respond with a JSON object:
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildClaudeMessagesRequestBody({
           model: this.model,
-          max_tokens: 1024,
-          messages: [{ role: 'user', content: prompt }],
+          systemPrompt: 'You are an expert SEO specialist who creates optimized titles for better search engine rankings. Return valid JSON only.',
+          userPrompt: prompt,
           temperature: 0.7,
-        })
+          maxOutputTokens: 1024,
+        }))
       })
 
       if (!response.ok) {
@@ -96,11 +98,13 @@ Respond with a JSON object:
 
       const data = await response.json()
 
-      if (!data.content || data.content.length === 0) {
+      const resultText = getClaudeResponseText(data)
+
+      if (!resultText) {
         throw this.createError('No response content', 'NO_CONTENT')
       }
 
-      const result = JSON.parse(data.content[0].text)
+      const result = JSON.parse(resultText)
 
       // Calculate usage
       const inputTokens = data.usage?.input_tokens || 0
@@ -111,6 +115,7 @@ Respond with a JSON object:
         'claude-opus-4-7': { input: 5.00, output: 25.00 },
         'claude-sonnet-4-6': { input: 3.00, output: 15.00 },
         'claude-haiku-4-5': { input: 1.00, output: 5.00 },
+        'claude-haiku-4-5-20251001': { input: 1.00, output: 5.00 },
         'claude-3-5-sonnet-20241022': { input: 3.00, output: 15.00 },
       }
 
@@ -183,12 +188,13 @@ Respond with a JSON object:
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildClaudeMessagesRequestBody({
           model: this.model,
-          max_tokens: 1024,
-          messages: [{ role: 'user', content: prompt }],
+          systemPrompt: 'You are an expert SEO specialist who creates optimized meta descriptions for better search engine rankings and click-through rates. Return valid JSON only.',
+          userPrompt: prompt,
           temperature: 0.7,
-        })
+          maxOutputTokens: 1024,
+        }))
       })
 
       if (!response.ok) {
@@ -201,11 +207,13 @@ Respond with a JSON object:
 
       const data = await response.json()
 
-      if (!data.content || data.content.length === 0) {
+      const resultText = getClaudeResponseText(data)
+
+      if (!resultText) {
         throw this.createError('No response content', 'NO_CONTENT')
       }
 
-      const result = JSON.parse(data.content[0].text)
+      const result = JSON.parse(resultText)
 
       const inputTokens = data.usage?.input_tokens || 0
       const outputTokens = data.usage?.output_tokens || 0
@@ -215,6 +223,7 @@ Respond with a JSON object:
         'claude-opus-4-7': { input: 5.00, output: 25.00 },
         'claude-sonnet-4-6': { input: 3.00, output: 15.00 },
         'claude-haiku-4-5': { input: 1.00, output: 5.00 },
+        'claude-haiku-4-5-20251001': { input: 1.00, output: 5.00 },
         'claude-3-5-sonnet-20241022': { input: 3.00, output: 15.00 },
       }
 
@@ -284,12 +293,13 @@ Respond with a JSON object:
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildClaudeMessagesRequestBody({
           model: this.model,
-          max_tokens: 2048,
-          messages: [{ role: 'user', content: prompt }],
+          systemPrompt: 'You are an expert SEO keyword researcher who identifies optimal keywords for content optimization. Return valid JSON only.',
+          userPrompt: prompt,
           temperature: 0.5,
-        })
+          maxOutputTokens: 2048,
+        }))
       })
 
       if (!response.ok) {
@@ -302,11 +312,13 @@ Respond with a JSON object:
 
       const data = await response.json()
 
-      if (!data.content || data.content.length === 0) {
+      const resultText = getClaudeResponseText(data)
+
+      if (!resultText) {
         throw this.createError('No response content', 'NO_CONTENT')
       }
 
-      const result = JSON.parse(data.content[0].text)
+      const result = JSON.parse(resultText)
 
       const inputTokens = data.usage?.input_tokens || 0
       const outputTokens = data.usage?.output_tokens || 0
@@ -316,6 +328,7 @@ Respond with a JSON object:
         'claude-opus-4-7': { input: 5.00, output: 25.00 },
         'claude-sonnet-4-6': { input: 3.00, output: 15.00 },
         'claude-haiku-4-5': { input: 1.00, output: 5.00 },
+        'claude-haiku-4-5-20251001': { input: 1.00, output: 5.00 },
         'claude-3-5-sonnet-20241022': { input: 3.00, output: 15.00 },
       }
 

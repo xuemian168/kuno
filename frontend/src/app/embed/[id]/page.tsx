@@ -22,8 +22,8 @@ export async function generateMetadata({ params }: EmbedPageProps): Promise<Meta
       canonical: `/embed/${id}`,
       includeRSS: false, // Embed pages don't need RSS
       robots: {
-        index: true,
-        follow: true,
+        index: false,
+        follow: false,
       }
     })
   } catch (error) {

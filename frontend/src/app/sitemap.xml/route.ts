@@ -1,35 +1,58 @@
-import { getApiUrl } from '@/lib/config'
-import { headers } from 'next/headers'
+import { getApiUrl, getSiteUrl } from '@/lib/config'
+import { buildLocalizedPath, getArticleAvailableLocales, getSiteAvailableLocales } from '@/lib/seo-locale-utils'
 
 export const dynamic = 'force-dynamic'
 
+type SiteSettingsResponse = {
+  block_search_engines?: boolean
+  default_language?: string
+  translations?: Array<{
+    language: string
+    site_title?: string
+    site_subtitle?: string
+  }>
+}
+
+type SitemapArticle = {
+  id: number | string
+  seo_slug?: string
+  default_lang?: string
+  translations?: Array<{
+    language: string
+    title?: string
+    summary?: string
+    content?: string
+  }>
+  created_at: string
+  updated_at?: string
+}
+
+function generateAlternateLinks(siteUrl: string, locales: string[], path: string): string {
+  return locales
+    .map((locale) => {
+      const href = `${siteUrl}${buildLocalizedPath(path, locale)}`
+      return `<xhtml:link rel="alternate" hreflang="${locale}" href="${href}" />`
+    })
+    .join('\n')
+}
+
 export async function GET() {
   const apiUrl = getApiUrl()
-
-  // 从请求头获取正确的域名和协议
-  const headersList = await headers()
-  const host = headersList.get('x-forwarded-host') || headersList.get('host') || 'localhost:3000'
-  const protocol = headersList.get('x-forwarded-proto') || 'https'
-
-  // 构建 baseUrl：生产环境强制使用 HTTPS，开发环境使用请求的协议
-  const baseUrl = host.includes('localhost')
-    ? `http://${host}`
-    : `https://${host}`
+  const siteUrl = getSiteUrl()
+  let siteSettings: SiteSettingsResponse | null = null
 
   try {
-    // Check privacy settings first
     const settingsResponse = await fetch(`${apiUrl}/settings`, {
       headers: {
         'Accept': 'application/json',
       },
-      cache: 'no-store'
+      cache: 'no-store',
     })
 
     if (settingsResponse.ok) {
-      const settings = await settingsResponse.json()
+      siteSettings = await settingsResponse.json()
 
-      // If search engines are blocked, return empty sitemap
-      if (settings.block_search_engines) {
+      if (siteSettings.block_search_engines) {
         return new Response(
           '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>',
           {
@@ -44,32 +67,14 @@ export async function GET() {
     console.error('Failed to fetch settings for sitemap:', error)
   }
 
-  // Define supported locales
-  const locales = ['zh', 'en', 'ja', 'ko', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ar', 'hi']
-  const defaultLocale = 'zh'
-
+  const siteLocales = getSiteAvailableLocales(siteSettings)
   const urls: string[] = []
 
-  // Helper function to generate alternate links
-  const generateAlternates = (getUrl: (locale: string) => string) => {
-    return locales
-      .map(loc => `<xhtml:link rel="alternate" hreflang="${loc}" href="${getUrl(loc)}" />`)
-      .join('\n')
-  }
-
-  // Add home pages for each locale
-  locales.forEach(locale => {
-    const url = locale === defaultLocale
-      ? `${baseUrl}/`
-      : `${baseUrl}/${locale}/`
-
-    const alternates = generateAlternates(loc =>
-      loc === defaultLocale ? `${baseUrl}/` : `${baseUrl}/${loc}/`
-    )
-
+  siteLocales.forEach((locale) => {
+    const path = buildLocalizedPath('/', locale)
     urls.push(`<url>
-<loc>${url}</loc>
-${alternates}
+<loc>${siteUrl}${path}</loc>
+${generateAlternateLinks(siteUrl, siteLocales, '/')}
 <lastmod>${new Date().toISOString()}</lastmod>
 <changefreq>daily</changefreq>
 <priority>1</priority>
@@ -77,47 +82,27 @@ ${alternates}
   })
 
   try {
-    // Fetch articles
     const response = await fetch(`${apiUrl}/articles`, {
       headers: {
         'Accept': 'application/json',
       },
-      cache: 'no-store'
+      cache: 'no-store',
     })
 
     if (response.ok) {
-      const articles = await response.json()
-
-      // Filter out future articles
+      const articles: SitemapArticle[] = await response.json()
       const now = new Date()
-      const publishedArticles = articles.filter((article: any) =>
-        new Date(article.created_at) <= now
-      )
+      const publishedArticles = articles.filter((article) => new Date(article.created_at) <= now)
 
-      // Add article pages for each locale
-      publishedArticles.forEach((article: any) => {
-        locales.forEach(locale => {
-          const seoSlug = article.seo_slug
-          const url = seoSlug
-            ? (locale === defaultLocale
-                ? `${baseUrl}/article/${seoSlug}`
-                : `${baseUrl}/${locale}/article/${seoSlug}`)
-            : (locale === defaultLocale
-                ? `${baseUrl}/article/${article.id}`
-                : `${baseUrl}/${locale}/article/${article.id}`)
+      publishedArticles.forEach((article) => {
+        const articleIdentifier = article.seo_slug || article.id
+        const articlePath = `/article/${articleIdentifier}`
+        const articleLocales = getArticleAvailableLocales(article)
+        const alternates = generateAlternateLinks(siteUrl, articleLocales, articlePath)
 
-          const alternates = generateAlternates(loc => {
-            return seoSlug
-              ? (loc === defaultLocale
-                  ? `${baseUrl}/article/${seoSlug}`
-                  : `${baseUrl}/${loc}/article/${seoSlug}`)
-              : (loc === defaultLocale
-                  ? `${baseUrl}/article/${article.id}`
-                  : `${baseUrl}/${loc}/article/${article.id}`)
-          })
-
+        articleLocales.forEach((locale) => {
           urls.push(`<url>
-<loc>${url}</loc>
+<loc>${siteUrl}${buildLocalizedPath(articlePath, locale)}</loc>
 ${alternates}
 <lastmod>${new Date(article.updated_at || article.created_at).toISOString()}</lastmod>
 <changefreq>weekly</changefreq>
@@ -130,7 +115,6 @@ ${alternates}
     console.error('Failed to fetch articles for sitemap:', error)
   }
 
-  // Build the complete sitemap XML with correct namespaces
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${urls.join('\n')}

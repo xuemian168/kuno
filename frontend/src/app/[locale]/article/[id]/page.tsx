@@ -7,6 +7,7 @@ import { fetchArticle, fetchSettings } from '@/lib/server-api'
 import { ArticleStructuredData, BreadcrumbStructuredData } from '@/components/seo/structured-data'
 import { getSiteUrl } from '@/lib/config'
 import { routing } from '@/i18n/routing'
+import { getArticleAvailableLocales } from '@/lib/seo-locale-utils'
 
 interface ArticlePageProps {
   params: Promise<{ id: string; locale: string }>
@@ -18,10 +19,12 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 
   try {
     const article = await fetchArticle(id, locale)
+    const availableLocales = getArticleAvailableLocales(article)
 
     return generateArticleMetadata({
       locale,
       canonical: `/article/${article.seo_slug || id}`,
+      availableLocales,
       article: {
         title: article.title,
         summary: article.summary,
@@ -31,6 +34,8 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         cover_image_alt: article.cover_image_alt,
         created_at: article.created_at,
         updated_at: article.updated_at,
+        default_lang: article.default_lang,
+        translations: article.translations,
       },
       robots: {
         index: true,
@@ -73,10 +78,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   // 服务端渲染结构化数据
   const siteUrl = getSiteUrl()
   const defaultLocale = routing.defaultLocale
-  const articleUrl = locale === defaultLocale
+  const articleAvailableLocales = getArticleAvailableLocales(article)
+  const contentLocale = articleAvailableLocales.includes(locale) ? locale : (article.default_lang || defaultLocale)
+  const articleUrl = contentLocale === defaultLocale
     ? `${siteUrl}/article/${article.seo_slug || id}`
-    : `${siteUrl}/${locale}/article/${article.seo_slug || id}`
-  const homeUrl = locale === defaultLocale ? siteUrl : `${siteUrl}/${locale}`
+    : `${siteUrl}/${contentLocale}/article/${article.seo_slug || id}`
+  const homeUrl = contentLocale === defaultLocale ? siteUrl : `${siteUrl}/${contentLocale}`
   const t = await getTranslations({ locale })
 
   const breadcrumbItems = [
@@ -93,7 +100,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         datePublished={article.created_at}
         dateModified={article.updated_at}
         author={settings?.site_title || 'Blog'}
-        locale={locale}
+        locale={contentLocale}
         content={article.content}
       />
       <BreadcrumbStructuredData items={breadcrumbItems} />

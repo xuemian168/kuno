@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { getTranslations } from 'next-intl/server'
 import HomePageClient from './home-client'
 import { generatePageMetadata } from '@/lib/metadata-utils'
 import { fetchArticles, fetchCategories, fetchSettings } from '@/lib/server-api'
@@ -11,14 +10,9 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale } = await params
-  const t = await getTranslations({ locale })
-
-  // Use the home title as a custom title
-  const homeTitle = t('nav.home')
 
   return generatePageMetadata({
     locale,
-    title: homeTitle,
     canonical: '/',
     includeRSS: true,
     robots: {

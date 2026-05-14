@@ -1,5 +1,6 @@
 import { BaseTranslationProvider } from './base'
 import { TranslationResult, AuthHeaderType } from '../types'
+import { buildOpenAIChatRequestBody, getOpenAIResponseText } from '../../ai-providers/openai-chat'
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { formatErrorMessage } from '../error-messages'
 import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
@@ -78,23 +79,15 @@ export class OpenAIProvider extends BaseTranslationProvider {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.buildAuthHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildOpenAIChatRequestBody({
           model: this.model,
-          messages: [
-            {
-              role: 'system',
-              content: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}. 
-                       Maintain the original formatting, tone, and style. 
-                       Only provide the translation without any explanation or additional text.`
-            },
-            {
-              role: 'user',
-              content: text
-            }
-          ],
+          systemPrompt: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}. 
+Maintain the original formatting, tone, and style. 
+Only provide the translation without any explanation or additional text.`,
+          userPrompt: text,
           temperature: 0.3,
-          max_tokens: Math.min(text.length * 2, 4000)
-        })
+          maxOutputTokens: Math.min(text.length * 2, 4000)
+        }))
       })
 
       if (!response.ok) {
@@ -120,7 +113,7 @@ export class OpenAIProvider extends BaseTranslationProvider {
       }
 
       const data = await response.json()
-      return data.choices[0].message.content.trim()
+      return getOpenAIResponseText(data)
     } catch (error) {
       if (error instanceof Error && 'code' in error) {
         throw error
@@ -147,23 +140,15 @@ export class OpenAIProvider extends BaseTranslationProvider {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.buildAuthHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildOpenAIChatRequestBody({
           model: this.model,
-          messages: [
-            {
-              role: 'system',
-              content: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}. 
-                       Maintain the original formatting, tone, and style. 
-                       Only provide the translation without any explanation or additional text.`
-            },
-            {
-              role: 'user',
-              content: text
-            }
-          ],
+          systemPrompt: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}. 
+Maintain the original formatting, tone, and style. 
+Only provide the translation without any explanation or additional text.`,
+          userPrompt: text,
           temperature: 0.3,
-          max_tokens: Math.min(text.length * 2, 4000)
-        })
+          maxOutputTokens: Math.min(text.length * 2, 4000)
+        }))
       })
 
       if (!response.ok) {
@@ -209,18 +194,21 @@ export class OpenAIProvider extends BaseTranslationProvider {
         'gpt-5-nano': { input: 0.00005, output: 0.0004 },
         'gpt-4.1': { input: 0.002, output: 0.008 },
         'gpt-4.1-mini': { input: 0.0004, output: 0.0016 },
+        'gpt-4.1-nano': { input: 0.0001, output: 0.0004 },
         'gpt-3.5-turbo': { input: 0.0015, output: 0.002 },
         'gpt-4': { input: 0.03, output: 0.06 },
         'gpt-4-turbo-preview': { input: 0.01, output: 0.03 },
         'gpt-4o': { input: 0.005, output: 0.015 },
-        'gpt-4o-mini': { input: 0.00015, output: 0.0006 }
+        'gpt-4o-mini': { input: 0.00015, output: 0.0006 },
+        'o3': { input: 0.002, output: 0.008 },
+        'o4-mini': { input: 0.0011, output: 0.0044 }
       }
       
       const modelPricing = pricing[this.model] || pricing[DEFAULT_AI_MODELS.openai]
       estimatedCost = (inputTokens / 1000) * modelPricing.input + (outputTokens / 1000) * modelPricing.output
 
       return {
-        translatedText: data.choices[0].message.content.trim(),
+        translatedText: getOpenAIResponseText(data),
         usage: {
           inputTokens,
           outputTokens,
@@ -258,24 +246,16 @@ export class OpenAIProvider extends BaseTranslationProvider {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.buildAuthHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildOpenAIChatRequestBody({
           model: this.model,
-          messages: [
-            {
-              role: 'system',
-              content: `You are a professional translator. Translate the following numbered texts from ${fromLang} to ${toLang}. 
-                       Maintain the original formatting, tone, and style for each text. 
-                       Keep the same numbering format in your response.
-                       Only provide the translations without any explanation.`
-            },
-            {
-              role: 'user',
-              content: numberedTexts
-            }
-          ],
+          systemPrompt: `You are a professional translator. Translate the following numbered texts from ${fromLang} to ${toLang}. 
+Maintain the original formatting, tone, and style for each text. 
+Keep the same numbering format in your response.
+Only provide the translations without any explanation.`,
+          userPrompt: numberedTexts,
           temperature: 0.3,
-          max_tokens: Math.min(numberedTexts.length * 2, 4000)
-        })
+          maxOutputTokens: Math.min(numberedTexts.length * 2, 4000)
+        }))
       })
 
       if (!response.ok) {
@@ -301,7 +281,7 @@ export class OpenAIProvider extends BaseTranslationProvider {
       }
 
       const data = await response.json()
-      const translatedText = data.choices[0].message.content.trim()
+      const translatedText = getOpenAIResponseText(data)
       
       // Parse the numbered response
       const translations = translatedText

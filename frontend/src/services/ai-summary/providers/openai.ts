@@ -1,5 +1,6 @@
 import { BaseAISummaryProvider } from './base'
 import { AISummaryResult, AuthHeaderType } from '../types'
+import { buildOpenAIChatRequestBody, getOpenAIResponseText } from '../../ai-providers/openai-chat'
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
@@ -77,12 +78,9 @@ export class OpenAISummaryProvider extends BaseAISummaryProvider {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.buildAuthHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildOpenAIChatRequestBody({
           model: this.model,
-          messages: [
-            {
-              role: 'system',
-              content: `You are an expert content analyst and SEO specialist. Analyze the provided article content and generate:
+          systemPrompt: `You are an expert content analyst and SEO specialist. Analyze the provided article content and generate:
 1. An engaging, SEO-optimized title (max 60 characters)
 2. A compelling summary (${summaryLengthPrompt})
 3. SEO keywords (${this.maxKeywords} keywords/phrases, comma-separated)
@@ -99,16 +97,12 @@ Focus on:
 - Technical concepts and important terms
 - Target audience interests
 - Search engine optimization
-- Readability and engagement`
-            },
-            {
-              role: 'user',
-              content: `Please analyze this article content and generate title, summary, and SEO keywords:\n\n${cleanedContent}`
-            }
-          ],
+- Readability and engagement`,
+          userPrompt: `Please analyze this article content and generate title, summary, and SEO keywords:\n\n${cleanedContent}`,
           temperature: 0.7,
-          max_tokens: 1000
-        })
+          maxOutputTokens: 1000,
+          jsonObjectResponse: true
+        }))
       })
 
       if (!response.ok) {
@@ -120,7 +114,7 @@ Focus on:
       }
 
       const data = await response.json()
-      const resultText = data.choices[0].message.content.trim()
+      const resultText = getOpenAIResponseText(data)
 
       // Parse JSON response
       let result: any
@@ -157,11 +151,14 @@ Focus on:
         'gpt-5-nano': { input: 0.00005, output: 0.0004 },
         'gpt-4.1': { input: 0.002, output: 0.008 },
         'gpt-4.1-mini': { input: 0.0004, output: 0.0016 },
+        'gpt-4.1-nano': { input: 0.0001, output: 0.0004 },
         'gpt-3.5-turbo': { input: 0.0015, output: 0.002 },
         'gpt-4': { input: 0.03, output: 0.06 },
         'gpt-4-turbo-preview': { input: 0.01, output: 0.03 },
         'gpt-4o': { input: 0.005, output: 0.015 },
-        'gpt-4o-mini': { input: 0.00015, output: 0.0006 }
+        'gpt-4o-mini': { input: 0.00015, output: 0.0006 },
+        'o3': { input: 0.002, output: 0.008 },
+        'o4-mini': { input: 0.0011, output: 0.0044 }
       }
       
       const modelPricing = pricing[this.model] || pricing[DEFAULT_AI_MODELS.openai]
