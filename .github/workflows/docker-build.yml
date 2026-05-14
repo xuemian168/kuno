@@ -3,7 +3,6 @@ name: Build and Push to Docker Hub
 on:
   push:
     branches: [ main, develop ]
-    tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -31,7 +30,7 @@ jobs:
       uses: docker/setup-buildx-action@v3
       
     - name: Log in to Docker Hub
-      if: github.event_name != 'pull_request'
+      if: github.event_name == 'workflow_dispatch'
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
@@ -62,8 +61,8 @@ jobs:
       with:
         context: .
         platforms: linux/amd64
-        # Only push on tags and manual workflow dispatch
-        push: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
+        # Branch and pull request runs build only; manual dispatch can publish an image.
+        push: ${{ github.event_name == 'workflow_dispatch' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         build-args: |
@@ -76,8 +75,7 @@ jobs:
         timeout: 3600
     
     - name: Update Docker Hub description
-      # Only update description on tags and manual workflow dispatch
-      if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+      if: github.event_name == 'workflow_dispatch'
       uses: peter-evans/dockerhub-description@v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}

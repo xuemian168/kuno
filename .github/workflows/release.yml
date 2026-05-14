@@ -22,6 +22,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Collect build information
+        id: build_info
+        run: |
+          echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+          echo "GIT_COMMIT=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "GIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Extract version from tag
         id: extract_version
         run: |
@@ -69,10 +76,10 @@ jobs:
           build-args: |
             BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
             VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
-            VCS_REF=${{ github.sha }}
+            VCS_REF=${{ steps.build_info.outputs.GIT_SHA }}
             NEXT_PUBLIC_APP_VERSION=${{ steps.extract_version.outputs.version }}
             NEXT_PUBLIC_BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
-            NEXT_PUBLIC_GIT_COMMIT=${{ github.sha }}
+            NEXT_PUBLIC_GIT_COMMIT=${{ steps.build_info.outputs.GIT_SHA }}
             NEXT_PUBLIC_GIT_BRANCH=main
             NEXT_PUBLIC_BUILD_NUMBER=${{ github.run_number }}
           cache-from: type=gha
@@ -87,7 +94,7 @@ jobs:
           
           # 生成更新日志
           if [ -n "$PREVIOUS_TAG" ]; then
-            echo "## 🔄 Changes since $PREVIOUS_TAG" >> release_notes.md
+            echo "## Changes since $PREVIOUS_TAG" >> release_notes.md
             echo "" >> release_notes.md
             git log --pretty=format:"- %s" $PREVIOUS_TAG..${{ steps.extract_version.outputs.tag }} >> release_notes.md
             echo "" >> release_notes.md
@@ -96,13 +103,13 @@ jobs:
           # 添加部署信息
           cat << EOF >> release_notes.md
           
-          ## 🐳 Docker Image
+          ## Docker Image
           
           \`\`\`bash
           docker pull ${{ env.IMAGE_NAME }}:${{ steps.extract_version.outputs.tag }}
           \`\`\`
           
-          ## 🚀 Quick Deploy
+          ## Quick Deploy
           
           ### One-click deployment:
           \`\`\`bash
@@ -136,18 +143,17 @@ jobs:
             ${{ env.IMAGE_NAME }}:${{ steps.extract_version.outputs.tag }}
           \`\`\`
           
-          ## 📋 Version Information
+          ## Version Information
           
           - **Version**: ${{ steps.extract_version.outputs.version }}
           - **Build Date**: ${{ steps.build_info.outputs.BUILD_DATE }}
           - **Git Commit**: ${{ steps.build_info.outputs.GIT_COMMIT }}
           - **Docker Hub**: https://hub.docker.com/r/ictrun/kuno
           
-          ## 🔗 Links
+          ## Links
           
           - [Docker Hub Repository](https://hub.docker.com/r/ictrun/kuno)
           - [Documentation](https://github.com/xuemian168/kuno/blob/main/README.md)
-          - [Deployment Guide](https://github.com/xuemian168/kuno/blob/main/DOCKER_DEPLOYMENT.md)
           EOF
 
       - name: Check if release exists
@@ -165,15 +171,12 @@ jobs:
 
       - name: Create GitHub Release
         if: steps.check_release.outputs.exists == 'false'
-        uses: actions/create-release@v1
+        run: |
+          gh release create ${{ steps.extract_version.outputs.tag }} \
+            --title "Release ${{ steps.extract_version.outputs.tag }}" \
+            --notes-file release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.extract_version.outputs.tag }}
-          release_name: Release ${{ steps.extract_version.outputs.tag }}
-          body_path: release_notes.md
-          draft: false
-          prerelease: false
 
       - name: Update existing release
         if: steps.check_release.outputs.exists == 'true'
@@ -191,7 +194,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
           repository: ${{ env.IMAGE_NAME }}
-          readme-filepath: ./DOCKER_HUB_DESCRIPTION.md
+          readme-filepath: ./README.md
 
   notify:
     needs: release
@@ -201,10 +204,10 @@ jobs:
       - name: Notification
         run: |
           if [ "${{ needs.release.result }}" == "success" ]; then
-            echo "✅ Release ${{ github.ref_name }} completed successfully!"
-            echo "🐳 Docker image: ${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
-            echo "📦 Available at: https://hub.docker.com/r/ictrun/kuno"
-            echo "📋 GitHub Release: https://github.com/xuemian168/kuno/releases/tag/${{ github.ref_name }}"
+            echo "Release ${{ github.ref_name }} completed successfully."
+            echo "Docker image: ${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
+            echo "Available at: https://hub.docker.com/r/ictrun/kuno"
+            echo "GitHub Release: https://github.com/xuemian168/kuno/releases/tag/${{ github.ref_name }}"
           else
-            echo "❌ Release ${{ github.ref_name }} failed!"
+            echo "Release ${{ github.ref_name }} failed."
           fi

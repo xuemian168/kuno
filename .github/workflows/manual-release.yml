@@ -36,14 +36,14 @@ jobs:
           
           # 确保版本以 v 开头
           if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ Invalid version format: $VERSION"
+            echo "Invalid version format: $VERSION"
             echo "Please use semantic versioning format: v1.0.0"
             exit 1
           fi
           
           echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Version format valid: $VERSION"
+          echo "Version format valid: $VERSION"
 
   create-tag:
     needs: validate
@@ -92,6 +92,13 @@ jobs:
         with:
           ref: ${{ needs.validate.outputs.tag }}
 
+      - name: Collect build information
+        id: build_info
+        run: |
+          echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+          echo "GIT_COMMIT=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "GIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -128,57 +135,63 @@ jobs:
           build-args: |
             BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
             VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
-            VCS_REF=${{ github.sha }}
+            VCS_REF=${{ steps.build_info.outputs.GIT_SHA }}
             NEXT_PUBLIC_APP_VERSION=${{ needs.validate.outputs.version }}
             NEXT_PUBLIC_BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
-            NEXT_PUBLIC_GIT_COMMIT=${{ github.sha }}
+            NEXT_PUBLIC_GIT_COMMIT=${{ steps.build_info.outputs.GIT_SHA }}
             NEXT_PUBLIC_GIT_BRANCH=main
             NEXT_PUBLIC_BUILD_NUMBER=${{ github.run_number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           timeout: 3600
 
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
+      - name: Create or update GitHub Release
+        run: |
+          cat > release_notes.md <<'EOF'
+          ## Manual Release ${{ needs.validate.outputs.tag }}
+          
+          This release was created manually via GitHub Actions.
+          
+          ## Docker Image
+          
+          ```bash
+          docker pull ${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}
+          ```
+          
+          ## Quick Deploy
+          
+          ```bash
+          # One-click deployment
+          curl -sSL https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh | bash
+          
+          # Or with specific version
+          docker run -d \
+            --name kuno \
+            -p 80:80 \
+            -v blog-data:/app/data \
+            -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
+            ${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}
+          ```
+          
+          ## Build Information
+          
+          - **Version**: ${{ needs.validate.outputs.version }}
+          - **Build Date**: ${{ steps.build_info.outputs.BUILD_DATE }}
+          - **Git Commit**: ${{ steps.build_info.outputs.GIT_COMMIT }}
+          - **Workflow Run**: ${{ github.run_number }}
+          EOF
+
+          if gh release view "${{ needs.validate.outputs.tag }}" >/dev/null 2>&1; then
+            gh release edit "${{ needs.validate.outputs.tag }}" \
+              --title "Release ${{ needs.validate.outputs.tag }}" \
+              --notes-file release_notes.md
+          else
+            gh release create "${{ needs.validate.outputs.tag }}" \
+              --title "Release ${{ needs.validate.outputs.tag }}" \
+              --notes-file release_notes.md
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ needs.validate.outputs.tag }}
-          release_name: Release ${{ needs.validate.outputs.tag }}
-          body: |
-            ## 🚀 Manual Release ${{ needs.validate.outputs.tag }}
-            
-            This release was created manually via GitHub Actions.
-            
-            ## 🐳 Docker Image
-            
-            ```bash
-            docker pull ${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}
-            ```
-            
-            ## 🔗 Quick Deploy
-            
-            ```bash
-            # One-click deployment
-            curl -sSL https://raw.githubusercontent.com/xuemian168/kuno/main/deploy-from-hub.sh | bash
-            
-            # Or with specific version
-            docker run -d \
-              --name kuno \
-              -p 80:80 \
-              -v blog-data:/app/data \
-              -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
-              ${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}
-            ```
-            
-            ## 📋 Build Information
-            
-            - **Version**: ${{ needs.validate.outputs.version }}
-            - **Build Date**: ${{ steps.build_info.outputs.BUILD_DATE }}
-            - **Git Commit**: ${{ steps.build_info.outputs.GIT_COMMIT }}
-            - **Workflow Run**: ${{ github.run_number }}
-          draft: false
-          prerelease: false
 
   summary:
     needs: [validate, create-tag, build-and-release]
@@ -187,7 +200,7 @@ jobs:
     steps:
       - name: Print summary
         run: |
-          echo "## 📋 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: ${{ needs.validate.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Create Tag**: ${{ github.event.inputs.create_tag }}" >> $GITHUB_STEP_SUMMARY
@@ -195,11 +208,11 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ needs.build-and-release.result }}" == "success" ]; then
-            echo "✅ Release completed successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "Release completed successfully." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "🐳 **Docker Image**: \`${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Docker Image**: \`${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "📦 **Docker Hub**: https://hub.docker.com/r/ictrun/kuno" >> $GITHUB_STEP_SUMMARY
+            echo "**Docker Hub**: https://hub.docker.com/r/ictrun/kuno" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Release failed!" >> $GITHUB_STEP_SUMMARY
+            echo "Release failed." >> $GITHUB_STEP_SUMMARY
           fi
