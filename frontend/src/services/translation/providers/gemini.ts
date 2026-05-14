@@ -1,11 +1,12 @@
 import { BaseTranslationProvider } from './base'
 import { TranslationResult, AuthHeaderType } from '../types'
+import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { formatErrorMessage } from '../error-messages'
 import { getGeminiEndpoint, getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
 export class GeminiProvider extends BaseTranslationProvider {
   name = 'Gemini'
-  private model = 'gemini-1.5-flash'
+  private model = DEFAULT_AI_MODELS.gemini
   private baseUrl?: string
   private authType: AuthHeaderType = 'bearer'
   private customAuthHeader?: string
@@ -267,15 +268,18 @@ export class GeminiProvider extends BaseTranslationProvider {
       let estimatedCost = 0
       const currency = 'USD'
       
-      // Gemini pricing as of 2024 (per 1M tokens)
+      // Gemini pricing as of 2026-05 (per 1M tokens)
       const pricing: Record<string, { input: number, output: number }> = {
+        'gemini-2.5-pro': { input: 1.25, output: 10.00 },
+        'gemini-2.5-flash': { input: 0.30, output: 2.50 },
+        'gemini-2.5-flash-lite': { input: 0.10, output: 0.40 },
         'gemini-1.5-flash': { input: 0.075, output: 0.30 },
         'gemini-1.5-flash-8b': { input: 0.0375, output: 0.15 },
         'gemini-1.5-pro': { input: 3.50, output: 10.50 },
         'gemini-1.0-pro': { input: 0.50, output: 1.50 }
       }
       
-      const modelPricing = pricing[this.model] || pricing['gemini-1.5-flash']
+      const modelPricing = pricing[this.model] || pricing[DEFAULT_AI_MODELS.gemini]
       estimatedCost = (inputTokens / 1000000) * modelPricing.input + (outputTokens / 1000000) * modelPricing.output
 
       return {

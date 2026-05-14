@@ -1,9 +1,8 @@
 import { MetadataRoute } from 'next'
-import { getBaseUrl } from '@/lib/utils'
-import { getApiUrl } from '@/lib/config'
+import { getApiUrl, getSiteUrl } from '@/lib/config'
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
-  const baseUrl = getBaseUrl()
+  const siteUrl = getSiteUrl()
   
   try {
     // Fetch settings to check privacy controls
@@ -65,7 +64,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
             { userAgent: 'PerplexityBot', disallow: '/' },
             { userAgent: 'Google-Extended', disallow: '/' }
           ],
-          sitemap: `${baseUrl}/sitemap.xml`,
+          sitemap: `${siteUrl}/sitemap.xml`,
         }
       }
     }
@@ -85,6 +84,6 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         '/api/*',
       ],
     },
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: `${siteUrl}/sitemap.xml`,
   }
 }

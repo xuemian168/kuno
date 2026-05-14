@@ -452,7 +452,7 @@ type LanguageConfig struct {
 // GetLanguageConfig returns the current language configuration
 func GetLanguageConfig(c *gin.Context) {
 	var settings models.SiteSettings
-	if err := database.DB.First(&settings).Error; err != nil {
+	if err := database.DB.Preload("Translations").First(&settings).Error; err != nil {
 		log.Printf("Failed to get settings for language config: %v", err)
 		// Return fallback configuration
 		c.JSON(http.StatusOK, LanguageConfig{
@@ -497,10 +497,47 @@ func GetLanguageConfig(c *gin.Context) {
 		"hi": "हिन्दी (Hindi)",
 	}
 
-	// For now, we'll return all supported languages as enabled
-	// In the future, this could be configurable via admin settings
-	enabledLanguages := []string{
-		"zh", "en", "ja", "ko", "es", "fr", "de", "ru", "ar", "hi",
+	enabledLanguageSet := map[string]bool{
+		defaultLanguage: true,
+	}
+
+	for _, translation := range settings.Translations {
+		if _, supported := supportedLanguages[translation.Language]; !supported {
+			continue
+		}
+
+		if strings.TrimSpace(translation.SiteTitle) != "" || strings.TrimSpace(translation.SiteSubtitle) != "" {
+			enabledLanguageSet[translation.Language] = true
+		}
+	}
+
+	var articleLanguages []string
+	if err := database.DB.Model(&models.ArticleTranslation{}).
+		Distinct("language").
+		Where("TRIM(title) <> '' OR TRIM(content) <> '' OR TRIM(summary) <> ''").
+		Pluck("language", &articleLanguages).Error; err != nil {
+		log.Printf("Failed to infer enabled article languages: %v", err)
+	} else {
+		for _, language := range articleLanguages {
+			if _, supported := supportedLanguages[language]; supported {
+				enabledLanguageSet[language] = true
+			}
+		}
+	}
+
+	supportedLanguageOrder := []string{
+		"zh", "en", "ja", "ko", "es", "fr", "de", "it", "pt", "ru", "ar", "hi",
+	}
+
+	enabledLanguages := make([]string, 0, len(enabledLanguageSet))
+	for _, language := range supportedLanguageOrder {
+		if enabledLanguageSet[language] {
+			enabledLanguages = append(enabledLanguages, language)
+		}
+	}
+
+	if len(enabledLanguages) == 0 {
+		enabledLanguages = []string{defaultLanguage}
 	}
 
 	config := LanguageConfig{

@@ -31,18 +31,19 @@ import { UpdateChecker } from "@/components/admin/update-checker"
 import { AIUsageStatsComponent } from "./ai-usage-stats"
 import { aiUsageTracker } from "@/services/ai-usage-tracker"
 import { BaseUrlInput } from "./base-url-input"
+import {
+  AI_MODEL_OPTIONS,
+  AIModelProvider,
+  DEFAULT_AI_MODELS,
+  getAIModelOptions,
+  isBuiltInAIModel,
+} from "@/services/ai-providers/models"
 
 // Dynamic languages based on user configuration - will be set in component
 
 // Helper function to get default model for each provider
 function getDefaultModel(provider: string): string {
-  switch (provider) {
-    case 'openai': return 'gpt-4o-mini'
-    case 'claude': return 'claude-3-5-sonnet-20241022'
-    case 'gemini': return 'gemini-3-flash'
-    case 'volcano': return 'doubao-seed-1-6-250615'
-    default: return ''
-  }
+  return DEFAULT_AI_MODELS[provider as AIModelProvider] || ''
 }
 
 interface SettingsFormProps {
@@ -81,7 +82,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     provider: 'google-free',
     apiKey: '',
     apiSecret: '',
-    model: 'gpt-4o-mini',
+    model: getDefaultModel('openai'),
     apiUrl: '',
     email: '',
     region: 'cn-beijing',
@@ -97,7 +98,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
   const [aiSummaryConfig, setAISummaryConfig] = useState<AISummaryConfig>({
     provider: 'openai',
     apiKey: '',
-    model: 'gpt-4o-mini',
+    model: getDefaultModel('openai'),
     maxKeywords: 10,
     summaryLength: 'medium'
   })
@@ -228,6 +229,35 @@ export function SettingsForm({ locale }: SettingsFormProps) {
   
   // About dialog state
   const [showAboutDialog, setShowAboutDialog] = useState(false)
+
+  const getModelOptionsWithCurrentValue = (provider: string, currentModel?: string) => {
+    const options = getAIModelOptions(provider)
+
+    if (currentModel && !isBuiltInAIModel(provider, currentModel)) {
+      return [
+        {
+          value: currentModel,
+          label: `${currentModel} (${locale === 'zh' ? '当前值' : 'Current'})`
+        },
+        ...options
+      ]
+    }
+
+    return options
+  }
+
+  const renderModelSelectItems = (provider: string, currentModel?: string, allowCustom = true) => (
+    <>
+      {getModelOptionsWithCurrentValue(provider, currentModel).map((model) => (
+        <SelectItem key={model.value} value={model.value}>
+          {model.label}
+        </SelectItem>
+      ))}
+      {allowCustom && (
+        <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
+      )}
+    </>
+  )
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -1460,8 +1490,14 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                   <Select
                     value={translationConfig.provider}
                     onValueChange={(value) => {
-                      const newConfig = { ...translationConfig, provider: value as any }
+                      const isAIProvider = ['openai', 'claude', 'gemini', 'volcano'].includes(value)
+                      const newConfig = {
+                        ...translationConfig,
+                        provider: value as any,
+                        model: isAIProvider ? getDefaultModel(value) : translationConfig.model
+                      }
                       setTranslationConfig(newConfig)
+                      setCustomTranslationModel(false)
                       try {
                         translationService.configureFromSettings(newConfig)
                         setHasTranslationProvider(translationService.isConfigured())
@@ -1489,7 +1525,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                 </div>
 
                 {/* API Key field - only show for providers that need it */}
-                {['google', 'deepl', 'openai', 'gemini', 'volcano', 'libretranslate', 'mymemory'].includes(translationConfig.provider) && (
+                {['google', 'deepl', 'openai', 'claude', 'gemini', 'volcano', 'libretranslate', 'mymemory'].includes(translationConfig.provider) && (
                   <div className="space-y-2">
                     <Label>{t('settings.apiKey')} {['libretranslate', 'mymemory'].includes(translationConfig.provider) && `(${t('settings.apiKeyOptional')})`}</Label>
                     <Input
@@ -1509,6 +1545,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         translationConfig.provider === 'google' ? 'Enter your Google Cloud API key' :
                         translationConfig.provider === 'deepl' ? 'Enter your DeepL API key' :
                         translationConfig.provider === 'openai' ? 'Enter your OpenAI API key' :
+                        translationConfig.provider === 'claude' ? 'Enter your Anthropic API key' :
                         translationConfig.provider === 'gemini' ? 'Enter your Google AI Studio API key' :
                         translationConfig.provider === 'volcano' ? 'Enter your ARK API Key' :
                         translationConfig.provider === 'libretranslate' ? 'API key (if required by instance)' :
@@ -1519,11 +1556,11 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                 )}
 
 
-                {/* Model selection for OpenAI, Gemini and Volcano */}
-                {['openai', 'gemini', 'volcano'].includes(translationConfig.provider) && (
+                {/* Model selection for OpenAI, Claude, Gemini and Volcano */}
+                {['openai', 'claude', 'gemini', 'volcano'].includes(translationConfig.provider) && (
                   <div className="space-y-2">
                     <Label>{t('settings.model') || 'Model'}</Label>
-                    {customTranslationModel || (translationConfig.model && !['gpt-5.2', 'gpt-5.2-pro', 'gpt-5.1', 'gpt-5-nano', 'gpt-5-instant', 'gpt-4.5', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4o', 'gpt-4o-mini', 'o3', 'o3-mini', 'o4-mini', 'gemini-3-pro-preview', 'gemini-3-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash', 'doubao-seed-1-6-250615', 'doubao-seed-1-6-flash-250615', 'doubao-1-5-lite-32k-250115'].includes(translationConfig.model)) ? (
+                    {customTranslationModel || (translationConfig.model && !isBuiltInAIModel(translationConfig.provider, translationConfig.model)) ? (
                       <div className="flex gap-2">
                         <Input
                           type="text"
@@ -1539,7 +1576,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                               console.error('Failed to configure translation service:', error)
                             }
                           }}
-                          placeholder={locale === 'zh' ? '输入自定义模型名称，例如：gpt-4-turbo' : 'Enter custom model name, e.g.: gpt-4-turbo'}
+                          placeholder={locale === 'zh' ? '输入自定义模型名称，例如：gpt-5.4' : 'Enter custom model name, e.g.: gpt-5.4'}
                           className="flex-1"
                         />
                         <Button
@@ -1584,50 +1621,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {translationConfig.provider === 'openai' ? (
-                            <>
-                              <SelectItem value="gpt-5.2">GPT-5.2 (Latest)</SelectItem>
-                              <SelectItem value="gpt-5.2-pro">GPT-5.2 Pro</SelectItem>
-                              <SelectItem value="gpt-5.1">GPT-5.1</SelectItem>
-                              <SelectItem value="gpt-5-nano">GPT-5 Nano (Fast)</SelectItem>
-                              <SelectItem value="gpt-5-instant">GPT-5 Instant</SelectItem>
-                              <SelectItem value="gpt-4.5">GPT-4.5</SelectItem>
-                              <SelectItem value="gpt-4.1">GPT-4.1 (Coding)</SelectItem>
-                              <SelectItem value="gpt-4.1-mini">GPT-4.1 Mini</SelectItem>
-                              <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                              <SelectItem value="gpt-4o-mini">GPT-4o Mini (Recommended)</SelectItem>
-                              <SelectItem value="o3">O3 (Reasoning)</SelectItem>
-                              <SelectItem value="o3-mini">O3 Mini</SelectItem>
-                              <SelectItem value="o4-mini">O4 Mini</SelectItem>
-                              <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
-                            </>
-                          ) : translationConfig.provider === 'claude' ? (
-                            <>
-                              <SelectItem value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Latest)</SelectItem>
-                              <SelectItem value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Fast)</SelectItem>
-                              <SelectItem value="claude-3-opus-20240229">Claude 3 Opus (Powerful)</SelectItem>
-                              <SelectItem value="claude-3-sonnet-20240229">Claude 3 Sonnet</SelectItem>
-                              <SelectItem value="claude-3-haiku-20240307">Claude 3 Haiku</SelectItem>
-                              <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
-                            </>
-                          ) : translationConfig.provider === 'volcano' ? (
-                            <>
-                              <SelectItem value="doubao-seed-1-6-250615">Doubao-1.6 (Pro-32k)</SelectItem>
-                              <SelectItem value="doubao-seed-1-6-flash-250615">Doubao-1.6-Flash (Lite)</SelectItem>
-                              <SelectItem value="doubao-1-5-lite-32k-250115">Doubao-1.5-lite-32k</SelectItem>
-                              <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
-                            </>
-                          ) : (
-                            <>
-                              <SelectItem value="gemini-3-pro-preview">Gemini 3 Pro (Preview)</SelectItem>
-                              <SelectItem value="gemini-3-flash">Gemini 3 Flash (Latest)</SelectItem>
-                              <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
-                              <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (Fast)</SelectItem>
-                              <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</SelectItem>
-                              <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</SelectItem>
-                              <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
-                            </>
-                          )}
+                          {renderModelSelectItems(translationConfig.provider, translationConfig.model)}
                         </SelectContent>
                       </Select>
                     )}
@@ -1657,7 +1651,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="bearer">Bearer Token (OpenAI, Claude)</SelectItem>
+                        <SelectItem value="bearer">Bearer Token</SelectItem>
                         <SelectItem value="x-api-key">x-api-key</SelectItem>
                         <SelectItem value="x-goog-api-key">x-goog-api-key (TikHub AI)</SelectItem>
                         <SelectItem value="api-key">api-key</SelectItem>
@@ -1684,8 +1678,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     )}
                     <p className="text-xs text-muted-foreground">
                       {locale === 'zh'
-                        ? '不同的 API 提供商使用不同的认证方式。TikHub AI 使用 x-goog-api-key，OpenAI 使用 Bearer Token。'
-                        : 'Different API providers use different authentication methods. TikHub AI uses x-goog-api-key, OpenAI uses Bearer Token.'
+                        ? '不同的 API 提供商使用不同的认证方式。OpenAI 通常使用 Bearer Token，Anthropic Claude 使用 x-api-key，Gemini 官方接口会将 key 放在 URL 中。'
+                        : 'Different providers use different authentication styles. OpenAI usually uses Bearer Token, Anthropic Claude uses x-api-key, and the official Gemini API passes the key in the URL.'
                       }
                     </p>
                   </div>
@@ -2122,13 +2116,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                               ...aiSummaryConfig,
                               provider: translationConfig.provider as any,
                               apiKey: translationConfig.apiKey,
-                              model: translationConfig.provider === 'openai'
-                                ? (translationConfig.model || getDefaultModel('openai'))
-                                : translationConfig.provider === 'claude'
-                                ? (translationConfig.model || getDefaultModel('claude'))
-                                : translationConfig.provider === 'volcano'
-                                ? 'doubao-seed-1-6-250615'
-                                : getDefaultModel('gemini')
+                              model: translationConfig.model || getDefaultModel(translationConfig.provider)
                             }
                             setAISummaryConfig(newConfig)
                             try {
@@ -2148,8 +2136,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     </div>
                     <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
                       {locale === 'zh' 
-                        ? `使用${translationConfig.provider === 'openai' ? 'OpenAI' : translationConfig.provider === 'volcano' ? '火山引擎' : 'Gemini'}翻译服务的API配置来设置AI摘要服务`
-                        : `Use your ${translationConfig.provider === 'openai' ? 'OpenAI' : translationConfig.provider === 'volcano' ? 'Volcano Engine' : 'Gemini'} translation service API configuration for AI summary service`
+                        ? `使用${translationConfig.provider === 'openai' ? 'OpenAI' : translationConfig.provider === 'claude' ? 'Claude' : translationConfig.provider === 'volcano' ? '火山引擎' : 'Gemini'}翻译服务的API配置来设置AI摘要服务`
+                        : `Use your ${translationConfig.provider === 'openai' ? 'OpenAI' : translationConfig.provider === 'claude' ? 'Claude' : translationConfig.provider === 'volcano' ? 'Volcano Engine' : 'Gemini'} translation service API configuration for AI summary service`
                       }
                     </p>
                   </div>
@@ -2160,8 +2148,13 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                   <Select
                     value={aiSummaryConfig.provider}
                     onValueChange={(value) => {
-                      const newConfig = { ...aiSummaryConfig, provider: value as any }
+                      const newConfig = {
+                        ...aiSummaryConfig,
+                        provider: value as any,
+                        model: getDefaultModel(value),
+                      }
                       setAISummaryConfig(newConfig)
+                      setCustomAISummaryModel(false)
                       try {
                         aiSummaryService.configureFromSettings(newConfig)
                         setHasAISummaryProvider(aiSummaryService.isConfigured())
@@ -2214,7 +2207,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
 
                 <div className="space-y-2">
                   <Label>{locale === 'zh' ? '模型' : 'Model'}</Label>
-                  {customAISummaryModel || (aiSummaryConfig.model && !['gpt-5.2', 'gpt-5.2-pro', 'gpt-5.1', 'gpt-5-nano', 'gpt-5-instant', 'gpt-4.5', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4o', 'gpt-4o-mini', 'o3', 'o3-mini', 'o4-mini', 'gemini-3-pro-preview', 'gemini-3-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash', 'doubao-seed-1-6-250615', 'doubao-seed-1-6-flash-250615', 'doubao-1-5-lite-32k-250115', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'].includes(aiSummaryConfig.model)) ? (
+                  {customAISummaryModel || (aiSummaryConfig.model && !isBuiltInAIModel(aiSummaryConfig.provider, aiSummaryConfig.model)) ? (
                     <div className="flex gap-2">
                       <Input
                         type="text"
@@ -2231,7 +2224,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                             setHasAISummaryProvider(false)
                           }
                         }}
-                        placeholder={locale === 'zh' ? '输入自定义模型名称，例如：gpt-4-turbo' : 'Enter custom model name, e.g.: gpt-4-turbo'}
+                        placeholder={locale === 'zh' ? '输入自定义模型名称，例如：gpt-5.4' : 'Enter custom model name, e.g.: gpt-5.4'}
                         className="flex-1"
                       />
                       <Button
@@ -2278,53 +2271,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {aiSummaryConfig.provider === 'openai' && (
-                          <>
-                            <SelectItem value="gpt-5.2">GPT-5.2 (Latest)</SelectItem>
-                            <SelectItem value="gpt-5.2-pro">GPT-5.2 Pro</SelectItem>
-                            <SelectItem value="gpt-5.1">GPT-5.1</SelectItem>
-                            <SelectItem value="gpt-5-nano">GPT-5 Nano (Fast)</SelectItem>
-                            <SelectItem value="gpt-5-instant">GPT-5 Instant</SelectItem>
-                            <SelectItem value="gpt-4.5">GPT-4.5</SelectItem>
-                            <SelectItem value="gpt-4.1">GPT-4.1 (Coding)</SelectItem>
-                            <SelectItem value="gpt-4.1-mini">GPT-4.1 Mini</SelectItem>
-                            <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                            <SelectItem value="gpt-4o-mini">GPT-4o Mini (Recommended)</SelectItem>
-                            <SelectItem value="o3">O3 (Reasoning)</SelectItem>
-                            <SelectItem value="o3-mini">O3 Mini</SelectItem>
-                            <SelectItem value="o4-mini">O4 Mini</SelectItem>
-                            <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
-                          </>
-                        )}
-                        {aiSummaryConfig.provider === 'gemini' && (
-                          <>
-                            <SelectItem value="gemini-3-pro-preview">Gemini 3 Pro (Preview)</SelectItem>
-                            <SelectItem value="gemini-3-flash">Gemini 3 Flash (Latest)</SelectItem>
-                            <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
-                            <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (Fast)</SelectItem>
-                            <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</SelectItem>
-                            <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</SelectItem>
-                            <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
-                          </>
-                        )}
-                        {aiSummaryConfig.provider === 'volcano' && (
-                          <>
-                            <SelectItem value="doubao-seed-1-6-250615">Doubao-1.6 (Pro-32k)</SelectItem>
-                            <SelectItem value="doubao-seed-1-6-flash-250615">Doubao-1.6-Flash (Lite)</SelectItem>
-                            <SelectItem value="doubao-1-5-lite-32k-250115">Doubao-1.5-lite-32k</SelectItem>
-                            <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
-                          </>
-                        )}
-                        {aiSummaryConfig.provider === 'claude' && (
-                          <>
-                            <SelectItem value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Latest)</SelectItem>
-                            <SelectItem value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Fast)</SelectItem>
-                            <SelectItem value="claude-3-opus-20240229">Claude 3 Opus (Powerful)</SelectItem>
-                            <SelectItem value="claude-3-sonnet-20240229">Claude 3 Sonnet</SelectItem>
-                            <SelectItem value="claude-3-haiku-20240307">Claude 3 Haiku</SelectItem>
-                            <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
-                          </>
-                        )}
+                        {renderModelSelectItems(aiSummaryConfig.provider, aiSummaryConfig.model)}
                       </SelectContent>
                     </Select>
                   )}
@@ -2375,7 +2322,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="bearer">Bearer Token (OpenAI, Claude)</SelectItem>
+                        <SelectItem value="bearer">Bearer Token</SelectItem>
                         <SelectItem value="x-api-key">x-api-key</SelectItem>
                         <SelectItem value="x-goog-api-key">x-goog-api-key (TikHub AI)</SelectItem>
                         <SelectItem value="api-key">api-key</SelectItem>
@@ -2402,8 +2349,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                     )}
                     <p className="text-xs text-muted-foreground">
                       {locale === 'zh'
-                        ? '不同的 API 提供商使用不同的认证方式。TikHub AI 使用 x-goog-api-key，OpenAI 使用 Bearer Token。'
-                        : 'Different API providers use different authentication methods. TikHub AI uses x-goog-api-key, OpenAI uses Bearer Token.'
+                        ? '不同的 API 提供商使用不同的认证方式。OpenAI 通常使用 Bearer Token，Anthropic Claude 使用 x-api-key，Gemini 官方接口会将 key 放在 URL 中。'
+                        : 'Different providers use different authentication styles. OpenAI usually uses Bearer Token, Anthropic Claude uses x-api-key, and the official Gemini API passes the key in the URL.'
                       }
                     </p>
                   </div>
@@ -3059,65 +3006,67 @@ function AIConfigurationPanel({ aiConfig, setAIConfig, locale, originalMaskedKey
     setAIConfig(updatedConfig)
   }
 
+  const getModelOptionsWithCurrentValue = (provider: string, currentModel?: string) => {
+    const options = getAIModelOptions(provider)
+
+    if (currentModel && !isBuiltInAIModel(provider, currentModel)) {
+      return [
+        {
+          value: currentModel,
+          label: `${currentModel} (${locale === 'zh' ? '当前值' : 'Current'})`
+        },
+        ...options
+      ]
+    }
+
+    return options
+  }
+
+  const renderModelSelectItems = (provider: string, currentModel?: string, allowCustom = true) => (
+    <>
+      {getModelOptionsWithCurrentValue(provider, currentModel).map((model) => (
+        <SelectItem key={model.value} value={model.value}>
+          {model.label}
+        </SelectItem>
+      ))}
+      {allowCustom && (
+        <SelectItem value="custom">{locale === 'zh' ? '自定义模型...' : 'Custom Model...'}</SelectItem>
+      )}
+    </>
+  )
+
   const providers = [
     {
       id: 'openai',
       name: 'OpenAI',
-      description: locale === 'zh' ? '支持最新GPT模型，包括GPT-5、GPT-4.5、GPT-4o系列和O系列推理模型' : 'Support latest GPT models including GPT-5, GPT-4.5, GPT-4o series and O-series reasoning models',
-      models: [
-        { value: 'gpt-5.2', label: 'GPT-5.2 (Latest)', group: 'GPT-5 系列' },
-        { value: 'gpt-5.2-pro', label: 'GPT-5.2 Pro', group: 'GPT-5 系列' },
-        { value: 'gpt-5.1', label: 'GPT-5.1', group: 'GPT-5 系列' },
-        { value: 'gpt-5-nano', label: 'GPT-5 Nano (Fast)', group: 'GPT-5 系列' },
-        { value: 'gpt-5-instant', label: 'GPT-5 Instant', group: 'GPT-5 系列' },
-        { value: 'gpt-4.5', label: 'GPT-4.5', group: 'GPT-4 系列' },
-        { value: 'gpt-4.1', label: 'GPT-4.1 (Coding)', group: 'GPT-4 系列' },
-        { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', group: 'GPT-4 系列' },
-        { value: 'gpt-4o', label: 'GPT-4o', group: 'GPT-4 系列' },
-        { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Recommended)', group: 'GPT-4 系列' },
-        { value: 'o3', label: 'O3 (Reasoning)', group: 'O 系列' },
-        { value: 'o3-mini', label: 'O3 Mini', group: 'O 系列' },
-        { value: 'o4-mini', label: 'O4 Mini', group: 'O 系列' },
-        { value: 'custom', label: locale === 'zh' ? '自定义模型...' : 'Custom Model...', group: '其他' }
-      ]
+      description: locale === 'zh'
+        ? '支持最新 OpenAI API 模型，包括 GPT-5.5、GPT-5.4、GPT-4.1 与常用推理模型。'
+        : 'Supports current OpenAI API model names including GPT-5.5, GPT-5.4, GPT-4.1, and reasoning models.',
+      models: AI_MODEL_OPTIONS.openai
     },
     {
       id: 'gemini',
       name: 'Google Gemini',
-      description: locale === 'zh' ? '支持最新Gemini 3和Gemini 2.5系列模型，具备强大的多模态理解能力。注意：向量嵌入会自动使用text-embedding-004模型。' : 'Support latest Gemini 3 and Gemini 2.5 series with powerful multimodal capabilities. Note: Embeddings automatically use text-embedding-004 model.',
-      models: [
-        { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro (Preview)', group: 'Gemini 3 系列' },
-        { value: 'gemini-3-flash', label: 'Gemini 3 Flash (Latest)', group: 'Gemini 3 系列' },
-        { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', group: 'Gemini 2.5 系列' },
-        { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite (Fast)', group: 'Gemini 2.5 系列' },
-        { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (Legacy)', group: 'Gemini 1.5 系列' },
-        { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (Legacy)', group: 'Gemini 1.5 系列' },
-        { value: 'custom', label: locale === 'zh' ? '自定义模型...' : 'Custom Model...', group: '其他' }
-      ]
+      description: locale === 'zh'
+        ? '支持 Gemini 2.5 系列主力模型，并保留 Gemini 1.5 兼容选项。'
+        : 'Supports current Gemini 2.5 model names while keeping Gemini 1.5 compatibility options.',
+      models: AI_MODEL_OPTIONS.gemini
     },
     {
       id: 'volcano',
       name: 'Volcano Engine (豆包)',
-      description: locale === 'zh' ? '字节跳动的豆包AI模型' : 'ByteDance\'s Doubao AI model',
-      models: [
-        { value: 'doubao-seed-1-6-250615', label: 'Doubao-1.6 (Pro-32k)' },
-        { value: 'doubao-seed-1-6-flash-250615', label: 'Doubao-1.6-Flash (Lite)' },
-        { value: 'doubao-1-5-lite-32k-250115', label: 'Doubao-1.5-lite-32k' },
-        { value: 'custom', label: locale === 'zh' ? '自定义模型...' : 'Custom Model...', group: '其他' }
-      ]
+      description: locale === 'zh'
+        ? '支持火山方舟当前常见的 Doubao Seed 2.0、1.8 与 1.6 系列模型。'
+        : 'Supports current Volcano Ark Doubao Seed 2.0, 1.8, and 1.6 model names.',
+      models: AI_MODEL_OPTIONS.volcano
     },
     {
       id: 'claude',
       name: 'Claude (Anthropic)',
-      description: locale === 'zh' ? '最新Claude 3.5系列模型，具备卓越的推理和代码能力' : 'Latest Claude 3.5 series with exceptional reasoning and coding capabilities',
-      models: [
-        { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Latest)', group: 'Claude 3.5' },
-        { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku (Fast)', group: 'Claude 3.5' },
-        { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus (Powerful)', group: 'Claude 3' },
-        { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet', group: 'Claude 3' },
-        { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku', group: 'Claude 3' },
-        { value: 'custom', label: locale === 'zh' ? '自定义模型...' : 'Custom Model...', group: '其他' }
-      ]
+      description: locale === 'zh'
+        ? '支持 Claude 4 最新系列，并保留 Claude 3.x 兼容项。'
+        : 'Supports the latest Claude 4 family while keeping Claude 3.x compatibility options.',
+      models: AI_MODEL_OPTIONS.claude
     }
   ]
 
@@ -3158,6 +3107,7 @@ function AIConfigurationPanel({ aiConfig, setAIConfig, locale, originalMaskedKey
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="openai">OpenAI</SelectItem>
+                <SelectItem value="claude">Claude (Anthropic)</SelectItem>
                 <SelectItem value="gemini">Google Gemini</SelectItem>
                 <SelectItem value="volcano">Volcano Engine (豆包)</SelectItem>
               </SelectContent>
@@ -3200,8 +3150,8 @@ function AIConfigurationPanel({ aiConfig, setAIConfig, locale, originalMaskedKey
                   <SelectValue placeholder={locale === 'zh' ? '选择向量化提供商' : 'Select embedding provider'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="openai">OpenAI (text-embedding-ada-002)</SelectItem>
-                  <SelectItem value="gemini">Gemini (text-embedding-004)</SelectItem>
+                  <SelectItem value="openai">OpenAI Embeddings</SelectItem>
+                  <SelectItem value="gemini">Gemini Embeddings</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -3341,7 +3291,7 @@ function AIConfigurationPanel({ aiConfig, setAIConfig, locale, originalMaskedKey
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {provider.models.map((model) => (
+                        {getModelOptionsWithCurrentValue(provider.id, config.model).map((model) => (
                           <SelectItem key={model.value} value={model.value}>
                             {model.label}
                           </SelectItem>

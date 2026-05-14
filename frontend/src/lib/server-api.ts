@@ -3,16 +3,11 @@
  * 仅在 Server Components 中使用，配合 Next.js 缓存和请求去重
  */
 
+import { getApiUrl } from './config'
 import type { Article, Category, SiteSettings } from './api'
 
 function getServerApiUrl(): string {
-  if (process.env.INTERNAL_API_URL) {
-    return process.env.INTERNAL_API_URL
-  }
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return `${process.env.NEXT_PUBLIC_SITE_URL}/api`
-  }
-  return 'http://localhost:8085/api'
+  return getApiUrl()
 }
 
 async function serverFetch<T>(path: string, revalidate = 60): Promise<T> {

@@ -1,10 +1,12 @@
 import { BaseAISummaryProvider } from './base'
 import { AISummaryResult } from '../types'
+import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
+import { buildClaudeMessagesRequestBody, getClaudeResponseText } from '../../ai-providers/claude-messages'
 import { getClaudeEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
 export class ClaudeSummaryProvider extends BaseAISummaryProvider {
   name = 'Claude Summary'
-  protected model = 'claude-3-5-sonnet-20241022'
+  protected model = DEFAULT_AI_MODELS.claude
   private baseUrl?: string
 
   constructor(apiKey?: string, model?: string, maxKeywords?: number, summaryLength?: 'short' | 'medium' | 'long', baseUrl?: string) {
@@ -39,25 +41,19 @@ export class ClaudeSummaryProvider extends BaseAISummaryProvider {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildClaudeMessagesRequestBody({
           model: this.model,
-          max_tokens: 2048,
-          messages: [
-            {
-              role: 'user',
-              content: `You are a professional content analyst. Generate a comprehensive analysis of the given article in ${languageName}. Respond with a JSON object containing:
+          systemPrompt: `You are a professional content analyst. Generate a comprehensive analysis of the given article in ${languageName}. Respond with valid JSON only.`,
+          userPrompt: `Return a JSON object containing:
 - "title": A compelling title for the article (max 60 characters)
 - "summary": A ${summaryLengthPrompt} summary capturing the main points
 - "keywords": An array of ${this.maxKeywords} relevant SEO keywords
 
 Article content:
-${cleanedContent}
-
-Respond ONLY with valid JSON, no additional text.`
-            }
-          ],
+${cleanedContent}`,
           temperature: 0.3,
-        })
+          maxOutputTokens: 2048,
+        }))
       })
 
       if (!response.ok) {
@@ -70,11 +66,11 @@ Respond ONLY with valid JSON, no additional text.`
 
       const data = await response.json()
 
-      if (!data.content || data.content.length === 0) {
+      const resultText = getClaudeResponseText(data)
+
+      if (!resultText) {
         throw this.createError('No response content', 'NO_CONTENT')
       }
-
-      const resultText = data.content[0].text
       const result = JSON.parse(resultText)
 
       // Calculate usage
@@ -82,14 +78,18 @@ Respond ONLY with valid JSON, no additional text.`
       const outputTokens = data.usage?.output_tokens || 0
       const totalTokens = inputTokens + outputTokens
 
-      // Claude pricing (per 1M tokens)
+      // Claude pricing as of 2026-05 (per 1M tokens)
       const pricing: Record<string, { input: number, output: number }> = {
+        'claude-opus-4-7': { input: 5.00, output: 25.00 },
+        'claude-sonnet-4-6': { input: 3.00, output: 15.00 },
+        'claude-haiku-4-5': { input: 1.00, output: 5.00 },
+        'claude-haiku-4-5-20251001': { input: 1.00, output: 5.00 },
         'claude-3-5-sonnet-20241022': { input: 3.00, output: 15.00 },
         'claude-3-5-haiku-20241022': { input: 0.80, output: 4.00 },
         'claude-3-opus-20240229': { input: 15.00, output: 75.00 },
       }
 
-      const modelPricing = pricing[this.model] || pricing['claude-3-5-sonnet-20241022']
+      const modelPricing = pricing[this.model] || pricing[DEFAULT_AI_MODELS.claude]
       const estimatedCost = (inputTokens / 1000000) * modelPricing.input + (outputTokens / 1000000) * modelPricing.output
 
       return {
@@ -128,21 +128,16 @@ Respond ONLY with valid JSON, no additional text.`
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildClaudeMessagesRequestBody({
           model: this.model,
-          max_tokens: 1024,
-          messages: [
-            {
-              role: 'user',
-              content: `Extract ${this.maxKeywords} SEO-optimized keywords from the following article in ${languageName}.
-Return ONLY a JSON array of strings, no additional text.
+          systemPrompt: `Extract SEO keywords from article content in ${languageName}. Return only a JSON array of strings.`,
+          userPrompt: `Extract ${this.maxKeywords} SEO-optimized keywords from the following article.
 
 Article content:
-${cleanedContent}`
-            }
-          ],
+${cleanedContent}`,
           temperature: 0.3,
-        })
+          maxOutputTokens: 1024,
+        }))
       })
 
       if (!response.ok) {
@@ -155,11 +150,13 @@ ${cleanedContent}`
 
       const data = await response.json()
 
-      if (!data.content || data.content.length === 0) {
+      const resultText = getClaudeResponseText(data)
+
+      if (!resultText) {
         throw this.createError('No response content', 'NO_CONTENT')
       }
 
-      const keywords = JSON.parse(data.content[0].text)
+      const keywords = JSON.parse(resultText)
       return Array.isArray(keywords) ? keywords : []
     } catch (error) {
       if (error instanceof Error && 'code' in error) {
@@ -185,21 +182,16 @@ ${cleanedContent}`
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(buildClaudeMessagesRequestBody({
           model: this.model,
-          max_tokens: 256,
-          messages: [
-            {
-              role: 'user',
-              content: `Generate a compelling, SEO-friendly title (max 60 characters) for the following article in ${languageName}.
-Return ONLY the title text, no quotes or additional formatting.
+          systemPrompt: `Generate a compelling, SEO-friendly title in ${languageName}. Return only the title text.`,
+          userPrompt: `Generate a title with a maximum length of 60 characters for the following article.
 
 Article content:
-${cleanedContent}`
-            }
-          ],
+${cleanedContent}`,
           temperature: 0.5,
-        })
+          maxOutputTokens: 256,
+        }))
       })
 
       if (!response.ok) {
@@ -212,11 +204,13 @@ ${cleanedContent}`
 
       const data = await response.json()
 
-      if (!data.content || data.content.length === 0) {
+      const titleText = getClaudeResponseText(data)
+
+      if (!titleText) {
         throw this.createError('No response content', 'NO_CONTENT')
       }
 
-      return data.content[0].text.trim()
+      return titleText
     } catch (error) {
       if (error instanceof Error && 'code' in error) {
         throw error

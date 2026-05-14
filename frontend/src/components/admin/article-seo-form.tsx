@@ -80,11 +80,58 @@ export function ArticleSEOForm({
   useEffect(() => {
     const initAI = async () => {
       try {
-        // Try to initialize with stored configuration
-        // This would come from settings in a real implementation
-        setHasAIProvider(seoAIService.isConfigured())
+        const settingsStr = localStorage.getItem('blog_settings')
+
+        if (!settingsStr) {
+          setHasAIProvider(false)
+          return
+        }
+
+        const settings = JSON.parse(settingsStr)
+        const supportedProviders = ['openai', 'claude']
+        const summaryConfig = settings?.aiSummary
+
+        if (
+          summaryConfig?.provider &&
+          supportedProviders.includes(summaryConfig.provider) &&
+          summaryConfig.apiKey
+        ) {
+          await initializeSEOAIService({
+            provider: summaryConfig.provider,
+            apiKey: summaryConfig.apiKey,
+            model: summaryConfig.model,
+            baseUrl: summaryConfig.baseUrl,
+            authType: summaryConfig.authType,
+            customAuthHeader: summaryConfig.customAuthHeader
+          })
+          setHasAIProvider(seoAIService.isConfigured())
+          return
+        }
+
+        const globalAIConfig = settings?.aiConfig
+        const defaultProvider = globalAIConfig?.default_provider
+        const providerConfig = defaultProvider ? globalAIConfig?.providers?.[defaultProvider] : null
+
+        if (
+          defaultProvider &&
+          supportedProviders.includes(defaultProvider) &&
+          providerConfig?.enabled &&
+          providerConfig.api_key
+        ) {
+          await initializeSEOAIService({
+            provider: defaultProvider,
+            apiKey: providerConfig.api_key,
+            model: providerConfig.model,
+            baseUrl: providerConfig.settings?.base_url
+          })
+          setHasAIProvider(seoAIService.isConfigured())
+          return
+        }
+
+        setHasAIProvider(false)
       } catch (error) {
         console.error('Failed to initialize SEO AI service:', error)
+        setHasAIProvider(false)
       }
     }
     
@@ -603,7 +650,7 @@ export function ArticleSEOForm({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              配置AI服务后可使用智能SEO优化功能。前往设置页面配置OpenAI或Gemini API。
+              配置AI服务后可使用智能SEO优化功能。当前此入口支持 OpenAI 或 Claude，请前往设置页面完成配置。
             </AlertDescription>
           </Alert>
         )}

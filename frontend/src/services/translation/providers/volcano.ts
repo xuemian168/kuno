@@ -1,4 +1,5 @@
 import { BaseTranslationProvider } from './base'
+import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
 export class VolcanoProvider extends BaseTranslationProvider {
@@ -10,7 +11,7 @@ export class VolcanoProvider extends BaseTranslationProvider {
   constructor(apiKey?: string, model?: string, region?: string, baseUrl?: string) {
     super(apiKey)
     this.arkApiKey = apiKey || ''
-    this.model = model || 'doubao-seed-1-6-250615'
+    this.model = model || DEFAULT_AI_MODELS.volcano
     if (baseUrl) this.baseUrl = baseUrl
   }
 

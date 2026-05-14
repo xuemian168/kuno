@@ -3,6 +3,71 @@
  * 消除对 NEXT_PUBLIC_API_URL 环境变量的依赖，实现智能 URL 自动检测
  */
 
+function isLocalHost(hostname: string): boolean {
+  return hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '0.0.0.0' ||
+    hostname === '::1' ||
+    hostname.endsWith('.local') ||
+    /^10\.\d+\.\d+\.\d+$/.test(hostname) ||
+    /^192\.168\.\d+\.\d+$/.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(hostname)
+}
+
+function normalizePublicUrl(rawUrl: string): string {
+  const trimmedUrl = rawUrl.trim()
+  if (!trimmedUrl) {
+    return ''
+  }
+
+  const absoluteUrl = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(trimmedUrl)
+    ? trimmedUrl
+    : `${trimmedUrl.startsWith('localhost') || trimmedUrl.startsWith('127.0.0.1') || trimmedUrl.startsWith('0.0.0.0') ? 'http' : 'https'}://${trimmedUrl}`
+
+  try {
+    const parsedUrl = new URL(absoluteUrl)
+
+    if (!isLocalHost(parsedUrl.hostname)) {
+      parsedUrl.protocol = 'https:'
+    }
+
+    if ((parsedUrl.protocol === 'https:' && parsedUrl.port === '443') ||
+        (parsedUrl.protocol === 'http:' && parsedUrl.port === '80')) {
+      parsedUrl.port = ''
+    }
+
+    return parsedUrl.toString().replace(/\/$/, '')
+  } catch (error) {
+    return trimmedUrl.replace(/\/$/, '')
+  }
+}
+
+function getServerHeaders(): Headers | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { headers } = require('next/headers')
+    const headersResult = headers()
+
+    if (headersResult && typeof headersResult.get === 'function') {
+      return headersResult as Headers
+    }
+  } catch (error) {
+    // headers() 可能在某些上下文中不可用（如静态生成）
+  }
+
+  return null
+}
+
+function getConfiguredPublicUrl(): string {
+  const explicitUrl = process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
+    process.env.HOST ||
+    ''
+
+  return explicitUrl ? normalizePublicUrl(explicitUrl) : ''
+}
+
 /**
  * 获取 API 基础 URL
  * 自动适配不同环境，无需配置 NEXT_PUBLIC_API_URL
@@ -12,10 +77,14 @@ export function getApiUrl(): string {
   if (typeof window !== 'undefined') {
     return `${window.location.origin}/api`
   }
-  
-  // 服务端环境：使用 getBaseUrl 确保正确的域名
-  // 无论开发还是生产环境，都使用统一的逻辑
-  return `${getBaseUrl()}/api`
+
+  // 服务端环境：优先使用内部 API URL（Docker 容器间通信）
+  if (process.env.INTERNAL_API_URL) {
+    return process.env.INTERNAL_API_URL
+  }
+
+  // 回退：使用对外站点 URL，避免在 SEO 元数据中泄露内部地址
+  return getPublicApiUrl()
 }
 
 /**
@@ -27,47 +96,29 @@ export function getBaseUrl(): string {
   if (typeof window !== 'undefined') {
     return window.location.origin
   }
-  
-  // 服务端环境
-  // 优先使用显式设置的网站 URL
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL
+
+  const configuredUrl = getConfiguredPublicUrl()
+  if (configuredUrl) {
+    return configuredUrl
   }
-  
-  // 尝试从请求头动态获取域名（仅在服务端组件中可用）
-  // 使用条件性导入避免在客户端组件中出错
-  if (typeof window === 'undefined') {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { headers } = require('next/headers')
-      const headersList = headers()
-      const host = headersList.get('x-forwarded-host') || headersList.get('host')
-      
-      if (host) {
-        // 判断协议：优先使用 x-forwarded-proto，否则默认 https
-        // 在开发环境下如果没有 x-forwarded-proto，默认使用 http
-        const proto = headersList.get('x-forwarded-proto') || 
-                      (process.env.NODE_ENV === 'development' ? 'http' : 'https')
-        return `${proto}://${host}`
-      }
-    } catch (error) {
-      // headers() 可能在某些上下文中不可用（如静态生成）
-      // 静默处理，回退到其他方案
+
+  const headersList = getServerHeaders()
+  if (headersList) {
+    const host = headersList.get('x-forwarded-host') || headersList.get('host')
+    const forwardedProto = headersList.get('x-forwarded-proto')
+
+    if (host) {
+      const protocol = forwardedProto ||
+        (host.includes('localhost') || host.startsWith('127.0.0.1') || host.startsWith('0.0.0.0')
+          ? 'http'
+          : 'https')
+      return normalizePublicUrl(`${protocol}://${host}`)
     }
   }
-  
-  // 回退到环境变量
-  const fallbackHost = process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.HOST 
-    ? `https://${process.env.HOST}`
-    : process.env.NEXT_PUBLIC_APP_URL
-    ? process.env.NEXT_PUBLIC_APP_URL
-    : process.env.NODE_ENV === 'development'
+
+  return process.env.NODE_ENV === 'development'
     ? 'http://localhost:3000'
     : 'http://localhost'
-  
-  return fallbackHost
 }
 
 /**
@@ -106,8 +157,15 @@ export function getMediaUrl(path: string): string {
  * 与 getBaseUrl 的区别：这个专门用于对外展示的 URL
  */
 export function getSiteUrl(): string {
-  // 直接使用 getBaseUrl 的逻辑，它已经包含了从 headers 获取域名的功能
   return getBaseUrl()
+}
+
+/**
+ * 获取对外公开的 API URL
+ * 用于 RSS、Sitemap、OpenGraph 等需要暴露给搜索引擎或第三方的场景
+ */
+export function getPublicApiUrl(): string {
+  return `${getSiteUrl()}/api`
 }
 
 /**

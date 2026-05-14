@@ -1,5 +1,6 @@
 import { BaseAISummaryProvider } from './base'
 import { AISummaryResult } from '../types'
+import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
 export class VolcanoSummaryProvider extends BaseAISummaryProvider {
@@ -7,7 +8,7 @@ export class VolcanoSummaryProvider extends BaseAISummaryProvider {
   private baseUrl?: string
 
   constructor(apiKey?: string, model?: string, maxKeywords?: number, summaryLength?: 'short' | 'medium' | 'long', baseUrl?: string) {
-    super(apiKey, model || 'doubao-seed-1-6-250615', maxKeywords, summaryLength)
+    super(apiKey, model || DEFAULT_AI_MODELS.volcano, maxKeywords, summaryLength)
     if (baseUrl) this.baseUrl = baseUrl
   }
 
