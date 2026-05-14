@@ -71,16 +71,16 @@ export function getProviderEndpoint(
  * 2. API key 通过 query parameter 传递
  *
  * @param baseUrl - 自定义 base URL（可选）
- * @param model - Gemini 模型名称（如 'gemini-1.5-flash'）
+ * @param model - Gemini 模型名称（如 'gemini-2.5-flash'）
  * @param apiKey - API key
  * @returns 完整的 Gemini endpoint URL
  *
  * @example
- * getGeminiEndpoint(undefined, 'gemini-1.5-flash', 'AIza...')
- * // => 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIza...'
+ * getGeminiEndpoint(undefined, 'gemini-2.5-flash', 'AIza...')
+ * // => 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIza...'
  *
- * getGeminiEndpoint('http://localhost:8000', 'gemini-1.5-flash', 'test-key')
- * // => 'http://localhost:8000/models/gemini-1.5-flash:generateContent?key=test-key'
+ * getGeminiEndpoint('http://localhost:8000', 'gemini-2.5-flash', 'test-key')
+ * // => 'http://localhost:8000/models/gemini-2.5-flash:generateContent?key=test-key'
  */
 export function getGeminiEndpoint(
   baseUrl: string | undefined,

@@ -1,11 +1,12 @@
 import { BaseTranslationProvider } from './base'
 import { TranslationResult, AuthHeaderType } from '../types'
+import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { formatErrorMessage } from '../error-messages'
 import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
 export class OpenAIProvider extends BaseTranslationProvider {
   name = 'OpenAI'
-  private model = 'gpt-3.5-turbo'
+  private model = DEFAULT_AI_MODELS.openai
   private baseUrl?: string
   private authType: AuthHeaderType = 'bearer'
   private customAuthHeader?: string
@@ -197,8 +198,17 @@ export class OpenAIProvider extends BaseTranslationProvider {
       let estimatedCost = 0
       const currency = 'USD'
       
-      // Pricing as of 2024 (per 1K tokens)
+      // Pricing as of 2026-05 (per 1K tokens)
       const pricing: Record<string, { input: number, output: number }> = {
+        'gpt-5.5': { input: 0.005, output: 0.03 },
+        'gpt-5.4': { input: 0.0025, output: 0.015 },
+        'gpt-5.4-mini': { input: 0.00075, output: 0.0045 },
+        'gpt-5.4-nano': { input: 0.0002, output: 0.00125 },
+        'gpt-5': { input: 0.00125, output: 0.01 },
+        'gpt-5-mini': { input: 0.00025, output: 0.002 },
+        'gpt-5-nano': { input: 0.00005, output: 0.0004 },
+        'gpt-4.1': { input: 0.002, output: 0.008 },
+        'gpt-4.1-mini': { input: 0.0004, output: 0.0016 },
         'gpt-3.5-turbo': { input: 0.0015, output: 0.002 },
         'gpt-4': { input: 0.03, output: 0.06 },
         'gpt-4-turbo-preview': { input: 0.01, output: 0.03 },
@@ -206,7 +216,7 @@ export class OpenAIProvider extends BaseTranslationProvider {
         'gpt-4o-mini': { input: 0.00015, output: 0.0006 }
       }
       
-      const modelPricing = pricing[this.model] || pricing['gpt-3.5-turbo']
+      const modelPricing = pricing[this.model] || pricing[DEFAULT_AI_MODELS.openai]
       estimatedCost = (inputTokens / 1000) * modelPricing.input + (outputTokens / 1000) * modelPricing.output
 
       return {

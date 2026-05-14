@@ -1,11 +1,12 @@
 import { BaseTranslationProvider } from './base'
 import { TranslationResult } from '../types'
+import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { formatErrorMessage } from '../error-messages'
 import { getClaudeEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
 export class ClaudeProvider extends BaseTranslationProvider {
   name = 'Claude'
-  private model = 'claude-3-5-sonnet-20241022'
+  private model = DEFAULT_AI_MODELS.claude
   private baseUrl?: string
 
   constructor(apiKey?: string, model?: string, baseUrl?: string) {
@@ -158,8 +159,11 @@ ${text}`
       let estimatedCost = 0
       const currency = 'USD'
 
-      // Claude pricing as of 2024 (per 1M tokens)
+      // Claude pricing as of 2026-05 (per 1M tokens)
       const pricing: Record<string, { input: number, output: number }> = {
+        'claude-opus-4-7': { input: 5.00, output: 25.00 },
+        'claude-sonnet-4-6': { input: 3.00, output: 15.00 },
+        'claude-haiku-4-5': { input: 1.00, output: 5.00 },
         'claude-3-5-sonnet-20241022': { input: 3.00, output: 15.00 },
         'claude-3-5-sonnet-20240620': { input: 3.00, output: 15.00 },
         'claude-3-5-haiku-20241022': { input: 0.80, output: 4.00 },
@@ -168,7 +172,7 @@ ${text}`
         'claude-3-haiku-20240307': { input: 0.25, output: 1.25 },
       }
 
-      const modelPricing = pricing[this.model] || pricing['claude-3-5-sonnet-20241022']
+      const modelPricing = pricing[this.model] || pricing[DEFAULT_AI_MODELS.claude]
       estimatedCost = (inputTokens / 1000000) * modelPricing.input + (outputTokens / 1000000) * modelPricing.output
 
       return {

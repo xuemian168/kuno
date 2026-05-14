@@ -9,11 +9,12 @@ import {
   KeywordOptions,
   AuthHeaderType
 } from '../types'
+import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
 
 export class OpenAISEOProvider extends BaseSEOAIProvider {
   name = 'OpenAI SEO'
-  protected model = 'gpt-3.5-turbo'
+  protected model = DEFAULT_AI_MODELS.openai
   private baseUrl?: string
   private authType: AuthHeaderType = 'bearer'
   private customAuthHeader?: string
