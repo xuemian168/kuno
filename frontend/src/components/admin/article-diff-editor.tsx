@@ -375,7 +375,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       // Check if this line contains content that should not be translated
       const isNonTranslatableContent = (line: string) => {
         // Skip image markdown: ![alt](src)
-        if (/^!\[.*\]\(.*\)$/.test(line)) return translatedCount
+        if (/^!\[.*\]\(.*\)$/.test(line)) return true
         
         // Skip video HTML tags
         if (/<video\s+.*?>/.test(line) || 

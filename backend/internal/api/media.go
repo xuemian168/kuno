@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -24,11 +25,14 @@ import (
 )
 
 const (
-	MaxFileSize       = 100 * 1024 * 1024 // 100MB
-	MaxGIFFrames      = 1000               // Prevent GIF bombs
-	MaxPNGChunks      = 100                // Prevent PNG bombs
-	MaxImageDimension = 10000              // 10000x10000 pixels max
-	MaxVideoMetadata  = 10 * 1024 * 1024   // 10MB metadata limit
+	MaxFileSize         = 100 * 1024 * 1024 // 100MB
+	MaxBatchFiles       = 20
+	MaxBatchTotalSize   = MaxFileSize
+	MaxBatchRequestSize = MaxBatchTotalSize + 1*1024*1024 // Allow multipart overhead and alt text.
+	MaxGIFFrames        = 1000                            // Prevent GIF bombs
+	MaxPNGChunks        = 100                             // Prevent PNG bombs
+	MaxImageDimension   = 10000                           // 10000x10000 pixels max
+	MaxVideoMetadata    = 10 * 1024 * 1024                // 10MB metadata limit
 )
 
 var UploadDir = getUploadDir()
@@ -563,15 +567,23 @@ func UploadMedia(c *gin.Context) {
 }
 
 func UploadMediaBatch(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, MaxBatchRequestSize)
+
 	form, err := c.MultipartForm()
 	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "Batch upload request exceeds 101MB limit"})
+			return
+		}
+
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid multipart form"})
 		return
 	}
 
 	files := form.File["files"]
-	if len(files) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No files provided"})
+	if statusCode, validationErr := validateMediaBatchUpload(files); validationErr != nil {
+		c.JSON(statusCode, gin.H{"error": validationErr.Error()})
 		return
 	}
 
@@ -612,6 +624,26 @@ func UploadMediaBatch(c *gin.Context) {
 		"failed":   failed,
 		"message":  message,
 	})
+}
+
+func validateMediaBatchUpload(files []*multipart.FileHeader) (int, error) {
+	if len(files) == 0 {
+		return http.StatusBadRequest, fmt.Errorf("No files provided")
+	}
+
+	if len(files) > MaxBatchFiles {
+		return http.StatusBadRequest, fmt.Errorf("too many files: maximum %d files allowed", MaxBatchFiles)
+	}
+
+	var totalSize int64
+	for _, fileHeader := range files {
+		totalSize += fileHeader.Size
+		if totalSize > MaxBatchTotalSize {
+			return http.StatusRequestEntityTooLarge, fmt.Errorf("total upload size exceeds 100MB limit")
+		}
+	}
+
+	return http.StatusOK, nil
 }
 
 func processMediaUpload(header *multipart.FileHeader, alt string) (models.MediaLibrary, int, error) {
@@ -683,16 +715,6 @@ func processMediaUpload(header *multipart.FileHeader, alt string) (models.MediaL
 			fileContent = cleanContent
 			fmt.Printf("Metadata stripped from image: %s (JPEG EXIF/PNG tEXt/GIF Comment removed)\n", header.Filename)
 		}
-	}
-
-	isSVG := contentType == "image/svg+xml"
-	if isSVG {
-		sanitized, err := sanitizeSVG(fileContent)
-		if err != nil {
-			return emptyMedia, http.StatusBadRequest, fmt.Errorf("failed to sanitize SVG: %v", err)
-		}
-		fileContent = sanitized
-		fmt.Printf("SVG file sanitized: %s\n", header.Filename)
 	}
 
 	fileName := fmt.Sprintf("%s%s", uuid.New().String(), ext)

@@ -15,7 +15,7 @@ import { useTranslations } from 'next-intl'
 interface MediaUploadProps {
   onUploadComplete?: (media: MediaLibrary) => void
   acceptedTypes?: 'image' | 'video' | 'all'
-  maxSize?: number // max cumulative size in MB
+  maxSize?: number // max size in MB, used for both individual files and the total selection
 }
 
 interface PendingUploadFile {
@@ -39,6 +39,8 @@ export default function MediaUpload({
   const [selectedFiles, setSelectedFiles] = useState<PendingUploadFile[]>([])
   const [pasteHint, setPasteHint] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const selectedFilesRef = useRef<PendingUploadFile[]>([])
+  const progressResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const maxTotalBytes = maxSize * 1024 * 1024
 
   const getAcceptString = () => {
@@ -100,10 +102,16 @@ export default function MediaUpload({
     })
   }
 
+  const updateSelectedFiles = (files: PendingUploadFile[]) => {
+    selectedFilesRef.current = files
+    setSelectedFiles(files)
+  }
+
   const addFiles = (files: File[]) => {
+    const currentFiles = selectedFilesRef.current
     const validFiles: PendingUploadFile[] = []
     const validationErrors: string[] = []
-    const selectedTotalBytes = selectedFiles.reduce((sum, item) => sum + item.file.size, 0)
+    const selectedTotalBytes = currentFiles.reduce((sum, item) => sum + item.file.size, 0)
     let incomingAcceptedBytes = 0
 
     files.forEach((file) => {
@@ -125,7 +133,7 @@ export default function MediaUpload({
     })
 
     if (validFiles.length > 0) {
-      setSelectedFiles((prev) => [...prev, ...validFiles])
+      updateSelectedFiles([...currentFiles, ...validFiles])
     }
 
     if (validationErrors.length > 0) {
@@ -170,6 +178,19 @@ export default function MediaUpload({
   }
 
   useEffect(() => {
+    selectedFilesRef.current = selectedFiles
+  }, [selectedFiles])
+
+  useEffect(() => {
+    return () => {
+      releasePreviewUrls(selectedFilesRef.current)
+      if (progressResetTimeoutRef.current) {
+        clearTimeout(progressResetTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     // Add paste event listener to document
     document.addEventListener('paste', handlePaste)
     
@@ -190,9 +211,9 @@ export default function MediaUpload({
   }, [])
 
   const handleUpload = async () => {
-    if (selectedFiles.length === 0) return
+    if (selectedFilesRef.current.length === 0) return
 
-    const filesToUpload = selectedFiles
+    const filesToUpload = selectedFilesRef.current
     const totalUploadBytes = filesToUpload.reduce((sum, item) => sum + item.file.size, 0)
 
     if (totalUploadBytes > maxTotalBytes) {
@@ -204,9 +225,10 @@ export default function MediaUpload({
     setUploadProgress(0)
     setError('')
 
+    let progressInterval: ReturnType<typeof setInterval> | null = null
     try {
       // Simulate progress for user experience
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setUploadProgress(prev => Math.min(prev + 10, 90))
       }, 100)
 
@@ -215,7 +237,6 @@ export default function MediaUpload({
         filesToUpload.map(item => item.alt.trim())
       )
       
-      clearInterval(progressInterval)
       setUploadProgress(100)
 
       result.uploaded.forEach((media) => {
@@ -242,11 +263,11 @@ export default function MediaUpload({
           return accumulator
         }, [])
 
-        setSelectedFiles(failedItems)
+        updateSelectedFiles(failedItems)
         setError(`${t('status.uploadFailed')} (${result.failed.length}/${filesToUpload.length})`)
       } else {
         releasePreviewUrls(filesToUpload)
-        setSelectedFiles([])
+        updateSelectedFiles([])
         setError('')
       }
 
@@ -256,8 +277,14 @@ export default function MediaUpload({
     } catch (err) {
       setError(err instanceof Error ? err.message : t('status.uploadFailed'))
     } finally {
+      if (progressInterval) {
+        clearInterval(progressInterval)
+      }
       setUploading(false)
-      setTimeout(() => setUploadProgress(0), 1000)
+      if (progressResetTimeoutRef.current) {
+        clearTimeout(progressResetTimeoutRef.current)
+      }
+      progressResetTimeoutRef.current = setTimeout(() => setUploadProgress(0), 1000)
     }
   }
 
@@ -366,7 +393,7 @@ export default function MediaUpload({
                       size="sm"
                       onClick={() => {
                         URL.revokeObjectURL(item.previewUrl)
-                        setSelectedFiles((prev) => prev.filter((f) => f.id !== item.id))
+                        updateSelectedFiles(selectedFilesRef.current.filter((f) => f.id !== item.id))
                       }}
                       disabled={uploading}
                     >
@@ -451,8 +478,8 @@ export default function MediaUpload({
               <Button
                 variant="outline"
                 onClick={() => {
-                  releasePreviewUrls(selectedFiles)
-                  setSelectedFiles([])
+                  releasePreviewUrls(selectedFilesRef.current)
+                  updateSelectedFiles([])
                   setError('')
                   if (fileInputRef.current) {
                     fileInputRef.current.value = ''
