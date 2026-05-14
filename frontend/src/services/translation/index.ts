@@ -140,16 +140,18 @@ export class TranslationService {
       /`[^`\n]+`/g,
       // HTML/XML tags with attributes
       /<[a-zA-Z][^>]*>/g,
+      // Programming syntax patterns. Do not protect Markdown link labels.
+      /\[[^\]\n]+\](?!\(|\[)/g,
       // URLs
       /https?:\/\/[^\s<>"'\]]+/g,
+      // Markdown link/image destinations that are URL fragments or local paths
+      /\((?:#[^)]+|\/[^)\s]+)\)/g,
       // File paths
       /\/[^\s<>"'\]]+\.[a-zA-Z0-9]+/g,
       // Email addresses
       /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
       // Variables and placeholders
-      /\{[^}]+\}/g,
-      // Programming syntax patterns
-      /\[[^\]]+\]/g
+      /\{[^}]+\}/g
     ]
 
     patterns.forEach((pattern, patternIndex) => {
@@ -222,6 +224,42 @@ export class TranslationService {
     return restoredText
   }
 
+
+  private getFencedCodeLineNumbers(text: string): Set<number> {
+    const codeLineNumbers = new Set<number>()
+    let inCodeBlock = false
+
+    text.split('\n').forEach((line, index) => {
+      const lineNumber = index + 1
+
+      if (line.trim().startsWith('```')) {
+        inCodeBlock = !inCodeBlock
+        return
+      }
+
+      if (inCodeBlock) {
+        codeLineNumbers.add(lineNumber)
+      }
+    })
+
+    return codeLineNumbers
+  }
+
+  private hasCodeComment(line: string): boolean {
+    const trimmedLine = line.trim()
+
+    if (trimmedLine.startsWith('#') || trimmedLine.startsWith('//') || trimmedLine.startsWith('<!--')) {
+      return true
+    }
+
+    if (line.includes('//')) {
+      const slashIndex = line.indexOf('//')
+      const beforeSlash = line.substring(0, slashIndex)
+      return !beforeSlash.includes('http:') && !beforeSlash.includes('https:')
+    }
+
+    return line.includes('#') && !line.includes('http') && !/\[[^\]]+\]\(#[^)]+\)/.test(line)
+  }
 
   private async translateWithSelectiveComments(text: string, from: string, to: string): Promise<string> {
     // Cache protected content and remove it from text
@@ -320,6 +358,7 @@ export class TranslationService {
   private async applySelectiveCommentTranslation(translatedText: string, originalText: string, from: string, to: string): Promise<string> {
     const translatedLines = translatedText.split('\n')
     const originalLines = originalText.split('\n')
+    const fencedCodeLineNumbers = this.getFencedCodeLineNumbers(originalText)
     const processedLines: string[] = []
     
     for (let i = 0; i < Math.max(translatedLines.length, originalLines.length); i++) {
@@ -328,10 +367,9 @@ export class TranslationService {
       const lineNumber = i + 1
       const trimmedOriginalLine = originalLine.trim()
       
-      // Check if original line contains comments
-      const hasComment = trimmedOriginalLine.startsWith('#') || trimmedOriginalLine.startsWith('//') || 
-                        trimmedOriginalLine.startsWith('<!--') || originalLine.includes('//') || 
-                        (originalLine.includes('#') && !originalLine.includes('http'))
+      // Only preserve selected code comments inside fenced code blocks. Markdown
+      // headings and TOC anchor links also contain "#", but they are content.
+      const hasComment = fencedCodeLineNumbers.has(lineNumber) && this.hasCodeComment(originalLine)
       
       if (hasComment) {
         // Check if this line's comments should be translated

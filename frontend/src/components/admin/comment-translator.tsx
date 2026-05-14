@@ -38,11 +38,21 @@ export function CommentTranslator({
   const extractComments = (code: string): CommentLine[] => {
     const lines = code.split('\n')
     const commentLines: CommentLine[] = []
+    let inCodeBlock = false
     
     lines.forEach((line, index) => {
       const trimmedLine = line.trim()
       let commentText = ''
       let commentType: CommentLine['commentType'] = 'other'
+
+      if (trimmedLine.startsWith('```')) {
+        inCodeBlock = !inCodeBlock
+        return
+      }
+
+      if (!inCodeBlock) {
+        return
+      }
       
       // Detect different comment types
       if (trimmedLine.startsWith('#')) {
