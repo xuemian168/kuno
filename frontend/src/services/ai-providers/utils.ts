@@ -28,6 +28,45 @@ export const PROVIDER_DEFAULTS = {
   },
 } as const
 
+function normalizeProviderBaseUrl(baseUrl: string | undefined): string | undefined {
+  const trimmed = baseUrl?.trim()
+
+  if (!trimmed) {
+    return undefined
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed
+  }
+
+  return `https://${trimmed}`
+}
+
+export function shouldUseBrowserProxy(baseUrl: string | undefined): boolean {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  const normalizedBaseUrl = normalizeProviderBaseUrl(baseUrl)
+
+  if (!normalizedBaseUrl) {
+    return true
+  }
+
+  return normalizedBaseUrl.toLowerCase().startsWith('https://')
+}
+
+function withProxyBaseUrl(path: string, baseUrl: string | undefined): string {
+  const normalizedBaseUrl = normalizeProviderBaseUrl(baseUrl)
+
+  if (!normalizedBaseUrl) {
+    return path
+  }
+
+  const separator = path.includes('?') ? '&' : '?'
+  return `${path}${separator}baseUrl=${encodeURIComponent(normalizedBaseUrl)}`
+}
+
 /**
  * 构建完整的 API endpoint
  *
@@ -54,7 +93,17 @@ export function getProviderEndpoint(
   defaultUrl: string,
   path?: string
 ): string {
-  const base = baseUrl || defaultUrl
+  if (shouldUseBrowserProxy(baseUrl)) {
+    if (defaultUrl === PROVIDER_DEFAULTS.openai.baseUrl && path === PROVIDER_DEFAULTS.openai.chatCompletionsPath) {
+      return withProxyBaseUrl('/api/ai/openai/chat/completions', baseUrl)
+    }
+
+    if (defaultUrl === PROVIDER_DEFAULTS.volcano.baseUrl && path === PROVIDER_DEFAULTS.volcano.chatCompletionsPath) {
+      return withProxyBaseUrl('/api/ai/volcano/chat/completions', baseUrl)
+    }
+  }
+
+  const base = normalizeProviderBaseUrl(baseUrl) || defaultUrl
   const cleanBase = base.replace(/\/$/, '')
 
   if (!path) return cleanBase
@@ -87,6 +136,10 @@ export function getGeminiEndpoint(
   model: string,
   apiKey: string
 ): string {
+  if (shouldUseBrowserProxy(baseUrl)) {
+    return withProxyBaseUrl(`/api/ai/gemini/generateContent?model=${encodeURIComponent(model)}`, baseUrl)
+  }
+
   const base = getProviderEndpoint(
     baseUrl,
     PROVIDER_DEFAULTS.gemini.baseUrl
@@ -119,6 +172,10 @@ export function getGeminiEndpoint(
  * // => 'https://proxy.example.com/v1/messages'
  */
 export function getClaudeEndpoint(baseUrl: string | undefined): string {
+  if (shouldUseBrowserProxy(baseUrl)) {
+    return withProxyBaseUrl('/api/ai/claude/messages', baseUrl)
+  }
+
   return getProviderEndpoint(
     baseUrl,
     PROVIDER_DEFAULTS.claude.baseUrl,

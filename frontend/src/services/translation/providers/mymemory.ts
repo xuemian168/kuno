@@ -1,4 +1,6 @@
 import { BaseTranslationProvider } from './base'
+import { TranslationModelProfile } from '../types'
+import { createTranslationModelProfile } from '../model-profiles'
 
 export class MyMemoryProvider extends BaseTranslationProvider {
   name = 'MyMemory'
@@ -7,6 +9,10 @@ export class MyMemoryProvider extends BaseTranslationProvider {
   constructor(apiKey?: string, email?: string) {
     super(apiKey)
     this.email = email || 'user@example.com' // MyMemory requires an email
+  }
+
+  getModelProfile(): TranslationModelProfile {
+    return createTranslationModelProfile('mymemory')
   }
 
   async translate(text: string, from: string, to: string): Promise<string> {

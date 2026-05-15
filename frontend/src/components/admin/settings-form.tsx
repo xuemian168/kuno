@@ -46,6 +46,30 @@ function getDefaultModel(provider: string): string {
   return DEFAULT_AI_MODELS[provider as AIModelProvider] || ''
 }
 
+type AIAuthHeaderType = NonNullable<TranslationConfig['authType']>
+
+function getDefaultAuthType(provider: string): AIAuthHeaderType {
+  return provider === 'claude' ? 'x-api-key' : 'bearer'
+}
+
+function getSelectedAuthType(provider: string, authType?: AIAuthHeaderType): AIAuthHeaderType {
+  return authType || getDefaultAuthType(provider)
+}
+
+function getNextAuthTypeForProvider(
+  currentProvider: string,
+  nextProvider: string,
+  currentAuthType?: AIAuthHeaderType
+): AIAuthHeaderType {
+  const currentDefault = getDefaultAuthType(currentProvider)
+
+  if (!currentAuthType || currentAuthType === currentDefault) {
+    return getDefaultAuthType(nextProvider)
+  }
+
+  return currentAuthType
+}
+
 interface SettingsFormProps {
   locale: string
 }
@@ -1494,7 +1518,10 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                       const newConfig = {
                         ...translationConfig,
                         provider: value as any,
-                        model: isAIProvider ? getDefaultModel(value) : translationConfig.model
+                        model: isAIProvider ? getDefaultModel(value) : translationConfig.model,
+                        authType: isAIProvider
+                          ? getNextAuthTypeForProvider(translationConfig.provider, value, translationConfig.authType)
+                          : translationConfig.authType
                       }
                       setTranslationConfig(newConfig)
                       setCustomTranslationModel(false)
@@ -1630,12 +1657,13 @@ export function SettingsForm({ locale }: SettingsFormProps) {
 
                 {/* API Authentication Type */}
                 {(translationConfig.provider === 'openai' ||
+                  translationConfig.provider === 'claude' ||
                   translationConfig.provider === 'gemini' ||
                   translationConfig.provider === 'volcano') && (
                   <div className="space-y-2">
                     <Label>{locale === 'zh' ? 'API 认证方式' : 'API Authentication'}</Label>
                     <Select
-                      value={translationConfig.authType || 'bearer'}
+                      value={getSelectedAuthType(translationConfig.provider, translationConfig.authType)}
                       onValueChange={(value: any) => {
                         const newConfig = { ...translationConfig, authType: value }
                         setTranslationConfig(newConfig)
@@ -2116,7 +2144,10 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                               ...aiSummaryConfig,
                               provider: translationConfig.provider as any,
                               apiKey: translationConfig.apiKey,
-                              model: translationConfig.model || getDefaultModel(translationConfig.provider)
+                              model: translationConfig.model || getDefaultModel(translationConfig.provider),
+                              baseUrl: translationConfig.baseUrl,
+                              authType: getSelectedAuthType(translationConfig.provider, translationConfig.authType),
+                              customAuthHeader: translationConfig.customAuthHeader
                             }
                             setAISummaryConfig(newConfig)
                             try {
@@ -2152,6 +2183,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                         ...aiSummaryConfig,
                         provider: value as any,
                         model: getDefaultModel(value),
+                        authType: getNextAuthTypeForProvider(aiSummaryConfig.provider, value, aiSummaryConfig.authType),
                       }
                       setAISummaryConfig(newConfig)
                       setCustomAISummaryModel(false)
@@ -2301,12 +2333,13 @@ export function SettingsForm({ locale }: SettingsFormProps) {
 
                 {/* API Authentication Type for AI Summary */}
                 {(aiSummaryConfig.provider === 'openai' ||
+                  aiSummaryConfig.provider === 'claude' ||
                   aiSummaryConfig.provider === 'gemini' ||
                   aiSummaryConfig.provider === 'volcano') && (
                   <div className="space-y-2">
                     <Label>{locale === 'zh' ? 'API 认证方式' : 'API Authentication'}</Label>
                     <Select
-                      value={aiSummaryConfig.authType || 'bearer'}
+                      value={getSelectedAuthType(aiSummaryConfig.provider, aiSummaryConfig.authType)}
                       onValueChange={(value: any) => {
                         const newConfig = { ...aiSummaryConfig, authType: value }
                         setAISummaryConfig(newConfig)

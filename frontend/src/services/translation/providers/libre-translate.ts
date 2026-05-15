@@ -1,4 +1,6 @@
 import { BaseTranslationProvider } from './base'
+import { TranslationModelProfile } from '../types'
+import { createTranslationModelProfile } from '../model-profiles'
 
 export class LibreTranslateProvider extends BaseTranslationProvider {
   name = 'LibreTranslate'
@@ -8,6 +10,10 @@ export class LibreTranslateProvider extends BaseTranslationProvider {
     super(apiKey)
     // Default to the public instance, but allow custom self-hosted instances
     this.apiUrl = apiUrl || 'https://libretranslate.com/translate'
+  }
+
+  getModelProfile(): TranslationModelProfile {
+    return createTranslationModelProfile('libretranslate')
   }
 
   async translate(text: string, from: string, to: string): Promise<string> {

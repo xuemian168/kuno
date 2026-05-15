@@ -1,18 +1,25 @@
 import { BaseTranslationProvider } from './base'
+import { AuthHeaderType, TranslationModelProfile } from '../types'
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
-import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
+import { getProviderEndpoint, PROVIDER_DEFAULTS, shouldUseBrowserProxy } from '../../ai-providers/utils'
+import { createTranslationModelProfile } from '../model-profiles'
+import { buildTranslationSystemPrompt } from '../prompt-utils'
 
 export class VolcanoProvider extends BaseTranslationProvider {
   name = 'Volcano Engine'
   private arkApiKey: string
   private model: string
   private baseUrl?: string
+  private authType: AuthHeaderType = 'bearer'
+  private customAuthHeader?: string
 
-  constructor(apiKey?: string, model?: string, region?: string, baseUrl?: string) {
+  constructor(apiKey?: string, model?: string, region?: string, baseUrl?: string, authType?: AuthHeaderType, customAuthHeader?: string) {
     super(apiKey)
     this.arkApiKey = apiKey || ''
     this.model = model || DEFAULT_AI_MODELS.volcano
     if (baseUrl) this.baseUrl = baseUrl
+    if (authType) this.authType = authType
+    if (customAuthHeader) this.customAuthHeader = customAuthHeader
   }
 
   private getEndpoint(): string {
@@ -23,8 +30,68 @@ export class VolcanoProvider extends BaseTranslationProvider {
     )
   }
 
+  private isUsingCustomBaseUrl(): boolean {
+    return !!this.baseUrl && this.baseUrl !== PROVIDER_DEFAULTS.volcano.baseUrl
+  }
+
+  private isUsingProxy(): boolean {
+    return shouldUseBrowserProxy(this.baseUrl)
+  }
+
+  private getHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    }
+
+    if (!this.arkApiKey) {
+      return headers
+    }
+
+    if (!this.isUsingCustomBaseUrl()) {
+      headers['Authorization'] = `Bearer ${this.arkApiKey}`
+      return headers
+    }
+
+    switch (this.authType) {
+      case 'bearer':
+        headers['Authorization'] = `Bearer ${this.arkApiKey}`
+        break
+      case 'x-api-key':
+        headers['x-api-key'] = this.arkApiKey
+        break
+      case 'x-goog-api-key':
+        headers['x-goog-api-key'] = this.arkApiKey
+        break
+      case 'api-key':
+        headers['api-key'] = this.arkApiKey
+        break
+      case 'custom':
+        if (this.customAuthHeader) {
+          headers[this.customAuthHeader] = this.arkApiKey
+          if (this.isUsingProxy()) {
+            headers['x-kuno-forward-auth-header'] = this.customAuthHeader
+          }
+        } else {
+          headers['Authorization'] = `Bearer ${this.arkApiKey}`
+        }
+        break
+      default:
+        headers['Authorization'] = `Bearer ${this.arkApiKey}`
+    }
+
+    return headers
+  }
+
   isConfigured(): boolean {
     return !!this.arkApiKey
+  }
+
+  getModelProfile(): TranslationModelProfile {
+    return createTranslationModelProfile('volcano', this.model)
+  }
+
+  private getMaxOutputTokens(text: string): number {
+    return Math.min(Math.max(Math.ceil(text.length * 1.5), 1024), this.getModelProfile().maxOutputTokens)
   }
 
   async translate(text: string, from: string, to: string): Promise<string> {
@@ -37,17 +104,14 @@ export class VolcanoProvider extends BaseTranslationProvider {
     const fromLang = this.getLanguageName(this.mapLanguageCode(from))
     const toLang = this.getLanguageName(this.mapLanguageCode(to))
 
-    const systemPrompt = `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}. Return ONLY the translated text without any explanations or additional content.`
+    const systemPrompt = buildTranslationSystemPrompt(fromLang, toLang)
     
     const userPrompt = text
 
     try {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.arkApiKey}`
-        },
+        headers: this.getHeaders(),
         body: JSON.stringify({
           model: this.model,
           messages: [
@@ -61,7 +125,7 @@ export class VolcanoProvider extends BaseTranslationProvider {
             }
           ],
           temperature: 0.3,
-          max_tokens: 2000,
+          max_tokens: this.getMaxOutputTokens(text),
           stream: false
         })
       })

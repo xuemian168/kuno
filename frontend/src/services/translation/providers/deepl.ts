@@ -1,8 +1,14 @@
 import { BaseTranslationProvider } from './base'
+import { TranslationModelProfile } from '../types'
+import { createTranslationModelProfile } from '../model-profiles'
 
 export class DeepLProvider extends BaseTranslationProvider {
   name = 'DeepL'
   private baseUrl = 'https://api-free.deepl.com/v2' // Use paid API endpoint for pro accounts
+
+  getModelProfile(): TranslationModelProfile {
+    return createTranslationModelProfile('deepl')
+  }
   
   async translate(text: string, from: string, to: string): Promise<string> {
     if (!this.isConfigured()) {

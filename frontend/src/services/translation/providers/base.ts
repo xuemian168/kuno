@@ -1,4 +1,5 @@
-import { TranslationProvider, TranslationError } from '../types'
+import { TranslationProvider, TranslationError, TranslationModelProfile } from '../types'
+import { createTranslationModelProfile, estimateTranslationTokens } from '../model-profiles'
 
 export abstract class BaseTranslationProvider implements TranslationProvider {
   abstract name: string
@@ -11,6 +12,14 @@ export abstract class BaseTranslationProvider implements TranslationProvider {
   }
 
   abstract translate(text: string, from: string, to: string): Promise<string>
+
+  getModelProfile(): TranslationModelProfile {
+    return createTranslationModelProfile('generic')
+  }
+
+  estimateTokens(text: string): number {
+    return estimateTranslationTokens(text)
+  }
   
   async translateBatch(texts: string[], from: string, to: string): Promise<string[]> {
     // Default implementation: translate one by one

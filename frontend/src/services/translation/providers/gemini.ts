@@ -1,8 +1,10 @@
 import { BaseTranslationProvider } from './base'
-import { TranslationResult, AuthHeaderType } from '../types'
+import { TranslationResult, AuthHeaderType, TranslationModelProfile } from '../types'
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { formatErrorMessage } from '../error-messages'
-import { getGeminiEndpoint, getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
+import { getGeminiEndpoint, getProviderEndpoint, PROVIDER_DEFAULTS, shouldUseBrowserProxy } from '../../ai-providers/utils'
+import { createTranslationModelProfile } from '../model-profiles'
+import { buildBatchTranslationSystemPrompt, buildTranslationSystemPrompt } from '../prompt-utils'
 
 export class GeminiProvider extends BaseTranslationProvider {
   name = 'Gemini'
@@ -21,6 +23,10 @@ export class GeminiProvider extends BaseTranslationProvider {
 
   private isUsingCustomBaseUrl(): boolean {
     return !!this.baseUrl && this.baseUrl !== PROVIDER_DEFAULTS.gemini.baseUrl
+  }
+
+  private isUsingProxy(): boolean {
+    return shouldUseBrowserProxy(this.baseUrl)
   }
 
   private getEndpoint(): string {
@@ -47,8 +53,9 @@ export class GeminiProvider extends BaseTranslationProvider {
       'Content-Type': 'application/json'
     }
 
-    // 如果使用官方 Gemini API，API key 在 URL 中，不需要在 header 中
-    if (!this.isUsingCustomBaseUrl()) {
+    // Browser requests use the same-origin proxy and need the key in headers.
+    // Server-side official Gemini calls keep using the key in the URL.
+    if (!this.isUsingCustomBaseUrl() && !this.isUsingProxy()) {
       return headers
     }
 
@@ -73,6 +80,9 @@ export class GeminiProvider extends BaseTranslationProvider {
       case 'custom':
         if (this.customAuthHeader) {
           headers[this.customAuthHeader] = this.apiKey
+          if (this.isUsingProxy()) {
+            headers['x-kuno-forward-auth-header'] = this.customAuthHeader
+          }
         } else {
           headers['Authorization'] = `Bearer ${this.apiKey}`
         }
@@ -82,6 +92,14 @@ export class GeminiProvider extends BaseTranslationProvider {
     }
 
     return headers
+  }
+
+  getModelProfile(): TranslationModelProfile {
+    return createTranslationModelProfile('gemini', this.model)
+  }
+
+  private getMaxOutputTokens(text: string): number {
+    return Math.min(Math.max(Math.ceil(text.length * 1.8), 1024), this.getModelProfile().maxOutputTokens)
   }
 
   async translate(text: string, from: string, to: string): Promise<string> {
@@ -101,19 +119,17 @@ export class GeminiProvider extends BaseTranslationProvider {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}. 
-                     Maintain the original formatting, tone, and style. 
-                     Only provide the translation without any explanation or additional text.
-                     
-                     Text to translate:
-                     ${text}`
+              text: `${buildTranslationSystemPrompt(fromLang, toLang)}
+
+Text to translate:
+${text}`
             }]
           }],
           generationConfig: {
             temperature: 0.3,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: Math.min(text.length * 3, 8192),
+            maxOutputTokens: this.getMaxOutputTokens(text),
           },
           safetySettings: [
             {
@@ -192,19 +208,17 @@ export class GeminiProvider extends BaseTranslationProvider {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}. 
-                     Maintain the original formatting, tone, and style. 
-                     Only provide the translation without any explanation or additional text.
-                     
-                     Text to translate:
-                     ${text}`
+              text: `${buildTranslationSystemPrompt(fromLang, toLang)}
+
+Text to translate:
+${text}`
             }]
           }],
           generationConfig: {
             temperature: 0.3,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: Math.min(text.length * 3, 8192),
+            maxOutputTokens: this.getMaxOutputTokens(text),
           },
           safetySettings: [
             {
@@ -323,20 +337,17 @@ export class GeminiProvider extends BaseTranslationProvider {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `You are a professional translator. Translate the following numbered texts from ${fromLang} to ${toLang}. 
-                     Maintain the original formatting, tone, and style for each text. 
-                     Keep the same numbering format in your response.
-                     Only provide the translations without any explanation.
-                     
-                     Texts to translate:
-                     ${numberedTexts}`
+              text: `${buildBatchTranslationSystemPrompt(fromLang, toLang)}
+
+Texts to translate:
+${numberedTexts}`
             }]
           }],
           generationConfig: {
             temperature: 0.3,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: Math.min(numberedTexts.length * 3, 8192),
+            maxOutputTokens: this.getMaxOutputTokens(numberedTexts),
           },
           safetySettings: [
             {

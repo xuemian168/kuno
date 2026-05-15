@@ -1,15 +1,19 @@
 import { BaseAISummaryProvider } from './base'
-import { AISummaryResult } from '../types'
+import { AISummaryResult, AuthHeaderType } from '../types'
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
-import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
+import { getProviderEndpoint, PROVIDER_DEFAULTS, shouldUseBrowserProxy } from '../../ai-providers/utils'
 
 export class VolcanoSummaryProvider extends BaseAISummaryProvider {
   name = 'Volcano Engine'
   private baseUrl?: string
+  private authType: AuthHeaderType = 'bearer'
+  private customAuthHeader?: string
 
-  constructor(apiKey?: string, model?: string, maxKeywords?: number, summaryLength?: 'short' | 'medium' | 'long', baseUrl?: string) {
+  constructor(apiKey?: string, model?: string, maxKeywords?: number, summaryLength?: 'short' | 'medium' | 'long', baseUrl?: string, authType?: AuthHeaderType, customAuthHeader?: string) {
     super(apiKey, model || DEFAULT_AI_MODELS.volcano, maxKeywords, summaryLength)
     if (baseUrl) this.baseUrl = baseUrl
+    if (authType) this.authType = authType
+    if (customAuthHeader) this.customAuthHeader = customAuthHeader
   }
 
   private getEndpoint(): string {
@@ -18,6 +22,58 @@ export class VolcanoSummaryProvider extends BaseAISummaryProvider {
       PROVIDER_DEFAULTS.volcano.baseUrl,
       PROVIDER_DEFAULTS.volcano.chatCompletionsPath
     )
+  }
+
+  private isUsingCustomBaseUrl(): boolean {
+    return !!this.baseUrl && this.baseUrl !== PROVIDER_DEFAULTS.volcano.baseUrl
+  }
+
+  private isUsingProxy(): boolean {
+    return shouldUseBrowserProxy(this.baseUrl)
+  }
+
+  private getHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    }
+
+    if (!this.apiKey) {
+      return headers
+    }
+
+    if (!this.isUsingCustomBaseUrl()) {
+      headers['Authorization'] = `Bearer ${this.apiKey}`
+      return headers
+    }
+
+    switch (this.authType) {
+      case 'bearer':
+        headers['Authorization'] = `Bearer ${this.apiKey}`
+        break
+      case 'x-api-key':
+        headers['x-api-key'] = this.apiKey
+        break
+      case 'x-goog-api-key':
+        headers['x-goog-api-key'] = this.apiKey
+        break
+      case 'api-key':
+        headers['api-key'] = this.apiKey
+        break
+      case 'custom':
+        if (this.customAuthHeader) {
+          headers[this.customAuthHeader] = this.apiKey
+          if (this.isUsingProxy()) {
+            headers['x-kuno-forward-auth-header'] = this.customAuthHeader
+          }
+        } else {
+          headers['Authorization'] = `Bearer ${this.apiKey}`
+        }
+        break
+      default:
+        headers['Authorization'] = `Bearer ${this.apiKey}`
+    }
+
+    return headers
   }
 
   async generateSummary(content: string, language: string): Promise<AISummaryResult> {
@@ -40,10 +96,7 @@ export class VolcanoSummaryProvider extends BaseAISummaryProvider {
     try {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
+        headers: this.getHeaders(),
         body: JSON.stringify({
           model: this.model,
           messages: [
@@ -135,10 +188,7 @@ export class VolcanoSummaryProvider extends BaseAISummaryProvider {
     try {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
+        headers: this.getHeaders(),
         body: JSON.stringify({
           model: this.model,
           messages: [
@@ -230,10 +280,7 @@ export class VolcanoSummaryProvider extends BaseAISummaryProvider {
     try {
       const response = await fetch(this.getEndpoint(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
+        headers: this.getHeaders(),
         body: JSON.stringify({
           model: this.model,
           messages: [

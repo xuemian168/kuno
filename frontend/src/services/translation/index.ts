@@ -1,4 +1,4 @@
-import { TranslationProvider, TranslationConfig } from './types'
+import { TranslationProvider, TranslationConfig, TranslationModelProfile, TranslationResult } from './types'
 import { GoogleTranslateProvider } from './providers/google'
 import { DeepLProvider } from './providers/deepl'
 import { OpenAIProvider } from './providers/openai'
@@ -9,6 +9,14 @@ import { LibreTranslateProvider } from './providers/libre-translate'
 import { MyMemoryProvider } from './providers/mymemory'
 import { GoogleFreeProvider } from './providers/google-free'
 import { aiUsageTracker } from '../ai-usage-tracker'
+import {
+  protectTranslatableContent,
+  restoreProtectedContent,
+  splitMarkdownIntoSemanticChunks,
+  validateRestoredContent,
+  validateTranslatedContent
+} from './content-pipeline'
+import { createTranslationModelProfile, estimateTranslationTokens, getAdaptiveChunkTokenBudget } from './model-profiles'
 
 export * from './types'
 
@@ -25,17 +33,22 @@ export interface TranslationUsageStats {
   }
 }
 
-interface CachedContent {
-  id: string
-  originalContent: string
-  lineNumbers?: number[]  // For code blocks with line numbers
+interface SelectiveCommentPlaceholder {
+  placeholder: string
+  commentText: string
+  lineNumber: number
+}
+
+interface CodeCommentSegment {
+  start: number
+  end: number
+  text: string
 }
 
 export class TranslationService {
   private providers: Map<string, TranslationProvider> = new Map()
   private activeProvider?: TranslationProvider
   private selectedComments: any[] = []
-  private contentCache: Map<string, CachedContent> = new Map()
   private usageStats: TranslationUsageStats = {
     totalTranslations: 0,
     totalTokens: 0,
@@ -93,137 +106,120 @@ export class TranslationService {
     this.usageStats.sessionStats.cost += usage.cost
   }
 
-  private async cacheAndRemoveProtectedContent(text: string): Promise<string> {
-    // Clear previous cache
-    this.contentCache.clear()
-    let processedText = text
+  private getActiveProviderProfile(): TranslationModelProfile {
+    return this.activeProvider?.getModelProfile?.() || createTranslationModelProfile('generic')
+  }
 
-    // Cache code blocks
-    const codeBlockPattern = /```[\s\S]*?```/g
-    let match
-    let cacheIndex = 0
-    while ((match = codeBlockPattern.exec(text)) !== null) {
-      const cacheId = `CODE-${cacheIndex}`
-      const codeBlock = match[0]
-      
-      // Calculate line numbers for this code block
-      const beforeCodeBlock = text.substring(0, match.index)
-      const startLineNumber = beforeCodeBlock.split('\n').length
-      const endLineNumber = startLineNumber + codeBlock.split('\n').length - 1
-      
-      this.contentCache.set(cacheId, {
-        id: cacheId,
-        originalContent: codeBlock,
-        lineNumbers: Array.from({length: endLineNumber - startLineNumber + 1}, (_, i) => startLineNumber + i)
+  private estimateActiveProviderTokens(text: string): number {
+    return this.activeProvider?.estimateTokens?.(text) || estimateTranslationTokens(text)
+  }
+
+  private mergeUsage(
+    current: TranslationResult['usage'] | undefined,
+    next: TranslationResult['usage'] | undefined
+  ): TranslationResult['usage'] | undefined {
+    if (!current && !next) {
+      return undefined
+    }
+
+    return {
+      inputTokens: (current?.inputTokens || 0) + (next?.inputTokens || 0),
+      outputTokens: (current?.outputTokens || 0) + (next?.outputTokens || 0),
+      totalTokens: (current?.totalTokens || 0) + (next?.totalTokens || 0),
+      estimatedCost: (current?.estimatedCost || 0) + (next?.estimatedCost || 0),
+      currency: next?.currency || current?.currency || 'USD'
+    }
+  }
+
+  private async callActiveProvider(text: string, from: string, to: string): Promise<{
+    translatedText: string
+    usage?: TranslationResult['usage']
+  }> {
+    if (!this.activeProvider) {
+      throw new Error('No active translation provider')
+    }
+
+    if (this.activeProvider.translateWithUsage) {
+      const result = await this.activeProvider.translateWithUsage(text, from, to)
+      return {
+        translatedText: result.translatedText,
+        usage: result.usage
+      }
+    }
+
+    return {
+      translatedText: await this.activeProvider.translate(text, from, to)
+    }
+  }
+
+  private async translateAdaptively(text: string, from: string, to: string): Promise<{
+    translatedText: string
+    usage?: TranslationResult['usage']
+    inputText: string
+    strategy: 'direct' | 'semantic_chunks'
+    chunkCount: number
+  }> {
+    const protectedContent = protectTranslatableContent(text)
+
+    if (protectedContent.text.trim() === '') {
+      return {
+        translatedText: text,
+        inputText: protectedContent.text,
+        strategy: 'direct',
+        chunkCount: 0
+      }
+    }
+
+    const profile = this.getActiveProviderProfile()
+    const chunkBudget = getAdaptiveChunkTokenBudget(profile)
+    const chunks = splitMarkdownIntoSemanticChunks(
+      protectedContent.text,
+      chunkBudget,
+      (value) => this.estimateActiveProviderTokens(value)
+    )
+    const strategy = chunks.length > 1 ? 'semantic_chunks' : 'direct'
+    let mergedTranslation = ''
+    let mergedUsage: TranslationResult['usage'] | undefined
+
+    for (const chunk of chunks) {
+      const result = await this.callActiveProvider(chunk.text, from, to)
+      const issues = validateTranslatedContent(chunk.text, result.translatedText, chunk.id)
+
+      if (issues.length > 0) {
+        throw new Error(`Translation QA failed: ${issues.map((issue) => issue.message).join('; ')}`)
+      }
+
+      mergedTranslation = mergedTranslation
+        ? `${mergedTranslation}\n\n${result.translatedText}`
+        : result.translatedText
+      mergedUsage = this.mergeUsage(mergedUsage, result.usage)
+    }
+
+    const restoredText = restoreProtectedContent(mergedTranslation, protectedContent.items)
+    const restoreIssues = validateRestoredContent(restoredText)
+
+    if (restoreIssues.length > 0) {
+      throw new Error(`Translation restore failed: ${restoreIssues.map((issue) => issue.message).join('; ')}`)
+    }
+
+    if (strategy === 'semantic_chunks') {
+      console.info('Adaptive translation completed', {
+        provider: this.activeProvider?.name,
+        model: profile.model,
+        chunkCount: chunks.length,
+        chunkBudget,
+        inputTokens: this.estimateActiveProviderTokens(protectedContent.text)
       })
-      
-      // Remove from text, leaving empty lines to maintain line numbers
-      const emptyLines = '\n'.repeat(codeBlock.split('\n').length - 1)
-      processedText = processedText.substring(0, match.index) + 
-                    emptyLines + 
-                    processedText.substring(match.index + codeBlock.length)
-      
-      // Update pattern index
-      codeBlockPattern.lastIndex = match.index + emptyLines.length
-      cacheIndex++
     }
 
-    // Cache other protected patterns
-    const patterns = [
-      // YouTube embed tags
-      /<youtubeembed\s[^>]*\/?>/gi,
-      // Bilibili embed tags  
-      /<bilibiliembed\s[^>]*\/?>/gi,
-      // Generic custom component tags
-      /<[a-z][a-z0-9]*embed\s[^>]*\/?>/gi,
-      // Inline code (markdown)
-      /`[^`\n]+`/g,
-      // HTML/XML tags with attributes
-      /<[a-zA-Z][^>]*>/g,
-      // Programming syntax patterns. Do not protect Markdown link labels.
-      /\[[^\]\n]+\](?!\(|\[)/g,
-      // URLs
-      /https?:\/\/[^\s<>"'\]]+/g,
-      // Markdown link/image destinations that are URL fragments or local paths
-      /\((?:#[^)]+|\/[^)\s]+)\)/g,
-      // File paths
-      /\/[^\s<>"'\]]+\.[a-zA-Z0-9]+/g,
-      // Email addresses
-      /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
-      // Variables and placeholders
-      /\{[^}]+\}/g
-    ]
-
-    patterns.forEach((pattern, patternIndex) => {
-      let match
-      let matchIndex = 0
-      pattern.lastIndex = 0
-      const globalPattern = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g')
-      
-      while ((match = globalPattern.exec(processedText)) !== null) {
-        const cacheId = `PATTERN-${patternIndex}-${matchIndex}`
-        const placeholder = `CACHED-${cacheId}-CACHED`
-        
-        this.contentCache.set(cacheId, {
-          id: cacheId,
-          originalContent: match[0]
-        })
-        
-        // Replace with placeholder instead of empty string
-        processedText = processedText.substring(0, match.index) + 
-                      placeholder + 
-                      processedText.substring(match.index + match[0].length)
-        
-        // Update pattern lastIndex to account for placeholder length
-        globalPattern.lastIndex = match.index + placeholder.length
-        
-        matchIndex++
-        
-        if (matchIndex > 1000) {
-          break
-        }
-      }
-    })
-
-    return processedText
-  }
-
-  private restoreCachedContent(translatedText: string, originalText: string): string {
-    if (this.contentCache.size === 0) {
-      return translatedText
+    return {
+      translatedText: restoredText,
+      usage: mergedUsage,
+      inputText: protectedContent.text,
+      strategy,
+      chunkCount: chunks.length
     }
-
-    let restoredText = translatedText
-    const translatedLines = translatedText.split('\n')
-    
-    // Restore code blocks based on line numbers
-    this.contentCache.forEach((cachedItem) => {
-      if (cachedItem.id.startsWith('CODE-') && cachedItem.lineNumbers) {
-        const startLine = cachedItem.lineNumbers[0] - 1 // Convert to 0-based index
-        const endLine = cachedItem.lineNumbers[cachedItem.lineNumbers.length - 1] - 1
-        
-        // Replace the empty lines with the original code block
-        const beforeLines = translatedLines.slice(0, startLine)
-        const afterLines = translatedLines.slice(endLine + 1)
-        const codeBlockLines = cachedItem.originalContent.split('\n')
-        
-        const newTranslatedLines = [...beforeLines, ...codeBlockLines, ...afterLines]
-        restoredText = newTranslatedLines.join('\n')
-      }
-    })
-
-    // Restore other protected patterns using placeholders
-    this.contentCache.forEach((cachedItem) => {
-      if (cachedItem.id.startsWith('PATTERN-')) {
-        const placeholder = `CACHED-${cachedItem.id}-CACHED`
-        const placeholderRegex = new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
-        restoredText = restoredText.replace(placeholderRegex, cachedItem.originalContent)
-      }
-    })
-    
-    return restoredText
   }
-
 
   private getFencedCodeLineNumbers(text: string): Set<number> {
     const codeLineNumbers = new Set<number>()
@@ -245,52 +241,184 @@ export class TranslationService {
     return codeLineNumbers
   }
 
-  private hasCodeComment(line: string): boolean {
-    const trimmedLine = line.trim()
+  private findInlineSlashCommentIndex(line: string): number {
+    let slashIndex = line.indexOf('//')
 
-    if (trimmedLine.startsWith('#') || trimmedLine.startsWith('//') || trimmedLine.startsWith('<!--')) {
-      return true
+    while (slashIndex >= 0) {
+      const beforeSlash = line.substring(0, slashIndex).toLowerCase()
+      const nearbyPrefix = line.substring(Math.max(0, slashIndex - 8), slashIndex).toLowerCase()
+
+      if (!nearbyPrefix.includes('http:') && !nearbyPrefix.includes('https:') && !beforeSlash.endsWith(':')) {
+        return slashIndex
+      }
+
+      slashIndex = line.indexOf('//', slashIndex + 2)
     }
 
-    if (line.includes('//')) {
-      const slashIndex = line.indexOf('//')
-      const beforeSlash = line.substring(0, slashIndex)
-      return !beforeSlash.includes('http:') && !beforeSlash.includes('https:')
+    return -1
+  }
+
+  private findInlineHashCommentIndex(line: string): number {
+    let hashIndex = line.indexOf('#')
+
+    while (hashIndex >= 0) {
+      const beforeHash = line.substring(0, hashIndex).toLowerCase()
+
+      if (!beforeHash.includes('http') && !beforeHash.includes('www.') && !/\[[^\]]+\]\([^)]*$/.test(beforeHash)) {
+        return hashIndex
+      }
+
+      hashIndex = line.indexOf('#', hashIndex + 1)
     }
 
-    return line.includes('#') && !line.includes('http') && !/\[[^\]]+\]\(#[^)]+\)/.test(line)
+    return -1
+  }
+
+  private createCodeCommentSegment(line: string, start: number, end: number): CodeCommentSegment | null {
+    let textStart = start
+    let textEnd = end
+
+    while (textStart < textEnd && /\s/.test(line[textStart])) {
+      textStart++
+    }
+
+    while (textEnd > textStart && /\s/.test(line[textEnd - 1])) {
+      textEnd--
+    }
+
+    if (textStart >= textEnd) {
+      return null
+    }
+
+    return {
+      start: textStart,
+      end: textEnd,
+      text: line.slice(textStart, textEnd)
+    }
+  }
+
+  private getCodeCommentSegment(line: string): CodeCommentSegment | null {
+    const xmlMatch = line.match(/^(.*?<!--\s*)([\s\S]*?)(\s*-->.*)$/)
+    if (xmlMatch) {
+      return this.createCodeCommentSegment(
+        line,
+        xmlMatch[1].length,
+        xmlMatch[1].length + xmlMatch[2].length
+      )
+    }
+
+    const hashLineMatch = line.match(/^(\s*#\s*)(.+)$/)
+    if (hashLineMatch) {
+      return this.createCodeCommentSegment(line, hashLineMatch[1].length, line.length)
+    }
+
+    const slashLineMatch = line.match(/^(\s*\/\/\s*)(.+)$/)
+    if (slashLineMatch) {
+      return this.createCodeCommentSegment(line, slashLineMatch[1].length, line.length)
+    }
+
+    const slashIndex = this.findInlineSlashCommentIndex(line)
+    if (slashIndex >= 0) {
+      return this.createCodeCommentSegment(line, slashIndex + 2, line.length)
+    }
+
+    const hashIndex = this.findInlineHashCommentIndex(line)
+    if (hashIndex >= 0) {
+      return this.createCodeCommentSegment(line, hashIndex + 1, line.length)
+    }
+
+    return null
+  }
+
+  private isSelectedCodeComment(lineNumber: number, commentText: string): boolean {
+    const normalizedCommentText = commentText.trim()
+
+    return this.selectedComments.some((comment) => {
+      if (comment.lineNumber !== lineNumber) {
+        return false
+      }
+
+      if (!comment.commentText) {
+        return true
+      }
+
+      return comment.commentText.trim() === normalizedCommentText
+    })
+  }
+
+  private prepareSelectiveCommentPlaceholders(text: string): {
+    text: string
+    comments: SelectiveCommentPlaceholder[]
+  } {
+    const fencedCodeLineNumbers = this.getFencedCodeLineNumbers(text)
+    const comments: SelectiveCommentPlaceholder[] = []
+
+    const lines = text.split('\n').map((line, index) => {
+      const lineNumber = index + 1
+
+      if (!fencedCodeLineNumbers.has(lineNumber)) {
+        return line
+      }
+
+      const segment = this.getCodeCommentSegment(line)
+      if (!segment || !this.isSelectedCodeComment(lineNumber, segment.text)) {
+        return line
+      }
+
+      const placeholder = `{{KUNO_COMMENT_${String(comments.length).padStart(4, '0')}}}`
+      comments.push({
+        placeholder,
+        commentText: segment.text,
+        lineNumber
+      })
+
+      return `${line.slice(0, segment.start)}${placeholder}${line.slice(segment.end)}`
+    })
+
+    return {
+      text: lines.join('\n'),
+      comments
+    }
+  }
+
+  private restoreSelectiveCommentPlaceholders(
+    text: string,
+    translatedComments: Map<string, string>
+  ): string {
+    let result = text
+
+    translatedComments.forEach((translatedComment, placeholder) => {
+      result = result.split(placeholder).join(translatedComment.trim())
+    })
+
+    return result
   }
 
   private async translateWithSelectiveComments(text: string, from: string, to: string): Promise<string> {
-    // Cache protected content and remove it from text
-    const processedText = await this.cacheAndRemoveProtectedContent(text)
-    
-    // Skip translation if text is empty after removing protected content
-    if (processedText.trim() === '') {
-      return text
-    }
-
+    const preparedText = this.prepareSelectiveCommentPlaceholders(text)
     const providerName = this.activeProvider!.name.toLowerCase()
     const startTime = Date.now()
     let success = false
     let errorMessage: string | undefined
-    let usage: any = null
+    let usage: TranslationResult['usage'] | undefined
 
     try {
-      // Translate the cleaned text normally
-      let translatedText: string
+      const result = await this.translateAdaptively(preparedText.text, from, to)
+      usage = result.usage
+      const translatedComments = new Map<string, string>()
 
-      // Use translateWithUsage if available (for AI providers)
-      if (this.activeProvider!.translateWithUsage) {
-        const result = await this.activeProvider!.translateWithUsage(processedText, from, to)
-        translatedText = result.translatedText
-        usage = result.usage
-      } else {
-        // Fallback to regular translate
-        translatedText = await this.activeProvider!.translate(processedText, from, to)
+      for (const comment of preparedText.comments) {
+        const translatedComment = await this.callActiveProvider(comment.commentText, from, to)
+        translatedComments.set(comment.placeholder, translatedComment.translatedText)
+        usage = this.mergeUsage(usage, translatedComment.usage)
       }
 
-      // Update usage stats if available
+      const translatedText = this.restoreSelectiveCommentPlaceholders(
+        result.translatedText,
+        translatedComments
+      )
+      success = true
+
       if (usage) {
         this.updateUsageStats({
           translations: 1,
@@ -299,13 +427,6 @@ export class TranslationService {
         })
       }
       
-      // Restore cached content
-      const restoredText = this.restoreCachedContent(translatedText, text)
-      
-      // Now handle selective comment translation on the result
-      const result = await this.applySelectiveCommentTranslation(restoredText, text, from, to)
-      success = true
-      
       // Track usage with detailed metrics
       const responseTime = Date.now() - startTime
       await aiUsageTracker.trackUsage({
@@ -313,8 +434,8 @@ export class TranslationService {
         provider: providerName,
         operation: 'translate_text',
         language: `${from}->${to}`,
-        inputLength: processedText.length,
-        outputLength: result.length,
+        inputLength: result.inputText.length + preparedText.comments.reduce((sum, comment) => sum + comment.commentText.length, 0),
+        outputLength: translatedText.length,
         inputTokens: usage?.inputTokens || 0,
         outputTokens: usage?.outputTokens || 0,
         totalTokens: usage?.totalTokens || 0,
@@ -325,7 +446,7 @@ export class TranslationService {
         errorMessage
       })
       
-      return result
+      return translatedText
       
     } catch (error) {
       success = false
@@ -338,7 +459,7 @@ export class TranslationService {
         provider: providerName,
         operation: 'translate_text',
         language: `${from}->${to}`,
-        inputLength: processedText.length,
+        inputLength: preparedText.text.length,
         outputLength: 0,
         inputTokens: 0,
         outputTokens: 0,
@@ -354,75 +475,6 @@ export class TranslationService {
       throw error
     }
   }
-
-  private async applySelectiveCommentTranslation(translatedText: string, originalText: string, from: string, to: string): Promise<string> {
-    const translatedLines = translatedText.split('\n')
-    const originalLines = originalText.split('\n')
-    const fencedCodeLineNumbers = this.getFencedCodeLineNumbers(originalText)
-    const processedLines: string[] = []
-    
-    for (let i = 0; i < Math.max(translatedLines.length, originalLines.length); i++) {
-      const translatedLine = translatedLines[i] || ''
-      const originalLine = originalLines[i] || ''
-      const lineNumber = i + 1
-      const trimmedOriginalLine = originalLine.trim()
-      
-      // Only preserve selected code comments inside fenced code blocks. Markdown
-      // headings and TOC anchor links also contain "#", but they are content.
-      const hasComment = fencedCodeLineNumbers.has(lineNumber) && this.hasCodeComment(originalLine)
-      
-      if (hasComment) {
-        // Check if this line's comments should be translated
-        const shouldTranslateComments = this.selectedComments.some(comment => 
-          comment.lineNumber === lineNumber
-        )
-        
-        if (shouldTranslateComments) {
-          // Directly translate the comment part from original
-          if (trimmedOriginalLine.startsWith('#')) {
-            // Hash comment
-            const match = originalLine.match(/^(\s*)(#\s*)(.+)$/)
-            if (match) {
-              const [, indent, hashSymbol, commentText] = match
-              try {
-                const translatedComment = await this.activeProvider!.translate(commentText, from, to)
-                const translatedCommentLine = indent + hashSymbol + translatedComment
-                processedLines.push(translatedCommentLine)
-              } catch (error) {
-                processedLines.push(translatedLine) // Fallback to translated version
-              }
-            } else {
-              processedLines.push(translatedLine)
-            }
-          } else if (originalLine.includes('#')) {
-            // Inline hash comment
-            const hashIndex = originalLine.indexOf('#')
-            const codePart = originalLine.substring(0, hashIndex + 1)
-            const commentPart = originalLine.substring(hashIndex + 1).trim()
-            
-            try {
-              const translatedComment = await this.activeProvider!.translate(commentPart, from, to)
-              const translatedCommentLine = codePart + ' ' + translatedComment
-              processedLines.push(translatedCommentLine)
-            } catch (error) {
-              processedLines.push(translatedLine) // Fallback to translated version
-            }
-          } else {
-            processedLines.push(translatedLine)
-          }
-        } else {
-          // Keep original comment line unchanged (don't translate comments)
-          processedLines.push(originalLine)
-        }
-      } else {
-        // No comments, use the translated version
-        processedLines.push(translatedLine)
-      }
-    }
-    
-    return processedLines.join('\n')
-  }
-
 
   // Public method to clean up corrupted protected content
   public cleanupProtectedContent(text: string): string {
@@ -476,14 +528,7 @@ export class TranslationService {
   async translate(text: string, from: string, to: string, selectedComments?: any[]): Promise<string> {
     // Use selectedComments parameter or existing stored comments
     const commentsToUse = selectedComments || this.selectedComments
-    
-    // If we have selected comments, use direct selective translation
-    if (commentsToUse && commentsToUse.length > 0) {
-      // Store for use in translateWithSelectiveComments
-      this.selectedComments = commentsToUse
-      return await this.translateWithSelectiveComments(text, from, to)
-    }
-    
+
     if (!this.activeProvider) {
       throw new Error('No active translation provider')
     }
@@ -491,17 +536,12 @@ export class TranslationService {
     if (!this.activeProvider.isConfigured()) {
       throw new Error(`Translation provider '${this.activeProvider.name}' is not configured`)
     }
-
-    // Check if this is an AI provider (has translateWithUsage method)
-    const isAIProvider = !!this.activeProvider.translateWithUsage
     
-    // AI providers: translate full content including code blocks
-    // Traditional providers: use protection logic for code blocks
-    const processedText = isAIProvider ? text : await this.cacheAndRemoveProtectedContent(text)
-    
-    // Skip translation if text is empty after removing protected content (traditional providers only)
-    if (!isAIProvider && processedText.trim() === '') {
-      return text
+    // If we have selected comments, use direct selective translation
+    if (commentsToUse && commentsToUse.length > 0) {
+      // Store for use in translateWithSelectiveComments
+      this.selectedComments = commentsToUse
+      return await this.translateWithSelectiveComments(text, from, to)
     }
 
     try {
@@ -509,20 +549,11 @@ export class TranslationService {
       const startTime = Date.now()
       let success = false
       let errorMessage: string | undefined
-      let usage: any = null
+      let usage: TranslationResult['usage'] | undefined
 
       try {
-        let translatedText: string
-
-        // Use translateWithUsage if available (for AI providers)
-        if (this.activeProvider!.translateWithUsage) {
-          const result = await this.activeProvider!.translateWithUsage(processedText, from, to)
-          translatedText = result.translatedText
-          usage = result.usage
-        } else {
-          // Fallback to regular translate
-          translatedText = await this.activeProvider!.translate(processedText, from, to)
-        }
+        const result = await this.translateAdaptively(text, from, to)
+        usage = result.usage
 
         // Update local usage stats if available
         if (usage) {
@@ -532,9 +563,7 @@ export class TranslationService {
             cost: usage.estimatedCost || 0
           })
         }
-        
-        // Restore cached content (only for traditional providers)
-        const result = isAIProvider ? translatedText : this.restoreCachedContent(translatedText, text)
+
         success = true
         
         // Track usage with detailed metrics
@@ -544,8 +573,8 @@ export class TranslationService {
           provider: providerName,
           operation: 'translate_text',
           language: `${from}->${to}`,
-          inputLength: processedText.length,
-          outputLength: result.length,
+          inputLength: result.inputText.length,
+          outputLength: result.translatedText.length,
           inputTokens: usage?.inputTokens || 0,
           outputTokens: usage?.outputTokens || 0,
           totalTokens: usage?.totalTokens || 0,
@@ -556,7 +585,7 @@ export class TranslationService {
           errorMessage
         })
         
-        return result
+        return result.translatedText
       } catch (error) {
         success = false
         errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -568,7 +597,7 @@ export class TranslationService {
           provider: providerName,
           operation: 'translate_text',
           language: `${from}->${to}`,
-          inputLength: processedText.length,
+          inputLength: text.length,
           outputLength: 0,
           inputTokens: 0,
           outputTokens: 0,
@@ -661,10 +690,23 @@ export class TranslationService {
         provider = new GeminiProvider(config.apiKey, config.model, config.baseUrl, config.authType, config.customAuthHeader)
         break
       case 'volcano':
-        provider = new VolcanoProvider(config.apiKey, config.apiSecret, config.region, config.baseUrl)
+        provider = new VolcanoProvider(
+          config.apiKey,
+          config.model,
+          config.region,
+          config.baseUrl,
+          config.authType,
+          config.customAuthHeader
+        )
         break
       case 'claude':
-        provider = new ClaudeProvider(config.apiKey, config.model, config.baseUrl)
+        provider = new ClaudeProvider(
+          config.apiKey,
+          config.model,
+          config.baseUrl,
+          config.authType,
+          config.customAuthHeader
+        )
         break
       case 'libretranslate':
         provider = new LibreTranslateProvider(config.apiKey, config.apiUrl)

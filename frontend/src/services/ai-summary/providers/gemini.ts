@@ -1,7 +1,7 @@
 import { BaseAISummaryProvider } from './base'
 import { AISummaryResult, AuthHeaderType } from '../types'
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
-import { getGeminiEndpoint, getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
+import { getGeminiEndpoint, getProviderEndpoint, PROVIDER_DEFAULTS, shouldUseBrowserProxy } from '../../ai-providers/utils'
 
 export class GeminiSummaryProvider extends BaseAISummaryProvider {
   name = 'Gemini Summary'
@@ -20,6 +20,10 @@ export class GeminiSummaryProvider extends BaseAISummaryProvider {
 
   private isUsingCustomBaseUrl(): boolean {
     return !!this.baseUrl && this.baseUrl !== PROVIDER_DEFAULTS.gemini.baseUrl
+  }
+
+  private isUsingProxy(): boolean {
+    return shouldUseBrowserProxy(this.baseUrl)
   }
 
   private getEndpoint(): string {
@@ -46,8 +50,9 @@ export class GeminiSummaryProvider extends BaseAISummaryProvider {
       'Content-Type': 'application/json'
     }
 
-    // 如果使用官方 Gemini API，API key 在 URL 中，不需要在 header 中
-    if (!this.isUsingCustomBaseUrl()) {
+    // Browser requests use the same-origin proxy and need the key in headers.
+    // Server-side official Gemini calls keep using the key in the URL.
+    if (!this.isUsingCustomBaseUrl() && !this.isUsingProxy()) {
       return headers
     }
 
@@ -72,6 +77,9 @@ export class GeminiSummaryProvider extends BaseAISummaryProvider {
       case 'custom':
         if (this.customAuthHeader) {
           headers[this.customAuthHeader] = this.apiKey
+          if (this.isUsingProxy()) {
+            headers['x-kuno-forward-auth-header'] = this.customAuthHeader
+          }
         } else {
           headers['Authorization'] = `Bearer ${this.apiKey}`
         }

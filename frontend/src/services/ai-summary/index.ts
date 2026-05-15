@@ -220,7 +220,9 @@ export class AISummaryService {
           config.model,
           config.maxKeywords,
           config.summaryLength,
-          config.baseUrl
+          config.baseUrl,
+          config.authType,
+          config.customAuthHeader
         )
         break
       case 'claude':
@@ -229,7 +231,9 @@ export class AISummaryService {
           config.model,
           config.maxKeywords,
           config.summaryLength,
-          config.baseUrl
+          config.baseUrl,
+          config.authType,
+          config.customAuthHeader
         )
         break
       default:

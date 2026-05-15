@@ -1,9 +1,11 @@
 import { BaseTranslationProvider } from './base'
-import { TranslationResult, AuthHeaderType } from '../types'
+import { TranslationResult, AuthHeaderType, TranslationModelProfile } from '../types'
 import { buildOpenAIChatRequestBody, getOpenAIResponseText } from '../../ai-providers/openai-chat'
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { formatErrorMessage } from '../error-messages'
-import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
+import { getProviderEndpoint, PROVIDER_DEFAULTS, shouldUseBrowserProxy } from '../../ai-providers/utils'
+import { createTranslationModelProfile } from '../model-profiles'
+import { buildBatchTranslationSystemPrompt, buildTranslationSystemPrompt } from '../prompt-utils'
 
 export class OpenAIProvider extends BaseTranslationProvider {
   name = 'OpenAI'
@@ -26,6 +28,14 @@ export class OpenAIProvider extends BaseTranslationProvider {
       PROVIDER_DEFAULTS.openai.baseUrl,
       PROVIDER_DEFAULTS.openai.chatCompletionsPath
     )
+  }
+
+  getModelProfile(): TranslationModelProfile {
+    return createTranslationModelProfile('openai', this.model)
+  }
+
+  private getMaxOutputTokens(text: string): number {
+    return Math.min(Math.max(Math.ceil(text.length * 1.5), 1024), this.getModelProfile().maxOutputTokens)
   }
 
   private buildAuthHeaders(): Record<string, string> {
@@ -53,6 +63,9 @@ export class OpenAIProvider extends BaseTranslationProvider {
       case 'custom':
         if (this.customAuthHeader) {
           headers[this.customAuthHeader] = this.apiKey
+          if (shouldUseBrowserProxy(this.baseUrl)) {
+            headers['x-kuno-forward-auth-header'] = this.customAuthHeader
+          }
         } else {
           // Fallback to bearer if custom header not specified
           headers['Authorization'] = `Bearer ${this.apiKey}`
@@ -81,12 +94,10 @@ export class OpenAIProvider extends BaseTranslationProvider {
         headers: this.buildAuthHeaders(),
         body: JSON.stringify(buildOpenAIChatRequestBody({
           model: this.model,
-          systemPrompt: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}. 
-Maintain the original formatting, tone, and style. 
-Only provide the translation without any explanation or additional text.`,
+          systemPrompt: buildTranslationSystemPrompt(fromLang, toLang),
           userPrompt: text,
           temperature: 0.3,
-          maxOutputTokens: Math.min(text.length * 2, 4000)
+          maxOutputTokens: this.getMaxOutputTokens(text)
         }))
       })
 
@@ -142,12 +153,10 @@ Only provide the translation without any explanation or additional text.`,
         headers: this.buildAuthHeaders(),
         body: JSON.stringify(buildOpenAIChatRequestBody({
           model: this.model,
-          systemPrompt: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}. 
-Maintain the original formatting, tone, and style. 
-Only provide the translation without any explanation or additional text.`,
+          systemPrompt: buildTranslationSystemPrompt(fromLang, toLang),
           userPrompt: text,
           temperature: 0.3,
-          maxOutputTokens: Math.min(text.length * 2, 4000)
+          maxOutputTokens: this.getMaxOutputTokens(text)
         }))
       })
 
@@ -248,13 +257,10 @@ Only provide the translation without any explanation or additional text.`,
         headers: this.buildAuthHeaders(),
         body: JSON.stringify(buildOpenAIChatRequestBody({
           model: this.model,
-          systemPrompt: `You are a professional translator. Translate the following numbered texts from ${fromLang} to ${toLang}. 
-Maintain the original formatting, tone, and style for each text. 
-Keep the same numbering format in your response.
-Only provide the translations without any explanation.`,
+          systemPrompt: buildBatchTranslationSystemPrompt(fromLang, toLang),
           userPrompt: numberedTexts,
           temperature: 0.3,
-          maxOutputTokens: Math.min(numberedTexts.length * 2, 4000)
+          maxOutputTokens: this.getMaxOutputTokens(numberedTexts)
         }))
       })
 

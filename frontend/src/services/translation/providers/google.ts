@@ -1,7 +1,13 @@
 import { BaseTranslationProvider } from './base'
+import { TranslationModelProfile } from '../types'
+import { createTranslationModelProfile } from '../model-profiles'
 
 export class GoogleTranslateProvider extends BaseTranslationProvider {
   name = 'Google Translate'
+
+  getModelProfile(): TranslationModelProfile {
+    return createTranslationModelProfile('google')
+  }
   
   async translate(text: string, from: string, to: string): Promise<string> {
     if (!this.isConfigured()) {

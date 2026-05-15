@@ -11,7 +11,7 @@ import {
 } from '../types'
 import { buildOpenAIChatRequestBody, getOpenAIResponseText } from '../../ai-providers/openai-chat'
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
-import { getProviderEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
+import { getProviderEndpoint, PROVIDER_DEFAULTS, shouldUseBrowserProxy } from '../../ai-providers/utils'
 
 export class OpenAISEOProvider extends BaseSEOAIProvider {
   name = 'OpenAI SEO'
@@ -61,6 +61,9 @@ export class OpenAISEOProvider extends BaseSEOAIProvider {
       case 'custom':
         if (this.customAuthHeader) {
           headers[this.customAuthHeader] = this.apiKey
+          if (shouldUseBrowserProxy(this.baseUrl)) {
+            headers['x-kuno-forward-auth-header'] = this.customAuthHeader
+          }
         } else {
           // Fallback to bearer if custom header not specified
           headers['Authorization'] = `Bearer ${this.apiKey}`

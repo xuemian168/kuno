@@ -1,30 +1,79 @@
 import { BaseAISummaryProvider } from './base'
-import { AISummaryResult } from '../types'
+import { AISummaryResult, AuthHeaderType } from '../types'
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { buildClaudeMessagesRequestBody, getClaudeResponseText } from '../../ai-providers/claude-messages'
-import { getClaudeEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
+import { getClaudeEndpoint, PROVIDER_DEFAULTS, shouldUseBrowserProxy } from '../../ai-providers/utils'
 
 export class ClaudeSummaryProvider extends BaseAISummaryProvider {
   name = 'Claude Summary'
   protected model = DEFAULT_AI_MODELS.claude
   private baseUrl?: string
+  private authType: AuthHeaderType = 'x-api-key'
+  private customAuthHeader?: string
 
-  constructor(apiKey?: string, model?: string, maxKeywords?: number, summaryLength?: 'short' | 'medium' | 'long', baseUrl?: string) {
+  constructor(apiKey?: string, model?: string, maxKeywords?: number, summaryLength?: 'short' | 'medium' | 'long', baseUrl?: string, authType?: AuthHeaderType, customAuthHeader?: string) {
     super(apiKey, model, maxKeywords, summaryLength)
     if (model) this.model = model
     if (baseUrl) this.baseUrl = baseUrl
+    if (authType) this.authType = authType
+    if (customAuthHeader) this.customAuthHeader = customAuthHeader
   }
 
   private getEndpoint(): string {
     return getClaudeEndpoint(this.baseUrl)
   }
 
+  private isUsingCustomBaseUrl(): boolean {
+    return !!this.baseUrl && this.baseUrl !== PROVIDER_DEFAULTS.claude.baseUrl
+  }
+
+  private isUsingProxy(): boolean {
+    return shouldUseBrowserProxy(this.baseUrl)
+  }
+
   private getHeaders(): HeadersInit {
-    return {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'x-api-key': this.apiKey || '',
       'anthropic-version': PROVIDER_DEFAULTS.claude.apiVersion,
     }
+
+    if (!this.apiKey) {
+      return headers
+    }
+
+    if (!this.isUsingCustomBaseUrl()) {
+      headers['x-api-key'] = this.apiKey
+      return headers
+    }
+
+    switch (this.authType) {
+      case 'bearer':
+        headers['Authorization'] = `Bearer ${this.apiKey}`
+        break
+      case 'x-api-key':
+        headers['x-api-key'] = this.apiKey
+        break
+      case 'x-goog-api-key':
+        headers['x-goog-api-key'] = this.apiKey
+        break
+      case 'api-key':
+        headers['api-key'] = this.apiKey
+        break
+      case 'custom':
+        if (this.customAuthHeader) {
+          headers[this.customAuthHeader] = this.apiKey
+          if (this.isUsingProxy()) {
+            headers['x-kuno-forward-auth-header'] = this.customAuthHeader
+          }
+        } else {
+          headers['x-api-key'] = this.apiKey
+        }
+        break
+      default:
+        headers['x-api-key'] = this.apiKey
+    }
+
+    return headers
   }
 
   async generateSummary(content: string, language: string): Promise<AISummaryResult> {

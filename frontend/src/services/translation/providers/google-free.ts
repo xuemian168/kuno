@@ -1,10 +1,16 @@
 import { BaseTranslationProvider } from './base'
+import { TranslationModelProfile } from '../types'
+import { createTranslationModelProfile } from '../model-profiles'
 
 export class GoogleFreeProvider extends BaseTranslationProvider {
   name = 'Google Translate (Free)'
   
   constructor() {
     super() // No API key needed
+  }
+
+  getModelProfile(): TranslationModelProfile {
+    return createTranslationModelProfile('google-free')
   }
 
   async translate(text: string, from: string, to: string): Promise<string> {

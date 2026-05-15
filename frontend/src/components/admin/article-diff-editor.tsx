@@ -578,8 +578,6 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
       if (
         // Special symbols at start
         /^[⚠️❗️💡🔥✅❌⭐️📝💻🎯🚀🔔📋📊⚡️🎉🛠️🔗📁📖📌]+/.test(trimmedLine) ||
-        // Markdown links
-        /^\s*-\s*\[.*\]\(.*\)\s*$/.test(line) ||
         // URLs
         /^https?:\/\//.test(trimmedLine) ||
         // Common domains
@@ -593,7 +591,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
         /<YouTubeEmbed\s+.*?\/>/.test(line) ||
         /<BiliBiliEmbed\s+.*?\/>/.test(line)
       ) {
-        const placeholder = `[NOTR-${placeholderIndex}-KEEP]`
+        const placeholder = `{{KUNO_NOTR_${String(placeholderIndex).padStart(4, '0')}}}`
         placeholderIndex++
         placeholders.set(placeholder, line)
         return placeholder

@@ -3,8 +3,26 @@ export interface TranslationProvider {
   translate(text: string, from: string, to: string): Promise<string>
   translateBatch(texts: string[], from: string, to: string): Promise<string[]>
   translateWithUsage?(text: string, from: string, to: string): Promise<TranslationResult>
+  getModelProfile?(): TranslationModelProfile
+  estimateTokens?(text: string): number
   isConfigured(): boolean
   getSupportedLanguages(): string[]
+}
+
+export type TranslationTokenizer = 'openai' | 'anthropic' | 'google' | 'heuristic'
+
+export interface TranslationModelProfile {
+  provider: TranslationConfig['provider'] | string
+  model?: string
+  contextWindow: number
+  maxOutputTokens: number
+  supportsSystemPrompt: boolean
+  supportsJsonSchema: boolean
+  supportsBatch: boolean
+  supportsPromptCache: boolean
+  tokenizer: TranslationTokenizer
+  safetyMarginRatio: number
+  preferredChunkTokens?: number
 }
 
 export interface TranslationResult {

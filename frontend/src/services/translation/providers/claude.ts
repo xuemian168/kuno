@@ -1,31 +1,90 @@
 import { BaseTranslationProvider } from './base'
-import { TranslationResult } from '../types'
+import { AuthHeaderType, TranslationResult, TranslationModelProfile } from '../types'
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { buildClaudeMessagesRequestBody, getClaudeResponseText } from '../../ai-providers/claude-messages'
 import { formatErrorMessage } from '../error-messages'
-import { getClaudeEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
+import { getClaudeEndpoint, PROVIDER_DEFAULTS, shouldUseBrowserProxy } from '../../ai-providers/utils'
+import { createTranslationModelProfile } from '../model-profiles'
+import { buildBatchTranslationSystemPrompt, buildTranslationSystemPrompt } from '../prompt-utils'
 
 export class ClaudeProvider extends BaseTranslationProvider {
   name = 'Claude'
   private model = DEFAULT_AI_MODELS.claude
   private baseUrl?: string
+  private authType: AuthHeaderType = 'x-api-key'
+  private customAuthHeader?: string
 
-  constructor(apiKey?: string, model?: string, baseUrl?: string) {
+  constructor(apiKey?: string, model?: string, baseUrl?: string, authType?: AuthHeaderType, customAuthHeader?: string) {
     super(apiKey)
     if (model) this.model = model
     if (baseUrl) this.baseUrl = baseUrl
+    if (authType) this.authType = authType
+    if (customAuthHeader) this.customAuthHeader = customAuthHeader
   }
 
   private getEndpoint(): string {
     return getClaudeEndpoint(this.baseUrl)
   }
 
+  private isUsingCustomBaseUrl(): boolean {
+    return !!this.baseUrl && this.baseUrl !== PROVIDER_DEFAULTS.claude.baseUrl
+  }
+
+  private isUsingProxy(): boolean {
+    return shouldUseBrowserProxy(this.baseUrl)
+  }
+
   private getHeaders(): HeadersInit {
-    return {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'x-api-key': this.apiKey || '',
       'anthropic-version': PROVIDER_DEFAULTS.claude.apiVersion,
     }
+
+    if (!this.apiKey) {
+      return headers
+    }
+
+    if (!this.isUsingCustomBaseUrl()) {
+      headers['x-api-key'] = this.apiKey
+      return headers
+    }
+
+    switch (this.authType) {
+      case 'bearer':
+        headers['Authorization'] = `Bearer ${this.apiKey}`
+        break
+      case 'x-api-key':
+        headers['x-api-key'] = this.apiKey
+        break
+      case 'x-goog-api-key':
+        headers['x-goog-api-key'] = this.apiKey
+        break
+      case 'api-key':
+        headers['api-key'] = this.apiKey
+        break
+      case 'custom':
+        if (this.customAuthHeader) {
+          headers[this.customAuthHeader] = this.apiKey
+          if (this.isUsingProxy()) {
+            headers['x-kuno-forward-auth-header'] = this.customAuthHeader
+          }
+        } else {
+          headers['x-api-key'] = this.apiKey
+        }
+        break
+      default:
+        headers['x-api-key'] = this.apiKey
+    }
+
+    return headers
+  }
+
+  getModelProfile(): TranslationModelProfile {
+    return createTranslationModelProfile('claude', this.model)
+  }
+
+  private getMaxOutputTokens(text: string): number {
+    return Math.min(Math.max(Math.ceil(text.length * 1.5), 1024), this.getModelProfile().maxOutputTokens)
   }
 
   async translate(text: string, from: string, to: string): Promise<string> {
@@ -44,13 +103,11 @@ export class ClaudeProvider extends BaseTranslationProvider {
         headers: this.getHeaders(),
         body: JSON.stringify(buildClaudeMessagesRequestBody({
           model: this.model,
-          systemPrompt: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}.
-Maintain the original formatting, tone, and style.
-Only provide the translation without any explanation or additional text.`,
+          systemPrompt: buildTranslationSystemPrompt(fromLang, toLang),
           userPrompt: `Text to translate:
 ${text}`,
           temperature: 0.3,
-          maxOutputTokens: 4096,
+          maxOutputTokens: this.getMaxOutputTokens(text),
         }))
       })
 
@@ -107,13 +164,11 @@ ${text}`,
         headers: this.getHeaders(),
         body: JSON.stringify(buildClaudeMessagesRequestBody({
           model: this.model,
-          systemPrompt: `You are a professional translator. Translate the following text from ${fromLang} to ${toLang}.
-Maintain the original formatting, tone, and style.
-Only provide the translation without any explanation or additional text.`,
+          systemPrompt: buildTranslationSystemPrompt(fromLang, toLang),
           userPrompt: `Text to translate:
 ${text}`,
           temperature: 0.3,
-          maxOutputTokens: 4096,
+          maxOutputTokens: this.getMaxOutputTokens(text),
         }))
       })
 
@@ -207,13 +262,10 @@ ${text}`,
         headers: this.getHeaders(),
         body: JSON.stringify(buildClaudeMessagesRequestBody({
           model: this.model,
-          systemPrompt: `You are a professional translator. Translate the following numbered texts from ${fromLang} to ${toLang}.
-Maintain the original formatting, tone, and style for each text.
-Keep the same numbering format in your response.
-Only provide the translations without any explanation.`,
+          systemPrompt: buildBatchTranslationSystemPrompt(fromLang, toLang),
           userPrompt: numberedTexts,
           temperature: 0.3,
-          maxOutputTokens: 4096,
+          maxOutputTokens: this.getMaxOutputTokens(numberedTexts),
         }))
       })
 
