@@ -15,6 +15,96 @@ import { MermaidChart } from '@/components/mermaid-chart'
 import { MermaidErrorBoundary } from '@/components/mermaid-error-boundary'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 
+function decodeAnchorId(value: string): string {
+  const rawId = value.replace(/^#/, '')
+
+  try {
+    return decodeURIComponent(rawId)
+  } catch {
+    return rawId
+  }
+}
+
+function normalizeAnchorId(value: string): string {
+  return decodeAnchorId(value)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\u4e00-\u9fff-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function isSamePageAnchorLink(href?: string): boolean {
+  if (!href) {
+    return false
+  }
+
+  if (href.startsWith('#')) {
+    return href.length > 1
+  }
+
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  try {
+    const url = new URL(href, window.location.href)
+    return Boolean(url.hash) &&
+      url.origin === window.location.origin &&
+      url.pathname === window.location.pathname &&
+      url.search === window.location.search
+  } catch {
+    return false
+  }
+}
+
+function shouldOpenInNewTab(href?: string): boolean {
+  return Boolean(href && /^https?:\/\//i.test(href))
+}
+
+function findAnchorTarget(hash: string): HTMLElement | null {
+  const rawId = decodeAnchorId(hash).trim()
+  const exactTarget = document.getElementById(rawId)
+
+  if (exactTarget) {
+    return exactTarget
+  }
+
+  const normalizedTarget = normalizeAnchorId(rawId)
+  if (!normalizedTarget) {
+    return null
+  }
+
+  const headings = Array.from(
+    document.querySelectorAll<HTMLElement>('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]')
+  )
+
+  return headings.find((heading) => normalizeAnchorId(heading.id) === normalizedTarget) || null
+}
+
+function scrollToAnchor(href: string): boolean {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  const hash = href.startsWith('#')
+    ? href
+    : new URL(href, window.location.href).hash
+
+  const target = findAnchorTarget(hash)
+  if (!target) {
+    return false
+  }
+
+  const yOffset = -80
+  const y = target.getBoundingClientRect().top + window.pageYOffset + yOffset
+  window.scrollTo({ top: y, behavior: 'smooth' })
+  window.history.pushState(null, '', `${window.location.pathname}${window.location.search}#${encodeURIComponent(target.id)}`)
+
+  return true
+}
+
 interface MarkdownRendererProps {
   content: string
   className?: string
@@ -241,10 +331,15 @@ export function MarkdownRenderer({ content, className = "", includeStructuredDat
           ),
           // Custom component for links
           a: ({ href, children }) => (
-            <a 
-              href={href} 
-              target="_blank" 
-              rel="noopener noreferrer"
+            <a
+              href={href}
+              target={shouldOpenInNewTab(href) ? '_blank' : undefined}
+              rel={shouldOpenInNewTab(href) ? 'noopener noreferrer' : undefined}
+              onClick={(event) => {
+                if (isSamePageAnchorLink(href) && scrollToAnchor(href!)) {
+                  event.preventDefault()
+                }
+              }}
               className="text-primary underline hover:no-underline"
             >
               {children}
