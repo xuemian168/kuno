@@ -36,6 +36,11 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          if [[ "$VERSION" == *-* ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
           echo "Version: $VERSION"
           echo "Tag: ${GITHUB_REF#refs/tags/}"
 
@@ -56,9 +61,9 @@ jobs:
           images: ${{ env.IMAGE_NAME }}
           tags: |
             type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest
+            type=semver,pattern={{major}}.{{minor}},enable=${{ steps.extract_version.outputs.prerelease == 'false' }}
+            type=semver,pattern={{major}},enable=${{ steps.extract_version.outputs.prerelease == 'false' }}
+            type=raw,value=latest,enable=${{ steps.extract_version.outputs.prerelease == 'false' }}
           labels: |
             org.opencontainers.image.title=kuno
             org.opencontainers.image.description=A multilingual blog system with Go backend and Next.js frontend
@@ -171,9 +176,15 @@ jobs:
       - name: Create GitHub Release
         if: steps.check_release.outputs.exists == 'false'
         run: |
+          PRERELEASE_FLAG=""
+          if [ "${{ steps.extract_version.outputs.prerelease }}" = "true" ]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+
           gh release create ${{ steps.extract_version.outputs.tag }} \
             --title "Release ${{ steps.extract_version.outputs.tag }}" \
-            --notes-file release_notes.md
+            --notes-file release_notes.md \
+            $PRERELEASE_FLAG
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -181,9 +192,15 @@ jobs:
         if: steps.check_release.outputs.exists == 'true'
         run: |
           echo "Updating existing release ${{ steps.extract_version.outputs.tag }}"
+          PRERELEASE_FLAG="--latest"
+          if [ "${{ steps.extract_version.outputs.prerelease }}" = "true" ]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+
           gh release edit ${{ steps.extract_version.outputs.tag }} \
             --notes-file release_notes.md \
-            --title "Release ${{ steps.extract_version.outputs.tag }}"
+            --title "Release ${{ steps.extract_version.outputs.tag }}" \
+            $PRERELEASE_FLAG
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

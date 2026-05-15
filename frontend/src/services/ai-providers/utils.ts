@@ -95,11 +95,11 @@ export function getProviderEndpoint(
 ): string {
   if (shouldUseBrowserProxy(baseUrl)) {
     if (defaultUrl === PROVIDER_DEFAULTS.openai.baseUrl && path === PROVIDER_DEFAULTS.openai.chatCompletionsPath) {
-      return withProxyBaseUrl('/api/ai/openai/chat/completions', baseUrl)
+      return withProxyBaseUrl('/ai-proxy/openai/chat/completions', baseUrl)
     }
 
     if (defaultUrl === PROVIDER_DEFAULTS.volcano.baseUrl && path === PROVIDER_DEFAULTS.volcano.chatCompletionsPath) {
-      return withProxyBaseUrl('/api/ai/volcano/chat/completions', baseUrl)
+      return withProxyBaseUrl('/ai-proxy/volcano/chat/completions', baseUrl)
     }
   }
 
@@ -137,7 +137,7 @@ export function getGeminiEndpoint(
   apiKey: string
 ): string {
   if (shouldUseBrowserProxy(baseUrl)) {
-    return withProxyBaseUrl(`/api/ai/gemini/generateContent?model=${encodeURIComponent(model)}`, baseUrl)
+    return withProxyBaseUrl(`/ai-proxy/gemini/generateContent?model=${encodeURIComponent(model)}`, baseUrl)
   }
 
   const base = getProviderEndpoint(
@@ -173,7 +173,7 @@ export function getGeminiEndpoint(
  */
 export function getClaudeEndpoint(baseUrl: string | undefined): string {
   if (shouldUseBrowserProxy(baseUrl)) {
-    return withProxyBaseUrl('/api/ai/claude/messages', baseUrl)
+    return withProxyBaseUrl('/ai-proxy/claude/messages', baseUrl)
   }
 
   return getProviderEndpoint(

@@ -11,6 +11,7 @@ export default async function middleware(request: NextRequest) {
   // Allow API, static files, and embed routes to pass through
   if (
     pathname.startsWith('/api') ||
+    pathname.startsWith('/ai-proxy') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/embed') ||
     pathname.includes('.') ||
@@ -60,6 +61,6 @@ export default async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|embed|sitemap.xml|robots.txt|llms.txt|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.gif|.*\\.svg|.*\\.ico|.*\\.webp).*)'
+    '/((?!api|ai-proxy|_next/static|_next/image|favicon.ico|embed|sitemap.xml|robots.txt|llms.txt|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.gif|.*\\.svg|.*\\.ico|.*\\.webp).*)'
   ]
 }
