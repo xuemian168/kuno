@@ -122,7 +122,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ needs.validate.outputs.tag }}
+            type=raw,value=${{ needs.validate.outputs.version }}
             type=raw,value=latest,enable=${{ needs.validate.outputs.prerelease == 'false' }}
           labels: |
             org.opencontainers.image.title=kuno
@@ -160,7 +160,7 @@ jobs:
           ## Docker Image
           
           ```bash
-          docker pull ${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}
+          docker pull ${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.version }}
           ```
           
           ## Quick Deploy
@@ -175,7 +175,7 @@ jobs:
             -p 80:80 \
             -v blog-data:/app/data \
             -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \
-            ${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}
+            ${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.version }}
           ```
           
           ## Build Information
@@ -222,7 +222,7 @@ jobs:
           if [ "${{ needs.build-and-release.result }}" == "success" ]; then
             echo "Release completed successfully." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Docker Image**: \`${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Docker Image**: \`${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Docker Hub**: https://hub.docker.com/r/ictrun/kuno" >> $GITHUB_STEP_SUMMARY
           else
