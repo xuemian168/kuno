@@ -105,7 +105,7 @@ jobs:
           ## Docker Image
           
           \`\`\`bash
-          docker pull ${{ env.IMAGE_NAME }}:${{ steps.extract_version.outputs.tag }}
+          docker pull ${{ env.IMAGE_NAME }}:${{ steps.extract_version.outputs.version }}
           \`\`\`
           
           ## Quick Deploy
@@ -120,7 +120,7 @@ jobs:
           version: '3.8'
           services:
             i18n-blog:
-              image: ${{ env.IMAGE_NAME }}:${{ steps.extract_version.outputs.tag }}
+              image: ${{ env.IMAGE_NAME }}:${{ steps.extract_version.outputs.version }}
               ports:
                 - "80:80"
               volumes:
@@ -139,7 +139,7 @@ jobs:
             -p 80:80 \\
             -v blog-data:/app/data \\
             -e NEXT_PUBLIC_API_URL=https://your-domain.com/api \\
-            ${{ env.IMAGE_NAME }}:${{ steps.extract_version.outputs.tag }}
+            ${{ env.IMAGE_NAME }}:${{ steps.extract_version.outputs.version }}
           \`\`\`
           
           ## Version Information
@@ -188,6 +188,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update Docker Hub description
+        continue-on-error: true
         uses: peter-evans/dockerhub-description@v5
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -202,9 +203,10 @@ jobs:
     steps:
       - name: Notification
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
           if [ "${{ needs.release.result }}" == "success" ]; then
             echo "Release ${{ github.ref_name }} completed successfully."
-            echo "Docker image: ${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
+            echo "Docker image: ${{ env.IMAGE_NAME }}:$VERSION"
             echo "Available at: https://hub.docker.com/r/ictrun/kuno"
             echo "GitHub Release: https://github.com/xuemian168/kuno/releases/tag/${{ github.ref_name }}"
           else
