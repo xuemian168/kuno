@@ -11,23 +11,39 @@ import {
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { buildClaudeMessagesRequestBody, getClaudeResponseText } from '../../ai-providers/claude-messages'
 import { getClaudeEndpoint, PROVIDER_DEFAULTS } from '../../ai-providers/utils'
+import { AIServerProxyScope, getServerAIProxyEndpoint, getServerAIProxyHeaders } from '../../ai-providers/server-proxy'
 
 export class ClaudeSEOProvider extends BaseSEOAIProvider {
   name = 'Claude SEO'
   protected model = DEFAULT_AI_MODELS.claude
   private baseUrl?: string
+  private useServerProxy = false
+  private serverProxyScope: AIServerProxyScope = 'global'
 
-  constructor(apiKey?: string, model?: string, baseUrl?: string) {
+  constructor(apiKey?: string, model?: string, baseUrl?: string, useServerProxy?: boolean, serverProxyScope?: AIServerProxyScope) {
     super(apiKey)
     if (model) this.model = model
     if (baseUrl) this.baseUrl = baseUrl
+    if (useServerProxy) this.useServerProxy = true
+    if (serverProxyScope) this.serverProxyScope = serverProxyScope
   }
 
   private getEndpoint(): string {
+    if (this.useServerProxy) {
+      return getServerAIProxyEndpoint('claude', this.serverProxyScope)
+    }
+
     return getClaudeEndpoint(this.baseUrl)
   }
 
   private getHeaders(): HeadersInit {
+    if (this.useServerProxy) {
+      return {
+        ...getServerAIProxyHeaders(),
+        'anthropic-version': PROVIDER_DEFAULTS.claude.apiVersion,
+      }
+    }
+
     return {
       'Content-Type': 'application/json',
       'x-api-key': this.apiKey || '',

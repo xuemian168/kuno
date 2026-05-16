@@ -342,7 +342,7 @@
     "middleEast": "中東言語",
     "translationAPIConfiguration": "翻訳API設定",
     "translationAPIDesc": "自動記事翻訳のためのサードパーティ翻訳サービスを設定",
-    "apiConfigNote": "記事エディタで自動翻訳機能を有効にするために、お好みの翻訳サービスを設定してください。APIキーはブラウザにローカルに保存されます。",
+    "apiConfigNote": "記事エディタで自動翻訳機能を有効にするために、お好みの翻訳サービスを設定してください。APIキーはデータベースに暗号化保存され、ブラウザにはマスクされたキーのみ表示されます。",
     "translationProvider": "翻訳プロバイダー",
     "apiKey": "APIキー",
     "apiKeyOptional": "APIキー（オプション）",

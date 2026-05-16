@@ -221,6 +221,16 @@ func SetupRoutes() *gin.Engine {
 					adminAIUsage.PUT("/cost-limits", aiUsageController.SetCostLimits)
 				}
 
+				// AI provider proxy. Provider API keys stay server-side and are loaded
+				// from encrypted database settings for authenticated admins only.
+				adminAIProxy := admin.Group("/ai-proxy")
+				{
+					adminAIProxy.POST("/openai/chat/completions", ProxyOpenAIChatCompletions)
+					adminAIProxy.POST("/volcano/chat/completions", ProxyVolcanoChatCompletions)
+					adminAIProxy.POST("/claude/messages", ProxyClaudeMessages)
+					adminAIProxy.POST("/gemini/generateContent", ProxyGeminiGenerateContent)
+				}
+
 				// LLMs.txt management
 				adminLLMs := admin.Group("/llms-txt")
 				{

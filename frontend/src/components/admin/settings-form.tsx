@@ -70,6 +70,39 @@ function getNextAuthTypeForProvider(
   return currentAuthType
 }
 
+const AI_PROVIDER_IDS = ['openai', 'claude', 'gemini', 'volcano']
+
+function isAIProvider(provider?: string): boolean {
+  return !!provider && AI_PROVIDER_IDS.includes(provider)
+}
+
+function parseJSONConfig<T>(value?: string): T | null {
+  if (!value) return null
+
+  try {
+    return JSON.parse(value) as T
+  } catch (error) {
+    console.error('Failed to parse stored config:', error)
+    return null
+  }
+}
+
+function withTranslationServerProxy(config: TranslationConfig): TranslationConfig {
+  return {
+    ...config,
+    useServerProxy: isAIProvider(config.provider) && !!(config.isConfigured || config.apiKey),
+    serverProxyScope: 'translation'
+  }
+}
+
+function withSummaryServerProxy(config: AISummaryConfig): AISummaryConfig {
+  return {
+    ...config,
+    useServerProxy: isAIProvider(config.provider) && !!(config.isConfigured || config.apiKey),
+    serverProxyScope: 'summary'
+  }
+}
+
 interface SettingsFormProps {
   locale: string
 }
@@ -320,6 +353,25 @@ export function SettingsForm({ locale }: SettingsFormProps) {
             console.error('Failed to parse AI config:', error)
           }
         }
+
+        const storedTranslationConfig = parseJSONConfig<TranslationConfig>(settingsData.translation_config)
+        if (storedTranslationConfig?.provider) {
+          const config = withTranslationServerProxy(storedTranslationConfig)
+          setTranslationConfig(config)
+          translationService.configureFromSettings(config)
+          setHasTranslationProvider(translationService.isConfigured())
+          if (config.enabledLanguages?.length) {
+            setEnabledLanguages(config.enabledLanguages)
+          }
+        }
+
+        const storedAISummaryConfig = parseJSONConfig<AISummaryConfig>(settingsData.ai_summary_config)
+        if (storedAISummaryConfig?.provider) {
+          const config = withSummaryServerProxy(storedAISummaryConfig)
+          setAISummaryConfig(config)
+          aiSummaryService.configureFromSettings(config)
+          setHasAISummaryProvider(aiSummaryService.isConfigured())
+        }
         
         // Sync sound settings to localStorage
         setSoundEnabled(settingsData.enable_sound_effects ?? true)
@@ -331,29 +383,6 @@ export function SettingsForm({ locale }: SettingsFormProps) {
     }
 
     fetchSettings()
-
-    // Load translation settings from localStorage
-    const savedSettings = localStorage.getItem('blog_settings')
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings)
-        if (parsed.translation) {
-          setTranslationConfig(parsed.translation)
-          translationService.configureFromSettings(parsed.translation)
-          setHasTranslationProvider(!!parsed.translation.provider)
-        }
-        if (parsed.aiSummary) {
-          setAISummaryConfig(parsed.aiSummary)
-          aiSummaryService.configureFromSettings(parsed.aiSummary)
-          setHasAISummaryProvider(aiSummaryService.isConfigured())
-        }
-        if (parsed.aiConfig) {
-          setAIConfig(parsed.aiConfig)
-        }
-      } catch (error) {
-        console.error('Failed to load translation settings:', error)
-      }
-    }
 
     // Initialize translation service with default if none configured
     if (!translationService.isConfigured()) {
@@ -507,6 +536,10 @@ export function SettingsForm({ locale }: SettingsFormProps) {
       const allTranslations = translations.filter(t => 
         t.language !== formData.default_language && (t.site_title.trim() || t.site_subtitle.trim())
       )
+      const configWithLanguages = {
+        ...translationConfig,
+        enabledLanguages: enabledLanguages
+      }
 
       const settingsData = {
         site_title: formData.site_title,
@@ -528,6 +561,8 @@ export function SettingsForm({ locale }: SettingsFormProps) {
         background_image_url: formData.background_image_url,
         background_opacity: formData.background_opacity,
         ai_config: JSON.stringify(getFilteredAIConfig(aiConfig)),
+        translation_config: JSON.stringify(configWithLanguages),
+        ai_summary_config: JSON.stringify(aiSummaryConfig),
         translations: allTranslations
       }
 
@@ -538,29 +573,30 @@ export function SettingsForm({ locale }: SettingsFormProps) {
       // Update localStorage for sound effects
       setSoundEnabled(updatedSettings.enable_sound_effects ?? true)
 
-      // Save translation settings to localStorage
-      const configWithLanguages = {
-        ...translationConfig,
-        enabledLanguages: enabledLanguages
-      }
-      const allSettings = {
-        ...updatedSettings,
-        translation: configWithLanguages,
-        aiSummary: aiSummaryConfig,
-        aiConfig: aiConfig
-      }
-      localStorage.setItem('blog_settings', JSON.stringify(allSettings))
+      localStorage.removeItem('blog_settings')
+      localStorage.removeItem('translation_config')
+      localStorage.removeItem('ai_summary_config')
 
       // Update language manager
       languageManager.setEnabledLanguages(enabledLanguages)
 
       // Configure translation service
-      translationService.configureFromSettings(configWithLanguages)
+      const storedTranslationConfig = parseJSONConfig<TranslationConfig>(updatedSettings.translation_config)
+      const nextTranslationConfig = storedTranslationConfig
+        ? withTranslationServerProxy(storedTranslationConfig)
+        : withTranslationServerProxy(configWithLanguages)
+      setTranslationConfig(nextTranslationConfig)
+      translationService.configureFromSettings(nextTranslationConfig)
       setHasTranslationProvider(translationService.isConfigured())
       
       // Configure AI summary service
       try {
-        aiSummaryService.configureFromSettings(aiSummaryConfig)
+        const storedAISummaryConfig = parseJSONConfig<AISummaryConfig>(updatedSettings.ai_summary_config)
+        const nextAISummaryConfig = storedAISummaryConfig
+          ? withSummaryServerProxy(storedAISummaryConfig)
+          : withSummaryServerProxy(aiSummaryConfig)
+        setAISummaryConfig(nextAISummaryConfig)
+        aiSummaryService.configureFromSettings(nextAISummaryConfig)
         setHasAISummaryProvider(aiSummaryService.isConfigured())
       } catch (error) {
         console.error('Failed to configure AI summary service:', error)
@@ -1727,7 +1763,6 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                       try {
                         translationService.configureFromSettings(newConfig)
                         setHasTranslationProvider(translationService.isConfigured())
-                        localStorage.setItem('translation_config', JSON.stringify(newConfig))
                       } catch (error) {
                         console.error('Failed to configure translation service:', error)
                       }
@@ -2121,7 +2156,7 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    {locale === 'zh' ? 'AI摘要配置信息将保存在本地浏览器中。' : 'AI summary configuration is stored locally in your browser.'}
+                    {locale === 'zh' ? 'AI摘要配置会加密保存到数据库，浏览器只显示脱敏密钥。' : 'AI summary configuration is encrypted in the database. The browser only displays masked keys.'}
                   </AlertDescription>
                 </Alert>
 
@@ -2322,7 +2357,6 @@ export function SettingsForm({ locale }: SettingsFormProps) {
                       setAISummaryConfig(newConfig)
                       try {
                         aiSummaryService.configureFromSettings(newConfig)
-                        localStorage.setItem('ai_summary_config', JSON.stringify(newConfig))
                       } catch (error) {
                         console.error('Failed to configure AI summary service:', error)
                       }

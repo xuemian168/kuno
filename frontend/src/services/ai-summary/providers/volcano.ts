@@ -2,21 +2,30 @@ import { BaseAISummaryProvider } from './base'
 import { AISummaryResult, AuthHeaderType } from '../types'
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { getProviderEndpoint, PROVIDER_DEFAULTS, shouldUseBrowserProxy } from '../../ai-providers/utils'
+import { AIServerProxyScope, getServerAIProxyEndpoint, getServerAIProxyHeaders } from '../../ai-providers/server-proxy'
 
 export class VolcanoSummaryProvider extends BaseAISummaryProvider {
   name = 'Volcano Engine'
   private baseUrl?: string
   private authType: AuthHeaderType = 'bearer'
   private customAuthHeader?: string
+  private useServerProxy = false
+  private serverProxyScope: AIServerProxyScope = 'global'
 
-  constructor(apiKey?: string, model?: string, maxKeywords?: number, summaryLength?: 'short' | 'medium' | 'long', baseUrl?: string, authType?: AuthHeaderType, customAuthHeader?: string) {
+  constructor(apiKey?: string, model?: string, maxKeywords?: number, summaryLength?: 'short' | 'medium' | 'long', baseUrl?: string, authType?: AuthHeaderType, customAuthHeader?: string, useServerProxy?: boolean, serverProxyScope?: AIServerProxyScope) {
     super(apiKey, model || DEFAULT_AI_MODELS.volcano, maxKeywords, summaryLength)
     if (baseUrl) this.baseUrl = baseUrl
     if (authType) this.authType = authType
     if (customAuthHeader) this.customAuthHeader = customAuthHeader
+    if (useServerProxy) this.useServerProxy = true
+    if (serverProxyScope) this.serverProxyScope = serverProxyScope
   }
 
   private getEndpoint(): string {
+    if (this.useServerProxy) {
+      return getServerAIProxyEndpoint('volcano', this.serverProxyScope)
+    }
+
     return getProviderEndpoint(
       this.baseUrl,
       PROVIDER_DEFAULTS.volcano.baseUrl,
@@ -33,6 +42,10 @@ export class VolcanoSummaryProvider extends BaseAISummaryProvider {
   }
 
   private getHeaders(): Record<string, string> {
+    if (this.useServerProxy) {
+      return getServerAIProxyHeaders()
+    }
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     }

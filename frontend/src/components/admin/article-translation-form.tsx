@@ -132,8 +132,11 @@ export function ArticleTranslationForm({ article, isEditing = false, locale = 'z
 
     fetchCategories()
     
-    // Initialize translation service
-    initializeTranslationService()
+    initializeTranslationService().then(() => {
+      const provider = translationService.getActiveProvider()
+      console.log('Translation provider:', provider)
+      setHasTranslationProvider(!!provider)
+    })
     
     // Load available languages from language manager
     const enabledLanguages = languageManager.getEnabledLanguageOptions()

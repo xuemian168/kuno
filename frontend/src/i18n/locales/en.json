@@ -395,7 +395,7 @@
     "middleEast": "Middle East",
     "translationAPIConfiguration": "Translation API Configuration",
     "translationAPIDesc": "Configure third-party translation services for automatic article translation",
-    "apiConfigNote": "Configure your preferred translation service to enable automatic translation features in the article editor. API keys are stored locally in your browser.",
+    "apiConfigNote": "Configure your preferred translation service to enable automatic article translation. API keys are encrypted in the database and only masked keys are shown in the browser.",
     "translationProvider": "Translation Provider",
     "apiKey": "API Key",
     "apiKeyOptional": "API Key (Optional)",

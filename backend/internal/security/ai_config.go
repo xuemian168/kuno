@@ -42,8 +42,8 @@ type ClientProviderConfig struct {
 	APIKey       string            `json:"api_key"` // Masked version
 	Model        string            `json:"model"`
 	Enabled      bool              `json:"enabled"`
-	IsConfigured bool              `json:"is_configured"` // Whether a real key is configured
-	Settings     map[string]string `json:"settings,omitempty"`  // Custom settings like base_url
+	IsConfigured bool              `json:"is_configured"`      // Whether a real key is configured
+	Settings     map[string]string `json:"settings,omitempty"` // Custom settings like base_url
 }
 
 // ClientEmbeddingConfig represents embedding config for client
@@ -212,9 +212,7 @@ func getProviderNames(providers interface{}) []string {
 // MergeWithExisting merges input config with existing secure config
 // This handles the case where client sends placeholders for unchanged keys
 func (acs *AIConfigService) MergeWithExisting(input *InputAIConfig, existing *SecureAIConfig) (*SecureAIConfig, error) {
-	log.Printf("[AI Config Merge] Starting merge process...")
-	log.Printf("[AI Config Merge] Input providers: %v", getProviderNames(input.Providers))
-	log.Printf("[AI Config Merge] Existing providers: %v", getProviderNames(existing.Providers))
+	log.Printf("[AI Config Merge] Starting merge process for providers: %v", getProviderNames(input.Providers))
 
 	merged := &SecureAIConfig{
 		DefaultProvider: input.DefaultProvider,
@@ -229,31 +227,18 @@ func (acs *AIConfigService) MergeWithExisting(input *InputAIConfig, existing *Se
 		var encryptedKey string
 		var err error
 
-		log.Printf("[AI Config Merge] Processing provider '%s':", name)
-		log.Printf("  - Input key: '%s'", inputProvider.APIKey)
-		log.Printf("  - Is placeholder: %v", acs.isPlaceholder(inputProvider.APIKey))
-
 		existingProvider, exists := existing.Providers[name]
-		if exists {
-			log.Printf("  - Has existing encrypted key: %v", existingProvider.EncryptedAPIKey != "")
-		} else {
-			log.Printf("  - No existing provider found")
-		}
 
 		// Check if this is a new/updated key or should preserve existing
 		if inputProvider.APIKey != "" && !acs.isPlaceholder(inputProvider.APIKey) {
 			// New key provided - encrypt it
-			log.Printf("  → Encrypting new/changed key")
 			encryptedKey, err = acs.crypto.EncryptAPIKey(inputProvider.APIKey)
 			if err != nil {
 				return nil, fmt.Errorf("failed to encrypt API key for provider %s: %v", name, err)
 			}
 		} else if exists {
 			// Preserve existing encrypted key
-			log.Printf("  → Preserving existing encrypted key")
 			encryptedKey = existingProvider.EncryptedAPIKey
-		} else {
-			log.Printf("  → No key to preserve, leaving empty")
 		}
 		// If no existing key and input is placeholder/empty, encryptedKey remains empty
 
@@ -285,8 +270,6 @@ func (acs *AIConfigService) MergeWithExisting(input *InputAIConfig, existing *Se
 			Enabled:         inputProvider.Enabled,
 			Settings:        settings, // Save merged Settings
 		}
-
-		log.Printf("  ✓ Final encrypted key length: %d", len(encryptedKey))
 	}
 
 	return merged, nil

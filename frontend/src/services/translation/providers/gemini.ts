@@ -3,6 +3,7 @@ import { TranslationResult, AuthHeaderType, TranslationModelProfile } from '../t
 import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { formatErrorMessage } from '../error-messages'
 import { getGeminiEndpoint, getProviderEndpoint, PROVIDER_DEFAULTS, shouldUseBrowserProxy } from '../../ai-providers/utils'
+import { AIServerProxyScope, getServerAIProxyEndpoint, getServerAIProxyHeaders } from '../../ai-providers/server-proxy'
 import { createTranslationModelProfile } from '../model-profiles'
 import { buildBatchTranslationSystemPrompt, buildTranslationSystemPrompt } from '../prompt-utils'
 
@@ -12,13 +13,17 @@ export class GeminiProvider extends BaseTranslationProvider {
   private baseUrl?: string
   private authType: AuthHeaderType = 'bearer'
   private customAuthHeader?: string
+  private useServerProxy = false
+  private serverProxyScope: AIServerProxyScope = 'global'
 
-  constructor(apiKey?: string, model?: string, baseUrl?: string, authType?: AuthHeaderType, customAuthHeader?: string) {
+  constructor(apiKey?: string, model?: string, baseUrl?: string, authType?: AuthHeaderType, customAuthHeader?: string, useServerProxy?: boolean, serverProxyScope?: AIServerProxyScope) {
     super(apiKey)
     if (model) this.model = model
     if (baseUrl) this.baseUrl = baseUrl
     if (authType) this.authType = authType
     if (customAuthHeader) this.customAuthHeader = customAuthHeader
+    if (useServerProxy) this.useServerProxy = true
+    if (serverProxyScope) this.serverProxyScope = serverProxyScope
   }
 
   private isUsingCustomBaseUrl(): boolean {
@@ -30,6 +35,10 @@ export class GeminiProvider extends BaseTranslationProvider {
   }
 
   private getEndpoint(): string {
+    if (this.useServerProxy) {
+      return getServerAIProxyEndpoint('gemini', this.serverProxyScope, { model: this.model })
+    }
+
     if (!this.apiKey) {
       throw this.createError('Gemini API key not configured', 'NOT_CONFIGURED')
     }
@@ -49,6 +58,10 @@ export class GeminiProvider extends BaseTranslationProvider {
   }
 
   private buildAuthHeaders(): Record<string, string> {
+    if (this.useServerProxy) {
+      return getServerAIProxyHeaders()
+    }
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     }

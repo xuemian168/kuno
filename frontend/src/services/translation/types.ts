@@ -43,6 +43,9 @@ export type AuthHeaderType = 'bearer' | 'x-api-key' | 'x-goog-api-key' | 'api-ke
 export interface TranslationConfig {
   provider: 'google' | 'deepl' | 'openai' | 'gemini' | 'volcano' | 'claude' | 'libretranslate' | 'mymemory' | 'google-free'
   apiKey?: string
+  isConfigured?: boolean
+  useServerProxy?: boolean
+  serverProxyScope?: 'translation' | 'summary' | 'seo' | 'global'
   apiSecret?: string
   region?: string
   model?: string

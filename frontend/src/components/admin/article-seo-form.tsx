@@ -24,7 +24,7 @@ import {
   Zap,
   Eye
 } from "lucide-react"
-import { Article } from "@/lib/api"
+import { Article, apiClient, AIConfig } from "@/lib/api"
 import { seoAIService, initializeSEOAIService } from "@/services/seo-ai"
 import { SEOAnalyzer } from "@/services/seo-ai/analyzer"
 import { SEOAnalysisResult, SEOAIResult } from "@/services/seo-ai/types"
@@ -80,21 +80,16 @@ export function ArticleSEOForm({
   useEffect(() => {
     const initAI = async () => {
       try {
-        const settingsStr = localStorage.getItem('blog_settings')
-
-        if (!settingsStr) {
-          setHasAIProvider(false)
-          return
-        }
-
-        const settings = JSON.parse(settingsStr)
+        const settings = await apiClient.getSettings()
         const supportedProviders = ['openai', 'claude']
-        const summaryConfig = settings?.aiSummary
+        const summaryConfig = settings.ai_summary_config
+          ? JSON.parse(settings.ai_summary_config)
+          : null
 
         if (
           summaryConfig?.provider &&
           supportedProviders.includes(summaryConfig.provider) &&
-          summaryConfig.apiKey
+          (summaryConfig.isConfigured || summaryConfig.apiKey)
         ) {
           await initializeSEOAIService({
             provider: summaryConfig.provider,
@@ -102,13 +97,17 @@ export function ArticleSEOForm({
             model: summaryConfig.model,
             baseUrl: summaryConfig.baseUrl,
             authType: summaryConfig.authType,
-            customAuthHeader: summaryConfig.customAuthHeader
+            customAuthHeader: summaryConfig.customAuthHeader,
+            useServerProxy: true,
+            serverProxyScope: 'summary'
           })
           setHasAIProvider(seoAIService.isConfigured())
           return
         }
 
-        const globalAIConfig = settings?.aiConfig
+        const globalAIConfig = settings.ai_config
+          ? JSON.parse(settings.ai_config) as AIConfig
+          : null
         const defaultProvider = globalAIConfig?.default_provider
         const providerConfig = defaultProvider ? globalAIConfig?.providers?.[defaultProvider] : null
 
@@ -116,13 +115,15 @@ export function ArticleSEOForm({
           defaultProvider &&
           supportedProviders.includes(defaultProvider) &&
           providerConfig?.enabled &&
-          providerConfig.api_key
+          (providerConfig.is_configured || providerConfig.api_key)
         ) {
           await initializeSEOAIService({
-            provider: defaultProvider,
+            provider: defaultProvider as any,
             apiKey: providerConfig.api_key,
             model: providerConfig.model,
-            baseUrl: providerConfig.settings?.base_url
+            baseUrl: providerConfig.settings?.base_url,
+            useServerProxy: true,
+            serverProxyScope: 'global'
           })
           setHasAIProvider(seoAIService.isConfigured())
           return

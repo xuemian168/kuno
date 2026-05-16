@@ -4,6 +4,7 @@ import { GeminiSummaryProvider } from './providers/gemini'
 import { VolcanoSummaryProvider } from './providers/volcano'
 import { ClaudeSummaryProvider } from './providers/claude'
 import { aiUsageTracker, trackSummaryGeneration, trackSEOGeneration } from '../ai-usage-tracker'
+import { apiClient } from '../../lib/api'
 
 export * from './types'
 
@@ -200,7 +201,9 @@ export class AISummaryService {
           config.summaryLength,
           config.baseUrl,
           config.authType,
-          config.customAuthHeader
+          config.customAuthHeader,
+          config.useServerProxy,
+          config.serverProxyScope
         )
         break
       case 'gemini':
@@ -211,7 +214,9 @@ export class AISummaryService {
           config.summaryLength,
           config.baseUrl,
           config.authType,
-          config.customAuthHeader
+          config.customAuthHeader,
+          config.useServerProxy,
+          config.serverProxyScope
         )
         break
       case 'volcano':
@@ -222,7 +227,9 @@ export class AISummaryService {
           config.summaryLength,
           config.baseUrl,
           config.authType,
-          config.customAuthHeader
+          config.customAuthHeader,
+          config.useServerProxy,
+          config.serverProxyScope
         )
         break
       case 'claude':
@@ -233,7 +240,9 @@ export class AISummaryService {
           config.summaryLength,
           config.baseUrl,
           config.authType,
-          config.customAuthHeader
+          config.customAuthHeader,
+          config.useServerProxy,
+          config.serverProxyScope
         )
         break
       default:
@@ -248,20 +257,21 @@ export class AISummaryService {
 // Create a singleton instance
 export const aiSummaryService = new AISummaryService()
 
-// Helper function to initialize AI summary service from localStorage
-export function initializeAISummaryService(): void {
+// Helper function to initialize AI summary service from database-backed settings.
+export async function initializeAISummaryService(): Promise<void> {
   try {
-    const settingsStr = localStorage.getItem('blog_settings')
-    let settings = null
-    
-    if (settingsStr) {
-      settings = JSON.parse(settingsStr)
-    }
-    
-    // Check if AI summary settings exist
-    if (settings?.aiSummary) {
+    const settings = await apiClient.getSettings()
+    const storedConfig = settings.ai_summary_config
+      ? JSON.parse(settings.ai_summary_config) as AISummaryConfig
+      : null
+
+    if (storedConfig?.provider) {
       try {
-        aiSummaryService.configureFromSettings(settings.aiSummary)
+        aiSummaryService.configureFromSettings({
+          ...storedConfig,
+          useServerProxy: !!(storedConfig.isConfigured || storedConfig.apiKey),
+          serverProxyScope: 'summary'
+        })
       } catch (error) {
         console.error('Failed to configure AI summary service:', error)
       }

@@ -453,17 +453,17 @@ export async function initializeSEOAIService(config?: SEOConfig): Promise<void> 
   if (!config) return
 
   try {
-    const { provider, apiKey, model, baseUrl, authType, customAuthHeader } = config
+    const { provider, apiKey, model, baseUrl, authType, customAuthHeader, useServerProxy, serverProxyScope } = config
 
     switch (provider) {
       case 'openai':
-        const openaiProvider = new OpenAISEOProvider(apiKey, model, baseUrl, authType, customAuthHeader)
+        const openaiProvider = new OpenAISEOProvider(apiKey, model, baseUrl, authType, customAuthHeader, useServerProxy, serverProxyScope)
         seoAIService.registerProvider('openai', openaiProvider)
         seoAIService.setActiveProvider('openai')
         break
 
       case 'claude':
-        const claudeProvider = new ClaudeSEOProvider(apiKey, model, baseUrl)
+        const claudeProvider = new ClaudeSEOProvider(apiKey, model, baseUrl, useServerProxy, serverProxyScope)
         seoAIService.registerProvider('claude', claudeProvider)
         seoAIService.setActiveProvider('claude')
         break

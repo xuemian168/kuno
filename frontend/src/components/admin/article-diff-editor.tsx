@@ -442,9 +442,7 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
   const parseTranslationError = useCallback((error: unknown) => {
     const message = error instanceof Error ? error.message : '未知错误'
     const code = (error as any).code
-    const settingsStr = localStorage.getItem('blog_settings')
-    const settings = settingsStr ? JSON.parse(settingsStr) : null
-    const provider = settings?.translation?.provider || 'unknown'
+    const provider = translationService.getActiveProvider()?.name || 'unknown'
 
     return getErrorMessage(message, code, provider)
   }, [])
@@ -495,11 +493,18 @@ export function ArticleDiffEditor({ article, isEditing = false, locale = 'zh' }:
     fetchCategories()
     fetchSiteSettings()
     
-    // Initialize translation service
-    initializeTranslationService()
-    
-    // Initialize AI summary service
-    initializeAISummaryService()
+    const initializeAIServices = async () => {
+      await initializeTranslationService()
+      await initializeAISummaryService()
+
+      const provider = translationService.getActiveProvider()
+      setHasTranslationProvider(!!provider)
+
+      const aiProvider = aiSummaryService.getActiveProvider()
+      setHasAISummaryProvider(!!aiProvider && aiSummaryService.isConfigured())
+    }
+
+    initializeAIServices()
     
     // Load available languages from language manager
     const enabledLanguages = languageManager.getEnabledLanguageOptions()

@@ -70,7 +70,9 @@ type SiteSettings struct {
 	BackgroundOpacity  float64 `gorm:"default:0.8" json:"background_opacity"`         // 0.0 to 1.0
 	SetupCompleted     bool    `gorm:"default:false" json:"setup_completed"`
 	// AI API Configuration
-	AIConfig string `gorm:"type:text" json:"ai_config"`
+	AIConfig          string `gorm:"type:text" json:"ai_config"`
+	TranslationConfig string `gorm:"type:text" json:"translation_config"`
+	AISummaryConfig   string `gorm:"type:text" json:"ai_summary_config"`
 	// Privacy and Indexing Control
 	BlockSearchEngines bool                      `gorm:"default:false" json:"block_search_engines"`
 	BlockAITraining    bool                      `gorm:"default:false" json:"block_ai_training"`

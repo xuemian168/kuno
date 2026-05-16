@@ -1,6 +1,7 @@
 package api
 
 import (
+	"blog-backend/internal/auth"
 	"blog-backend/internal/database"
 	"blog-backend/internal/models"
 	"blog-backend/internal/security"
@@ -46,20 +47,61 @@ func GetSettings(c *gin.Context) {
 		applySettingsTranslation(&settings, lang)
 	}
 
-	// Handle AI configuration security
-	if settings.AIConfig != "" {
-		aiConfigService := security.GetGlobalAIConfigService()
-		clientConfig, err := aiConfigService.ToClientConfigJSON(settings.AIConfig)
-		if err != nil {
-			log.Printf("Failed to convert AI config to client format: %v", err)
-			// Clear AI config on error to prevent exposure
-			settings.AIConfig = ""
-		} else {
-			settings.AIConfig = clientConfig
+	if isAdminSettingsRequest(c) {
+		// Handle AI configuration security
+		if settings.AIConfig != "" {
+			aiConfigService := security.GetGlobalAIConfigService()
+			clientConfig, err := aiConfigService.ToClientConfigJSON(settings.AIConfig)
+			if err != nil {
+				log.Printf("Failed to convert AI config to client format: %v", err)
+				// Clear AI config on error to prevent exposure
+				settings.AIConfig = ""
+			} else {
+				settings.AIConfig = clientConfig
+			}
 		}
+
+		aiConfigService := security.GetGlobalAIConfigService()
+		if settings.TranslationConfig != "" {
+			clientConfig, err := aiConfigService.ToClientServiceConfigJSON(settings.TranslationConfig)
+			if err != nil {
+				log.Printf("Failed to convert translation config to client format: %v", err)
+				settings.TranslationConfig = ""
+			} else {
+				settings.TranslationConfig = clientConfig
+			}
+		}
+		if settings.AISummaryConfig != "" {
+			clientConfig, err := aiConfigService.ToClientServiceConfigJSON(settings.AISummaryConfig)
+			if err != nil {
+				log.Printf("Failed to convert AI summary config to client format: %v", err)
+				settings.AISummaryConfig = ""
+			} else {
+				settings.AISummaryConfig = clientConfig
+			}
+		}
+	} else {
+		settings.AIConfig = ""
+		settings.TranslationConfig = ""
+		settings.AISummaryConfig = ""
 	}
 
 	c.JSON(http.StatusOK, settings)
+}
+
+func isAdminSettingsRequest(c *gin.Context) bool {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return false
+	}
+
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return false
+	}
+
+	claims, err := auth.ValidateToken(parts[1])
+	return err == nil && claims.IsAdmin
 }
 
 func applySettingsTranslation(settings *models.SiteSettings, lang string) {
@@ -114,7 +156,9 @@ func UpdateSettings(c *gin.Context) {
 		BackgroundColor    string   `json:"background_color"`
 		BackgroundImageURL string   `json:"background_image_url"`
 		BackgroundOpacity  *float64 `json:"background_opacity"`
-		AIConfig           string   `json:"ai_config"`
+		AIConfig           *string  `json:"ai_config"`
+		TranslationConfig  *string  `json:"translation_config"`
+		AISummaryConfig    *string  `json:"ai_summary_config"`
 		// Privacy and Indexing Control
 		BlockSearchEngines *bool                            `json:"block_search_engines"`
 		BlockAITraining    *bool                            `json:"block_ai_training"`
@@ -170,12 +214,12 @@ func UpdateSettings(c *gin.Context) {
 	}
 
 	// Update AI configuration with encryption
-	if input.AIConfig != "" {
+	if input.AIConfig != nil && *input.AIConfig != "" {
 		aiConfigService := security.GetGlobalAIConfigService()
 
 		// Parse the input AI config
 		var inputAIConfig security.InputAIConfig
-		if err := json.Unmarshal([]byte(input.AIConfig), &inputAIConfig); err != nil {
+		if err := json.Unmarshal([]byte(*input.AIConfig), &inputAIConfig); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid AI configuration format: " + err.Error()})
 			return
 		}
@@ -212,9 +256,33 @@ func UpdateSettings(c *gin.Context) {
 		}
 
 		settings.AIConfig = string(secureJSON)
-	} else {
+	} else if input.AIConfig != nil {
 		// Allow empty to clear configuration
 		settings.AIConfig = ""
+	}
+
+	if input.TranslationConfig != nil && *input.TranslationConfig != "" {
+		aiConfigService := security.GetGlobalAIConfigService()
+		secureConfig, err := aiConfigService.EncryptServiceConfigJSON(*input.TranslationConfig, settings.TranslationConfig)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid translation configuration: " + err.Error()})
+			return
+		}
+		settings.TranslationConfig = secureConfig
+	} else if input.TranslationConfig != nil {
+		settings.TranslationConfig = ""
+	}
+
+	if input.AISummaryConfig != nil && *input.AISummaryConfig != "" {
+		aiConfigService := security.GetGlobalAIConfigService()
+		secureConfig, err := aiConfigService.EncryptServiceConfigJSON(*input.AISummaryConfig, settings.AISummaryConfig)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid AI summary configuration: " + err.Error()})
+			return
+		}
+		settings.AISummaryConfig = secureConfig
+	} else if input.AISummaryConfig != nil {
+		settings.AISummaryConfig = ""
 	}
 
 	if err := database.DB.Save(&settings).Error; err != nil {
@@ -254,6 +322,26 @@ func UpdateSettings(c *gin.Context) {
 			settings.AIConfig = ""
 		} else {
 			settings.AIConfig = clientConfig
+		}
+	}
+
+	aiConfigService := security.GetGlobalAIConfigService()
+	if settings.TranslationConfig != "" {
+		clientConfig, err := aiConfigService.ToClientServiceConfigJSON(settings.TranslationConfig)
+		if err != nil {
+			log.Printf("Failed to convert translation config to client format for response: %v", err)
+			settings.TranslationConfig = ""
+		} else {
+			settings.TranslationConfig = clientConfig
+		}
+	}
+	if settings.AISummaryConfig != "" {
+		clientConfig, err := aiConfigService.ToClientServiceConfigJSON(settings.AISummaryConfig)
+		if err != nil {
+			log.Printf("Failed to convert AI summary config to client format for response: %v", err)
+			settings.AISummaryConfig = ""
+		} else {
+			settings.AISummaryConfig = clientConfig
 		}
 	}
 

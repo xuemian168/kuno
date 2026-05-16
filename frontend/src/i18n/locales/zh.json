@@ -396,7 +396,7 @@
     "middleEast": "中东语言",
     "translationAPIConfiguration": "翻译API配置",
     "translationAPIDesc": "配置第三方翻译服务以实现自动文章翻译",
-    "apiConfigNote": "配置您首选的翻译服务以在文章编辑器中启用自动翻译功能。API密钥存储在您的浏览器本地。",
+    "apiConfigNote": "配置您首选的翻译服务以在文章编辑器中启用自动翻译功能。API密钥会加密保存到数据库，浏览器只显示脱敏密钥。",
     "translationProvider": "翻译提供商",
     "apiKey": "API密钥",
     "apiKeyOptional": "API密钥（可选）",

@@ -4,6 +4,7 @@ import { DEFAULT_AI_MODELS } from '../../ai-providers/models'
 import { buildClaudeMessagesRequestBody, getClaudeResponseText } from '../../ai-providers/claude-messages'
 import { formatErrorMessage } from '../error-messages'
 import { getClaudeEndpoint, PROVIDER_DEFAULTS, shouldUseBrowserProxy } from '../../ai-providers/utils'
+import { AIServerProxyScope, getServerAIProxyEndpoint, getServerAIProxyHeaders } from '../../ai-providers/server-proxy'
 import { createTranslationModelProfile } from '../model-profiles'
 import { buildBatchTranslationSystemPrompt, buildTranslationSystemPrompt } from '../prompt-utils'
 
@@ -13,16 +14,24 @@ export class ClaudeProvider extends BaseTranslationProvider {
   private baseUrl?: string
   private authType: AuthHeaderType = 'x-api-key'
   private customAuthHeader?: string
+  private useServerProxy = false
+  private serverProxyScope: AIServerProxyScope = 'global'
 
-  constructor(apiKey?: string, model?: string, baseUrl?: string, authType?: AuthHeaderType, customAuthHeader?: string) {
+  constructor(apiKey?: string, model?: string, baseUrl?: string, authType?: AuthHeaderType, customAuthHeader?: string, useServerProxy?: boolean, serverProxyScope?: AIServerProxyScope) {
     super(apiKey)
     if (model) this.model = model
     if (baseUrl) this.baseUrl = baseUrl
     if (authType) this.authType = authType
     if (customAuthHeader) this.customAuthHeader = customAuthHeader
+    if (useServerProxy) this.useServerProxy = true
+    if (serverProxyScope) this.serverProxyScope = serverProxyScope
   }
 
   private getEndpoint(): string {
+    if (this.useServerProxy) {
+      return getServerAIProxyEndpoint('claude', this.serverProxyScope)
+    }
+
     return getClaudeEndpoint(this.baseUrl)
   }
 
@@ -35,6 +44,13 @@ export class ClaudeProvider extends BaseTranslationProvider {
   }
 
   private getHeaders(): HeadersInit {
+    if (this.useServerProxy) {
+      return {
+        ...getServerAIProxyHeaders(),
+        'anthropic-version': PROVIDER_DEFAULTS.claude.apiVersion,
+      }
+    }
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'anthropic-version': PROVIDER_DEFAULTS.claude.apiVersion,

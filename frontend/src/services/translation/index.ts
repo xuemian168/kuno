@@ -9,6 +9,7 @@ import { LibreTranslateProvider } from './providers/libre-translate'
 import { MyMemoryProvider } from './providers/mymemory'
 import { GoogleFreeProvider } from './providers/google-free'
 import { aiUsageTracker } from '../ai-usage-tracker'
+import { apiClient } from '../../lib/api'
 import {
   protectTranslatableContent,
   restoreProtectedContent,
@@ -683,11 +684,13 @@ export class TranslationService {
           config.model,
           config.baseUrl,
           config.authType,
-          config.customAuthHeader
+          config.customAuthHeader,
+          config.useServerProxy,
+          config.serverProxyScope
         )
         break
       case 'gemini':
-        provider = new GeminiProvider(config.apiKey, config.model, config.baseUrl, config.authType, config.customAuthHeader)
+        provider = new GeminiProvider(config.apiKey, config.model, config.baseUrl, config.authType, config.customAuthHeader, config.useServerProxy, config.serverProxyScope)
         break
       case 'volcano':
         provider = new VolcanoProvider(
@@ -696,7 +699,9 @@ export class TranslationService {
           config.region,
           config.baseUrl,
           config.authType,
-          config.customAuthHeader
+          config.customAuthHeader,
+          config.useServerProxy,
+          config.serverProxyScope
         )
         break
       case 'claude':
@@ -705,7 +710,9 @@ export class TranslationService {
           config.model,
           config.baseUrl,
           config.authType,
-          config.customAuthHeader
+          config.customAuthHeader,
+          config.useServerProxy,
+          config.serverProxyScope
         )
         break
       case 'libretranslate':
@@ -729,32 +736,27 @@ export class TranslationService {
 // Create a singleton instance
 export const translationService = new TranslationService()
 
-// Helper function to initialize translation service from localStorage
-export function initializeTranslationService(): void {
+// Helper function to initialize translation service from database-backed settings.
+export async function initializeTranslationService(): Promise<void> {
   try {
-    const settingsStr = localStorage.getItem('blog_settings')
-    let settings = null
-    
-    if (settingsStr) {
-      settings = JSON.parse(settingsStr)
-    }
-    
-    // If no translation settings exist, use default free provider
-    if (!settings || !settings.translation || !settings.translation.provider) {
+    const settings = await apiClient.getSettings()
+    const storedConfig = settings.translation_config
+      ? JSON.parse(settings.translation_config) as TranslationConfig
+      : null
+
+    if (!storedConfig?.provider) {
       const defaultConfig: TranslationConfig = {
         provider: 'google-free'
       }
-      
-      // Save default config to localStorage
-      const newSettings = {
-        ...(settings || {}),
-        translation: defaultConfig
-      }
-      localStorage.setItem('blog_settings', JSON.stringify(newSettings))
-      
+
       translationService.configureFromSettings(defaultConfig)
     } else {
-      translationService.configureFromSettings(settings.translation)
+      const isAIProvider = ['openai', 'claude', 'gemini', 'volcano'].includes(storedConfig.provider)
+      translationService.configureFromSettings({
+        ...storedConfig,
+        useServerProxy: isAIProvider && !!(storedConfig.isConfigured || storedConfig.apiKey),
+        serverProxyScope: 'translation'
+      })
     }
   } catch (error) {
     console.error('Failed to initialize translation service:', error)

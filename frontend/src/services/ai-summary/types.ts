@@ -25,6 +25,9 @@ export type AuthHeaderType = 'bearer' | 'x-api-key' | 'x-goog-api-key' | 'api-ke
 export interface AISummaryConfig {
   provider: 'openai' | 'gemini' | 'volcano' | 'claude'
   apiKey?: string
+  isConfigured?: boolean
+  useServerProxy?: boolean
+  serverProxyScope?: 'translation' | 'summary' | 'seo' | 'global'
   model?: string
   baseUrl?: string  // Custom base URL for API endpoint
   maxKeywords?: number
