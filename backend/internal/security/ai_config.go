@@ -230,7 +230,7 @@ func (acs *AIConfigService) MergeWithExisting(input *InputAIConfig, existing *Se
 		var err error
 
 		log.Printf("[AI Config Merge] Processing provider '%s':", name)
-		log.Printf("  - Input key: '%s'", inputProvider.APIKey)
+		log.Printf("  - Input key provided: %v", inputProvider.APIKey != "")
 		log.Printf("  - Is placeholder: %v", acs.isPlaceholder(inputProvider.APIKey))
 
 		existingProvider, exists := existing.Providers[name]

@@ -28,6 +28,9 @@ func main() {
 	database.InitDatabase()
 	log.Println("Database initialization completed")
 
+	// Issue a one-time setup code if the setup wizard has not been completed
+	api.PrepareSetupCode()
+
 	// Setup routes with enhanced logging
 	log.Println("Setting up API routes...")
 	r := api.SetupRoutes()

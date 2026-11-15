@@ -21,6 +21,7 @@ type SetupRequest struct {
 	DefaultLanguage string `json:"default_language" binding:"required,oneof=zh en ja"`
 	AdminUsername   string `json:"admin_username" binding:"required,min=3,max=50"`
 	AdminPassword   string `json:"admin_password" binding:"required,min=6"`
+	SetupCode       string `json:"setup_code" binding:"required"`
 }
 
 type SetupResponse struct {
@@ -66,6 +67,15 @@ func InitializeSetup(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, SetupResponse{
 			Success: false,
 			Message: "Invalid request data: " + err.Error(),
+		})
+		return
+	}
+
+	if !setupCodes.verify(req.SetupCode) {
+		log.Printf("⚠️  Setup rejected: invalid setup code from %s", c.ClientIP())
+		c.JSON(http.StatusForbidden, SetupResponse{
+			Success: false,
+			Message: "Invalid setup code. Check the server logs for the current code.",
 		})
 		return
 	}
@@ -217,6 +227,7 @@ func InitializeSetup(c *gin.Context) {
 		return
 	}
 
+	setupCodes.clear()
 	log.Printf("🎉 Setup completed successfully for user: %s", req.AdminUsername)
 	c.JSON(http.StatusOK, SetupResponse{
 		Success: true,
