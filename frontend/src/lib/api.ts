@@ -254,6 +254,7 @@ export interface SetupRequest {
   default_language: string
   admin_username: string
   admin_password: string
+  setup_code: string
 }
 
 export interface SetupResponse {

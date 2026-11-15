@@ -129,6 +129,12 @@ The API URL can be changed at runtime — just restart the container, no rebuild
 
 KUNO ships without a default account. On first visit you are redirected to the setup wizard (`http://localhost/setup`), where you choose the administrator username and password.
 
+The wizard asks for a one-time **setup code** so that nobody else can claim a freshly deployed instance. The code is printed in the server logs on startup (a new one on every restart until setup is done):
+
+```bash
+docker logs kuno 2>&1 | grep "Setup code"
+```
+
 > Upgrading from 1.4.6 or earlier: if the old `admin` account still used the former default password, it is replaced with a random one on startup. If `admin` is your only administrator, the new password is printed once in `docker logs kuno` — sign in with it and change it.
 
 ### Directory Structure

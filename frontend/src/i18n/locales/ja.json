@@ -69,6 +69,9 @@
       "siteSubtitleDescription": "ブログの簡単な説明（オプション）"
     },
     "step3": {
+      "setupCode": "セットアップコード",
+      "setupCodePlaceholder": "XXXX-XXXX-XXXX-XXXX",
+      "setupCodeDescription": "サーバーログで一回限りのセットアップコードを確認してください（例：docker logs kuno）",
       "title": "管理者アカウント",
       "subtitle": "管理者アカウントを作成してください",
       "adminUsername": "管理者ユーザー名",
@@ -103,6 +106,7 @@
       ]
     },
     "validation": {
+      "setupCodeRequired": "セットアップコードを入力してください",
       "titleRequired": "サイトタイトルは必須です",
       "titleTooLong": "サイトタイトルは255文字未満である必要があります",
       "usernameRequired": "ユーザー名は必須です", 
@@ -114,6 +118,7 @@
       "languageRequired": "デフォルト言語を選択してください"
     },
     "errors": {
+      "invalidSetupCode": "セットアップコードが正しくありません。サーバーログから最新のコードをコピーしてください（再起動のたびに新しいコードが生成されます）。",
       "setupFailed": "セットアップに失敗しました。もう一度お試しください。",
       "networkError": "ネットワークエラー。接続を確認してください。",
       "serverError": "サーバーエラー。後でもう一度お試しください。",

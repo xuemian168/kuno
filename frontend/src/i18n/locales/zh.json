@@ -78,6 +78,9 @@
       "siteSubtitleDescription": "博客的简短描述（可选）"
     },
     "step3": {
+      "setupCode": "初始化码",
+      "setupCodePlaceholder": "XXXX-XXXX-XXXX-XXXX",
+      "setupCodeDescription": "在服务器日志中查看一次性初始化码，例如运行：docker logs kuno",
       "title": "管理员账户",
       "subtitle": "创建您的管理员账户",
       "adminUsername": "管理员用户名",
@@ -112,6 +115,7 @@
       ]
     },
     "validation": {
+      "setupCodeRequired": "请输入初始化码",
       "titleRequired": "站点标题是必需的",
       "titleTooLong": "站点标题必须少于255个字符",
       "usernameRequired": "用户名是必需的", 
@@ -123,6 +127,7 @@
       "languageRequired": "请选择默认语言"
     },
     "errors": {
+      "invalidSetupCode": "初始化码不正确。请从服务器日志中复制最新的初始化码（每次重启都会重新生成）。",
       "setupFailed": "设置失败。请重试。",
       "networkError": "网络错误。请检查您的连接。",
       "serverError": "服务器错误。请稍后重试。",

@@ -40,6 +40,7 @@ interface FormData {
   adminUsername: string
   adminPassword: string
   confirmPassword: string
+  setupCode: string
 }
 
 interface FormErrors {
@@ -49,6 +50,7 @@ interface FormErrors {
   adminPassword?: string
   confirmPassword?: string
   defaultLanguage?: string
+  setupCode?: string
 }
 
 interface PasswordStrength {
@@ -74,7 +76,8 @@ export default function SetupPage({ params }: SetupPageProps) {
     defaultLanguage: 'en',
     adminUsername: 'admin',
     adminPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    setupCode: ''
   })
 
   const [errors, setErrors] = useState<FormErrors>({})
@@ -156,6 +159,10 @@ export default function SetupPage({ params }: SetupPageProps) {
         }
         break
       case 3:
+        if (!formData.setupCode.trim()) {
+          newErrors.setupCode = t('setup.validation.setupCodeRequired')
+        }
+
         if (!formData.adminUsername.trim()) {
           newErrors.adminUsername = t('setup.validation.usernameRequired')
         } else if (formData.adminUsername.length < 3) {
@@ -209,14 +216,17 @@ export default function SetupPage({ params }: SetupPageProps) {
         site_subtitle: formData.siteSubtitle,
         default_language: formData.defaultLanguage,
         admin_username: formData.adminUsername,
-        admin_password: formData.adminPassword
+        admin_password: formData.adminPassword,
+        setup_code: formData.setupCode.trim()
       }
 
       await apiClient.initializeSetup(setupData)
       setCurrentStep(4)
     } catch (error: any) {
       console.error('Setup failed:', error)
-      if (error.message?.includes('already been completed')) {
+      if (error.message?.includes('403')) {
+        setSubmitError(t('setup.errors.invalidSetupCode'))
+      } else if (error.message?.includes('already been completed')) {
         setSubmitError(t('setup.errors.alreadyCompleted'))
       } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
         setSubmitError(t('setup.errors.networkError'))
@@ -395,6 +405,27 @@ export default function SetupPage({ params }: SetupPageProps) {
                   </div>
 
                   <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="setupCode" className="text-base font-medium">
+                        {t('setup.step3.setupCode')} *
+                      </Label>
+                      <Input
+                        id="setupCode"
+                        value={formData.setupCode}
+                        onChange={(e) => handleInputChange('setupCode', e.target.value)}
+                        placeholder={t('setup.step3.setupCodePlaceholder')}
+                        autoComplete="off"
+                        spellCheck={false}
+                        className="h-12 font-mono uppercase tracking-wider"
+                      />
+                      {errors.setupCode && (
+                        <p className="text-sm text-red-500">{errors.setupCode}</p>
+                      )}
+                      <p className="text-sm text-muted-foreground">
+                        {t('setup.step3.setupCodeDescription')}
+                      </p>
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="adminUsername" className="text-base font-medium">
                         {t('setup.step3.adminUsername')} *

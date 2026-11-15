@@ -12,7 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New installations no longer create an `admin` account with a fixed password; the first administrator is created by the setup wizard.
   - On upgrade, an `admin` account that still uses the former default password gets a random password. If it is the only administrator, the new password is printed once in the server logs.
   - Restarting before completing setup no longer skips the setup wizard.
+  - The setup wizard now requires a one-time setup code printed in the server logs, so a freshly deployed instance cannot be claimed by whoever reaches it first.
   - Recovery mode (`RECOVERY_MODE=true`) now resets the first administrator to a random password printed in the logs instead of a fixed one.
+  - AI provider API keys are no longer written to the logs in plain text when the AI configuration is saved.
 
 ## [1.4.0] - 2026-05-14
 
