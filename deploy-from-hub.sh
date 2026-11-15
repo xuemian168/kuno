@@ -459,7 +459,7 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo -e "${NC}"
     echo -e "${GREEN}✅ Blog is now running at: http://localhost:${PORT}${NC}"
     echo -e "${GREEN}📱 Admin panel: http://localhost:${PORT}/admin${NC}"
-    echo -e "${GREEN}🔑 Default login: admin / xuemian168${NC}"
+    echo -e "${GREEN}🔑 First visit opens the setup wizard to create your admin account${NC}"
     echo ""
     echo -e "${BLUE}🤖 Smart Features:${NC}"
     echo -e "  ✨ API endpoints auto-detected - works on any domain!"

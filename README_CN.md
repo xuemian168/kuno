@@ -127,11 +127,9 @@ API URL 支持运行时修改，重启容器即可生效，不需要重新构建
 
 ### 首次登录
 
-- 地址：`http://localhost/admin`
-- 账号：`admin`
-- 密码：`xuemian168`
+KUNO 不再内置默认账号。首次访问会自动跳转到初始化向导（`http://localhost/setup`），在向导里设置管理员用户名和密码。
 
-⚠️ 首次登录后立即修改默认密码。
+> 从 1.4.6 及更早版本升级：如果旧的 `admin` 账号仍在使用以前的默认密码，启动时会被替换成随机密码。若 `admin` 是你唯一的管理员，新密码只会在 `docker logs kuno` 中打印一次，请用它登录后立即修改。
 
 ### 目录结构
 
@@ -212,7 +210,7 @@ docker run -d --name kuno_recovery \
   -e RECOVERY_MODE="true" \
   ictrun/kuno:latest
 
-# 3. 查看日志 — 密码会重置为 xuemian168，然后容器会拒绝启动（这是设计行为）
+# 3. 查看日志 — 会打印管理员用户名和新的随机密码，然后容器会拒绝启动（这是设计行为）
 docker logs kuno_recovery
 docker rm -f kuno_recovery
 
@@ -225,7 +223,7 @@ docker run -d --name kuno --restart unless-stopped \
   -e RECOVERY_MODE="false" \
   ictrun/kuno:latest
 
-# 5. 用 admin / xuemian168 登录，立即修改密码
+# 5. 用第 3 步日志中的用户名和密码登录，立即修改密码
 ```
 
 恢复模式需要服务器访问权限才能设置环境变量，且恢复期间系统不会对外提供服务。

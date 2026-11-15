@@ -130,10 +130,6 @@ export default function LoginPage({ params }: LoginPageProps) {
                       {t('settings.recoveryModeActive')}
                     </div>
                     <p className="text-sm">{t('settings.recoveryModeWarning')}</p>
-                    <div className="text-sm font-mono bg-orange-100 dark:bg-orange-900/30 p-2 rounded border border-orange-200 dark:border-orange-800">
-                      <p><strong>Username:</strong> admin</p>
-                      <p><strong>Password:</strong> xuemian168</p>
-                    </div>
                     <p className="text-sm font-medium text-orange-700 dark:text-orange-300">
                       {t('settings.disableRecoveryMode')}
                     </p>
@@ -358,12 +354,6 @@ docker rm -f kuno_recovery`, 'step3')}
                     {/* Step 5 */}
                     <div className="space-y-2">
                       <h4 className="font-semibold text-sm">{t('admin.passwordResetStep5')}</h4>
-                      <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-md border border-green-200 dark:border-green-800">
-                        <div className="text-sm font-mono">
-                          <p><strong>Username:</strong> admin</p>
-                          <p><strong>Password:</strong> xuemian168</p>
-                        </div>
-                      </div>
                     </div>
 
                     {/* Step 6 */}

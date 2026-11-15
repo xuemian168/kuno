@@ -127,11 +127,9 @@ The API URL can be changed at runtime — just restart the container, no rebuild
 
 ### First Login
 
-- URL: `http://localhost/admin`
-- Username: `admin`
-- Password: `xuemian168`
+KUNO ships without a default account. On first visit you are redirected to the setup wizard (`http://localhost/setup`), where you choose the administrator username and password.
 
-⚠️ Change the default password immediately.
+> Upgrading from 1.4.6 or earlier: if the old `admin` account still used the former default password, it is replaced with a random one on startup. If `admin` is your only administrator, the new password is printed once in `docker logs kuno` — sign in with it and change it.
 
 ### Directory Structure
 
@@ -217,7 +215,7 @@ docker run -d --name kuno_recovery \
   -e RECOVERY_MODE="true" \
   ictrun/kuno:latest
 
-# 3. Check logs — password resets to xuemian168, then the container refuses to start (by design)
+# 3. Check logs — the administrator username and a new random password are printed, then the container refuses to start (by design)
 docker logs kuno_recovery
 docker rm -f kuno_recovery
 
@@ -230,7 +228,7 @@ docker run -d --name kuno --restart unless-stopped \
   -e RECOVERY_MODE="false" \
   ictrun/kuno:latest
 
-# 5. Log in with admin / xuemian168 and change the password immediately
+# 5. Log in with the username and password from step 3, then change the password immediately
 ```
 
 Recovery mode requires server access to set the env var, and the system won't serve traffic while it's active.

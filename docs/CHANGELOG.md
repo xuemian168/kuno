@@ -5,6 +5,15 @@ All notable changes to KUNO Blog Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.7] - Unreleased
+
+### Security
+- **Removed the built-in default administrator account** ([GHSA-p345-9r45-3529](https://github.com/xuemian168/kuno/security/advisories/GHSA-p345-9r45-3529))
+  - New installations no longer create an `admin` account with a fixed password; the first administrator is created by the setup wizard.
+  - On upgrade, an `admin` account that still uses the former default password gets a random password. If it is the only administrator, the new password is printed once in the server logs.
+  - Restarting before completing setup no longer skips the setup wizard.
+  - Recovery mode (`RECOVERY_MODE=true`) now resets the first administrator to a random password printed in the logs instead of a fixed one.
+
 ## [1.4.0] - 2026-05-14
 
 ### Added

@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -85,24 +84,13 @@ func InitDatabase() {
 		}
 	}
 
-	// Initialize default admin user if none exist
+	// No account is created here: the first administrator is created by the
+	// setup wizard (/api/setup/initialize). Existing installations that still
+	// carry the legacy default admin password get it replaced.
 	var userCount int64
 	DB.Model(&models.User{}).Count(&userCount)
 	log.Printf("👥 Found %d user records", userCount)
-	if userCount == 0 {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("xuemian168"), bcrypt.DefaultCost)
-		if err != nil {
-			log.Fatal("Failed to hash password:", err)
-		}
-
-		defaultUser := models.User{
-			Username: "admin",
-			Password: string(hashedPassword),
-			IsAdmin:  true,
-		}
-		DB.Create(&defaultUser)
-		log.Println("Default admin user created (username: admin)")
-	}
+	secureLegacyAdminAccount()
 
 	// Initialize default content (category and hello world article)
 	initializeDefaultContent()
@@ -119,30 +107,16 @@ func checkRecoveryMode() {
 
 	if recoveryMode == "true" {
 		log.Println("⚠️  RECOVERY MODE ACTIVATED ⚠️")
-		log.Println("🔑 Resetting admin password to default...")
+		log.Println("🔑 Resetting administrator password to a new random value...")
 
-		// Reset admin password to default
-		var adminUser models.User
-		result := DB.Where("username = ?", "admin").First(&adminUser)
-		if result.Error != nil {
-			log.Fatal("❌ Recovery failed: Admin user not found")
-		}
-
-		// Hash the default password
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("xuemian168"), bcrypt.DefaultCost)
+		username, newPassword, err := resetAdminPasswordForRecovery()
 		if err != nil {
-			log.Fatal("❌ Recovery failed: Unable to hash password")
+			log.Fatalf("❌ Recovery failed: %v", err)
 		}
 
-		// Update admin password
-		adminUser.Password = string(hashedPassword)
-		if err := DB.Save(&adminUser).Error; err != nil {
-			log.Fatal("❌ Recovery failed: Unable to update password")
-		}
-
-		log.Println("✅ Admin password has been reset to: xuemian168")
-		log.Println("📋 Username: admin")
-		log.Println("🔒 Password: xuemian168")
+		log.Println("✅ Administrator password has been reset")
+		log.Printf("📋 Username: %s", username)
+		log.Printf("🔒 Password: %s", newPassword)
 		log.Println("")
 		log.Println("⚠️  SECURITY WARNING ⚠️")
 		log.Println("🛑 Recovery mode is still ENABLED!")
