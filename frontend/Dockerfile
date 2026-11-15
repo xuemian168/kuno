@@ -1,5 +1,5 @@
 # Dependencies stage
-FROM node:18-alpine AS deps
+FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
@@ -8,7 +8,7 @@ COPY package*.json ./
 RUN npm ci && npm cache clean --force
 
 # Builder stage
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Install Git for build info
@@ -40,7 +40,7 @@ ENV NEXT_PUBLIC_GIT_BRANCH=$GIT_BRANCH
 RUN npm run build
 
 # Runtime stage
-FROM node:18-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

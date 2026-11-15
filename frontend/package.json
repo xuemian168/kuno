@@ -11,7 +11,7 @@
   "overrides": {
     "d3-color": "^3.1.0",
     "prismjs": "^1.30.0",
-    "postcss": "8.5.14",
+    "postcss": "^8.5.33",
     "mermaid": {
       "uuid": "^11.1.1"
     },
@@ -23,15 +23,17 @@
       "picomatch": "^4.0.4"
     },
     "@typescript-eslint/typescript-estree": {
-      "minimatch": "^9.0.9"
+      "minimatch": "^11.0.1"
     },
-    "brace-expansion@2.0.2": "2.1.0",
-    "minimatch@3": {
-      "brace-expansion": "^1.1.14"
-    },
-    "minimatch@9.0.9": {
-      "brace-expansion": "^2.1.0"
-    }
+    "dompurify": "^3.4.18",
+    "js-yaml": "^4.3.2",
+    "nanoid": "^3.3.20",
+    "source-map-js": "^1.2.2",
+    "@humanfs/node": "^0.16.8",
+    "sharp": "^0.35.5",
+    "brace-expansion@1": "^1.1.22",
+    "brace-expansion@2": "^2.1.8",
+    "katex": "^0.18.2"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -59,9 +61,9 @@
     "framer-motion": "^12.23.7",
     "highlight.js": "^11.11.1",
     "lucide-react": "^0.525.0",
-    "mermaid": "^11.15.0",
+    "mermaid": "^11.17.2",
     "monaco-editor": "^0.52.2",
-    "next": "^15.5.18",
+    "next": "^15.5.29",
     "next-intl": "^4.12.0",
     "next-themes": "^0.4.6",
     "qrcode": "^1.5.4",
@@ -90,7 +92,7 @@
     "@types/react-dom": "^19",
     "@types/react-simple-maps": "^3.0.6",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^15.5.18",
+    "eslint-config-next": "^15.5.29",
     "monaco-editor-webpack-plugin": "^7.1.0",
     "tailwindcss": "^4.3.0",
     "tw-animate-css": "^1.3.5",
