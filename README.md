@@ -221,7 +221,7 @@ docker run -d --name kuno_recovery \
   -e RECOVERY_MODE="true" \
   ictrun/kuno:latest
 
-# 3. Check logs — the administrator username and a new random password are printed, then the container refuses to start (by design)
+# 3. Check logs — the administrator username and a new random password are printed once; the backend then pauses and serves no requests (by design)
 docker logs kuno_recovery
 docker rm -f kuno_recovery
 

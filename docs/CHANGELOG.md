@@ -5,7 +5,12 @@ All notable changes to KUNO Blog Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.7] - Unreleased
+## [1.4.8] - Unreleased
+
+### Fixed
+- **Recovery mode printed several different passwords**: after resetting the password the backend exited, so the process manager in the Docker image restarted it and reset the password again on every restart, and only the last printed password worked. The backend now resets the password once and stays paused (serving no requests) until it is stopped.
+
+## [1.4.7] - 2026-11-15
 
 ### Security
 - **Removed the built-in default administrator account** ([GHSA-p345-9r45-3529](https://github.com/xuemian168/kuno/security/advisories/GHSA-p345-9r45-3529))
