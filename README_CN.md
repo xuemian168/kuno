@@ -216,7 +216,7 @@ docker run -d --name kuno_recovery \
   -e RECOVERY_MODE="true" \
   ictrun/kuno:latest
 
-# 3. 查看日志 — 会打印管理员用户名和新的随机密码，然后容器会拒绝启动（这是设计行为）
+# 3. 查看日志 — 会打印一次管理员用户名和新的随机密码，之后后端暂停、不处理任何请求（这是设计行为）
 docker logs kuno_recovery
 docker rm -f kuno_recovery
 

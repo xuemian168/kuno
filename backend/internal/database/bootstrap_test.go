@@ -1,7 +1,11 @@
 package database
 
 import (
+	"bytes"
+	"log"
+	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"blog-backend/internal/models"
@@ -174,5 +178,33 @@ func TestResetAdminPasswordForRecovery_FailsWithoutAdmin(t *testing.T) {
 
 	if _, _, err := resetAdminPasswordForRecovery(); err == nil {
 		t.Fatal("recovery without any admin account must fail")
+	}
+}
+
+func TestRunRecoveryMode_ResetsOnceAndWaitsInsteadOfExiting(t *testing.T) {
+	initTestDB(t)
+	InitDatabase()
+	createUser(t, "alice", "forgotten-password", true)
+
+	var logs bytes.Buffer
+	log.SetOutput(&logs)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+
+	waits := 0
+	original := waitForShutdown
+	waitForShutdown = func() { waits++ }
+	t.Cleanup(func() { waitForShutdown = original })
+
+	runRecoveryMode() // must return (after waiting) instead of exiting the process
+
+	if waits != 1 {
+		t.Fatalf("recovery mode must block exactly once until shutdown, waited %d times", waits)
+	}
+	printed := regexp.MustCompile(`Password: (\S+)`).FindAllStringSubmatch(logs.String(), -1)
+	if len(printed) != 1 {
+		t.Fatalf("expected exactly one printed password, got %d", len(printed))
+	}
+	if !passwordMatches(t, "alice", printed[0][1]) {
+		t.Fatal("the printed recovery password must be the one stored")
 	}
 }

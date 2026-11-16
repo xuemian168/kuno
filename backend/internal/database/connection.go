@@ -4,7 +4,9 @@ import (
 	"blog-backend/internal/models"
 	"log"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -101,33 +103,52 @@ func InitDatabase() {
 	checkRecoveryMode()
 }
 
-// checkRecoveryMode handles password recovery functionality
+// waitForShutdown blocks until the process is asked to stop. Tests replace it.
+var waitForShutdown = func() {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+}
+
+// checkRecoveryMode handles password recovery functionality. In recovery
+// mode the server never starts serving: the process exits once it is stopped.
 func checkRecoveryMode() {
-	recoveryMode := strings.ToLower(getEnv("RECOVERY_MODE", "false"))
-
-	if recoveryMode == "true" {
-		log.Println("⚠️  RECOVERY MODE ACTIVATED ⚠️")
-		log.Println("🔑 Resetting administrator password to a new random value...")
-
-		username, newPassword, err := resetAdminPasswordForRecovery()
-		if err != nil {
-			log.Fatalf("❌ Recovery failed: %v", err)
-		}
-
-		log.Println("✅ Administrator password has been reset")
-		log.Printf("📋 Username: %s", username)
-		log.Printf("🔒 Password: %s", newPassword)
-		log.Println("")
-		log.Println("⚠️  SECURITY WARNING ⚠️")
-		log.Println("🛑 Recovery mode is still ENABLED!")
-		log.Println("🔧 You MUST disable recovery mode to start the server:")
-		log.Println("   1. Set RECOVERY_MODE=false in your .env file")
-		log.Println("   2. Restart the application")
-		log.Println("   3. Login with the reset credentials")
-		log.Println("   4. Change your password immediately")
-		log.Println("")
-		log.Fatal("🚫 Server startup blocked due to active recovery mode")
+	if !IsRecoveryMode() {
+		return
 	}
+	runRecoveryMode()
+	os.Exit(0)
+}
+
+// runRecoveryMode resets the administrator password once, prints it, and then
+// stays paused until stopped. It deliberately does not exit right away: a
+// process manager (supervisord in the Docker image) would restart it and
+// reset the password again, leaving several different passwords in the logs.
+func runRecoveryMode() {
+	log.Println("⚠️  RECOVERY MODE ACTIVATED ⚠️")
+	log.Println("🔑 Resetting administrator password to a new random value...")
+
+	username, newPassword, err := resetAdminPasswordForRecovery()
+	if err != nil {
+		log.Fatalf("❌ Recovery failed: %v", err)
+	}
+
+	log.Println("✅ Administrator password has been reset")
+	log.Printf("📋 Username: %s", username)
+	log.Printf("🔒 Password: %s", newPassword)
+	log.Println("")
+	log.Println("⚠️  SECURITY WARNING ⚠️")
+	log.Println("🛑 Recovery mode is still ENABLED — the backend will not serve requests.")
+	log.Println("🔧 To finish the recovery:")
+	log.Println("   1. Stop this container / application")
+	log.Println("   2. Set RECOVERY_MODE=false")
+	log.Println("   3. Start the application again")
+	log.Println("   4. Log in with the credentials above and change the password immediately")
+	log.Println("")
+	log.Println("⏸️  Paused in recovery mode, waiting to be stopped...")
+
+	waitForShutdown()
+	log.Println("Recovery mode: stop signal received, exiting")
 }
 
 // IsRecoveryMode returns true if recovery mode is currently enabled
