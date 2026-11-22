@@ -1,0 +1,45 @@
+# KUNO with one-click updates from the admin panel.
+#
+# KUNO never gets the Docker socket. When an admin clicks "Update now",
+# KUNO backs up its database and asks Watchtower (over its token-protected
+# HTTP API, on the private Compose network) to pull ictrun/kuno:latest and
+# recreate the KUNO container. Watchtower does nothing on its own schedule.
+#
+# Setup:
+#   echo "WATCHTOWER_TOKEN=$(openssl rand -hex 32)" >> .env
+#   echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env   # keeps admins signed in across updates
+#   docker compose -f docker-compose.watchtower.yml up -d
+
+services:
+  kuno:
+    # Must be :latest. Watchtower re-pulls the same tag, so a pinned version never moves.
+    image: ictrun/kuno:latest
+    container_name: kuno
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-80}:80"
+    volumes:
+      - kuno-data:/app/data
+    environment:
+      - JWT_SECRET=${JWT_SECRET:?set JWT_SECRET in .env}
+      - WATCHTOWER_URL=http://watchtower:8080
+      - WATCHTOWER_TOKEN=${WATCHTOWER_TOKEN:?set WATCHTOWER_TOKEN in .env}
+    labels:
+      # Watchtower only manages containers carrying this label (WATCHTOWER_LABEL_ENABLE).
+      - com.centurylinklabs.watchtower.enable=true
+
+  watchtower:
+    image: nickfedor/watchtower:1.24.0
+    container_name: watchtower
+    restart: unless-stopped
+    # Not published on the host: only KUNO on this network can reach the API.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_HTTP_API_ENDPOINTS=update
+      - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_TOKEN:?set WATCHTOWER_TOKEN in .env}
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_CLEANUP=true
+
+volumes:
+  kuno-data:

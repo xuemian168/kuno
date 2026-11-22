@@ -122,6 +122,9 @@ docker-compose -f docker-compose.hub.yml up -d
 | `NODE_ENV` | `production` | Node.js environment |
 | `RECOVERY_MODE` | `false` | Password recovery mode |
 | `JWT_SECRET` | *(auto-generated)* | JWT signing secret |
+| `WATCHTOWER_URL` | *(unset)* | Watchtower HTTP API, e.g. `http://watchtower:8080`; enables [one-click update](#one-click-update) |
+| `WATCHTOWER_TOKEN` | *(unset)* | Must match Watchtower's `WATCHTOWER_HTTP_API_TOKEN` |
+| `WATCHTOWER_IMAGE` | `ictrun/kuno` | Image Watchtower updates; change only if you pull KUNO through a mirror |
 
 The API URL can be changed at runtime — just restart the container, no rebuild needed.
 
@@ -155,6 +158,33 @@ docker logs kuno 2>&1 | grep "Setup code"
 ![structure](./docs/structure.png)
 
 ## Upgrade
+
+### One-Click Update
+
+The System section of the admin settings checks GitHub Releases for a newer version. To also update from there with one click, run KUNO next to a [Watchtower](https://github.com/nicholas-fedor/watchtower) container, as in [`docker-compose.watchtower.yml`](docker-compose.watchtower.yml):
+
+```bash
+echo "WATCHTOWER_TOKEN=$(openssl rand -hex 32)" >> .env
+echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env
+docker compose -f docker-compose.watchtower.yml up -d
+```
+
+When you click **Update now**, KUNO saves a database snapshot to `/app/data/backups/pre-update-<version>-<time>.db` (the newest 5 are kept), then asks Watchtower to pull `ictrun/kuno:latest` and recreate the KUNO container. The page reloads once the new version is running.
+
+- KUNO never gets the Docker socket. Only Watchtower has it, and its API is not published on the host.
+- The container must use the `ictrun/kuno:latest` tag. Watchtower re-pulls the tag the container already uses, so a pinned tag such as `ictrun/kuno:1.4.8` never moves.
+- Set `JWT_SECRET`, otherwise admins are signed out after every update.
+- Installed from the 1Panel app store? Upgrade from 1Panel instead.
+
+To roll back, restore the snapshot and start the previous version:
+
+```bash
+docker compose -f docker-compose.watchtower.yml stop kuno
+docker compose -f docker-compose.watchtower.yml run --rm --no-deps kuno sh -c \
+  'cp /app/data/backups/pre-update-1.4.8-XXXX.db /app/data/blog.db && rm -f /app/data/blog.db-wal /app/data/blog.db-shm'
+# then set image: ictrun/kuno:1.4.8 for the kuno service and run
+docker compose -f docker-compose.watchtower.yml up -d kuno
+```
 
 ### Zero-Downtime (Recommended)
 

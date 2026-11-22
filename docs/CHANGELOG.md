@@ -5,7 +5,19 @@ All notable changes to KUNO Blog Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.8] - Unreleased
+## [Unreleased]
+
+### Added
+- **One-click update from the admin panel**: with a [Watchtower](https://github.com/nicholas-fedor/watchtower) sidecar configured (`WATCHTOWER_URL`, `WATCHTOWER_TOKEN`; see `docker-compose.watchtower.yml`), **Update now** backs up the database to `/app/data/backups/` and asks Watchtower to pull and recreate the container. KUNO itself never gets the Docker socket.
+
+### Fixed
+- **Update check reported "up to date" when it could not reach GitHub or Docker Hub**, and showed a made-up release date, image size and changelog. It now reports the error, and every value shown comes from GitHub or Docker Hub.
+- **Image size was never shown**: it was looked up with the `v`-prefixed release tag, which does not exist on Docker Hub.
+- Pre-release tags such as `1.4.6-rc.1` could be picked up as releases by the Docker Hub fallback.
+- Concurrent update checks raced on the shared cache.
+- The manual upgrade commands contained a hard-coded site URL and used the old `docker-compose` command.
+
+## [1.4.8] - 2026-11-16
 
 ### Fixed
 - **Recovery mode printed several different passwords**: after resetting the password the backend exited, so the process manager in the Docker image restarted it and reset the password again on every restart, and only the last printed password worked. The backend now resets the password once and stays paused (serving no requests) until it is stopped.

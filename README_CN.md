@@ -122,6 +122,9 @@ docker-compose -f docker-compose.hub.yml up -d
 | `NODE_ENV` | `production` | Node.js 环境 |
 | `RECOVERY_MODE` | `false` | 密码恢复模式 |
 | `JWT_SECRET` | *(自动生成)* | JWT 签名密钥 |
+| `WATCHTOWER_URL` | *(不设置)* | Watchtower HTTP API 地址，例如 `http://watchtower:8080`；设置后启用[一键更新](#一键更新) |
+| `WATCHTOWER_TOKEN` | *(不设置)* | 必须与 Watchtower 的 `WATCHTOWER_HTTP_API_TOKEN` 一致 |
+| `WATCHTOWER_IMAGE` | `ictrun/kuno` | Watchtower 要更新的镜像；只有通过镜像加速地址拉取 KUNO 时才需要改 |
 
 API URL 支持运行时修改，重启容器即可生效，不需要重新构建镜像。
 
@@ -151,6 +154,33 @@ docker logs kuno 2>&1 | grep "Setup code"
 ```
 
 ## 更新
+
+### 一键更新
+
+后台设置的「系统」部分会从 GitHub Releases 检查是否有新版本。如果还想在那里一键更新，请在 KUNO 旁边运行一个 [Watchtower](https://github.com/nicholas-fedor/watchtower) 容器，参考 [`docker-compose.watchtower.yml`](docker-compose.watchtower.yml)：
+
+```bash
+echo "WATCHTOWER_TOKEN=$(openssl rand -hex 32)" >> .env
+echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env
+docker compose -f docker-compose.watchtower.yml up -d
+```
+
+点击 **立即更新** 后，KUNO 先把数据库快照保存到 `/app/data/backups/pre-update-<版本>-<时间>.db`（保留最新 5 份），再让 Watchtower 拉取 `ictrun/kuno:latest` 并重建 KUNO 容器。新版本运行后页面会自动刷新。
+
+- KUNO 本身拿不到 Docker socket，只有 Watchtower 有，而且它的 API 不暴露到宿主机。
+- 容器必须使用 `ictrun/kuno:latest` 标签。Watchtower 只会重新拉取容器当前用的标签，固定版本（例如 `ictrun/kuno:1.4.8`）永远不会被升级。
+- 请设置 `JWT_SECRET`，否则每次更新后管理员都要重新登录。
+- 通过 1Panel 应用商店安装的，请在 1Panel 里升级。
+
+回滚：恢复快照，然后启动旧版本：
+
+```bash
+docker compose -f docker-compose.watchtower.yml stop kuno
+docker compose -f docker-compose.watchtower.yml run --rm --no-deps kuno sh -c \
+  'cp /app/data/backups/pre-update-1.4.8-XXXX.db /app/data/blog.db && rm -f /app/data/blog.db-wal /app/data/blog.db-shm'
+# 把 kuno 服务的 image 改成 ictrun/kuno:1.4.8，然后运行
+docker compose -f docker-compose.watchtower.yml up -d kuno
+```
 
 ### 零停机更新（推荐）
 

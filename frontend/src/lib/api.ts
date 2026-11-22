@@ -248,6 +248,31 @@ export interface SetupStatusResponse {
   setup_completed: boolean
 }
 
+export interface SelfUpdateStatus {
+  available: boolean
+  reason?: 'not_configured' | 'in_progress'
+}
+
+export interface UpdateInfo {
+  has_update: boolean
+  current_version: string
+  latest_version: string
+  release_date?: string
+  image_size?: number
+  changelog?: string[]
+  release_url?: string
+  source: 'github' | 'docker_hub'
+  checked_at: string
+  self_update: SelfUpdateStatus
+}
+
+export interface SelfUpdateTriggerResult {
+  status: 'triggered'
+  from_version: string
+  to_version: string
+  backup_file: string
+}
+
 export interface SetupRequest {
   site_title: string
   site_subtitle: string
@@ -827,7 +852,14 @@ class ApiClient {
           window.location.href = '/admin/login'
         }
       }
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+      // Keep the "API request failed: <status>" prefix: callers match on it.
+      const detail = await response
+        .json()
+        .then((body) => (typeof body?.error === 'string' ? body.error : ''))
+        .catch(() => '')
+      throw new Error(
+        `API request failed: ${response.status} ${response.statusText}${detail ? ` - ${detail}` : ''}`
+      )
     }
 
     return response.json()
@@ -1424,12 +1456,18 @@ class ApiClient {
     return this.request('/system/info')
   }
 
-  async checkUpdates(): Promise<any> {
+  async checkUpdates(): Promise<UpdateInfo> {
     return this.request('/system/check-updates')
   }
 
   async clearCache(): Promise<{ message: string }> {
     return this.request('/system/clear-cache', {
+      method: 'POST'
+    })
+  }
+
+  async triggerSelfUpdate(): Promise<SelfUpdateTriggerResult> {
+    return this.request('/system/self-update', {
       method: 'POST'
     })
   }
