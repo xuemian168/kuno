@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { apiClient } from '@/lib/api'
+import { apiClient, type UpdateInfo } from '@/lib/api'
+import { SelfUpdatePanel } from '@/components/admin/self-update-panel'
 import { 
   RefreshCw, 
   Download, 
@@ -47,17 +48,6 @@ interface UpdateInstructions {
   docker_compose: UpdateCommand[]
 }
 
-interface UpdateInfo {
-  has_update: boolean
-  current_version: string
-  latest_version: string
-  release_date?: string
-  image_size?: number
-  update_command?: string
-  changelog?: string[]
-  release_url?: string
-}
-
 export function UpdateChecker() {
   const t = useTranslations()
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
@@ -88,7 +78,8 @@ export function UpdateChecker() {
     try {
       const data = await apiClient.checkUpdates()
       setUpdateInfo(data)
-      setShowUpdateCommand(Boolean(data?.has_update))
+      // Manual commands are the fallback; hide them when one-click update can be used.
+      setShowUpdateCommand(Boolean(data?.has_update && !data.self_update?.available))
     } catch (err) {
       setError(err instanceof Error ? err.message : t('system.failedToCheckUpdates'))
     } finally {
@@ -182,14 +173,13 @@ docker run --rm -v blog-data:/data alpine sh -c "ls -la /data/ && if [ -f /data/
           step: 5,
           title: 'startNewContainer',
           description: 'startNewContainerDesc',
-          command: `# Start new container with data volume
+          command: `# Start new container with the same data volume.
+# Reuse the ports, volumes and -e options from your original docker run.
 docker run -d \\
   --name kuno \\
   --restart unless-stopped \\
   -p 80:80 \\
   -v blog-data:/app/data \\
-  -e NEXT_PUBLIC_API_URL=https://qut.edu.kg/api \\
-  -e DB_PATH=/app/data/blog.db \\
   ictrun/kuno:latest
 
 echo "New container started"`
@@ -222,7 +212,7 @@ docker exec kuno ls -la /app/data/`
 mkdir -p ./backups/$(date +%Y%m%d_%H%M%S)
 
 # Stop services temporarily
-docker-compose stop
+docker compose stop
 
 # Backup data volume (adjust volume name if needed)
 docker run --rm \\
@@ -231,7 +221,7 @@ docker run --rm \\
   alpine sh -c "cd /data && tar czf /backup/blog-data-backup.tar.gz ."
 
 # Start services back up
-docker-compose start
+docker compose start
 
 echo "Backup completed"`
         },
@@ -240,7 +230,7 @@ echo "Backup completed"`
           title: 'pullLatestImages',
           description: 'pullLatestImagesDesc',
           command: `# Pull latest images
-docker-compose pull
+docker compose pull
 
 echo "Latest images pulled"`
         },
@@ -249,7 +239,7 @@ echo "Latest images pulled"`
           title: 'upgradeZeroDowntime',
           description: 'upgradeZeroDowntimeDesc',
           command: `# Upgrade with zero downtime
-docker-compose up -d --force-recreate --remove-orphans
+docker compose up -d --force-recreate --remove-orphans
 
 echo "Services upgraded"`
         },
@@ -267,10 +257,10 @@ echo "Old images cleaned up"`
           title: 'verifyUpgrade',
           description: 'verifyUpgradeDesc',
           command: `# Check services status
-docker-compose ps
+docker compose ps
 
 # Check logs
-docker-compose logs -f --tail=50`
+docker compose logs -f --tail=50`
         }
       ]
     }
@@ -494,7 +484,9 @@ docker-compose logs -f --tail=50`
                 </div>
               )}
 
-              {/* Always show upgrade commands - Docker deployment requires manual commands */}
+              <SelfUpdatePanel updateInfo={updateInfo} />
+
+              {/* Manual upgrade commands: always available as a fallback */}
               {(
                 <div className="space-y-2">
                   <Button
@@ -522,6 +514,12 @@ docker-compose logs -f --tail=50`
                           <AlertTriangle className="h-4 w-4" />
                           <AlertDescription className="text-sm">
                             <strong>{t('common.important')}:</strong> {t('system.dockerDeploymentWarning')}
+                          </AlertDescription>
+                        </Alert>
+                        <Alert>
+                          <Info className="h-4 w-4" />
+                          <AlertDescription className="text-sm">
+                            {t('system.manualUpgrade1Panel')}
                           </AlertDescription>
                         </Alert>
                       </div>

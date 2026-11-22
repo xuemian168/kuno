@@ -15,7 +15,7 @@ import (
 var DB *gorm.DB
 
 func InitDatabase() {
-	dbPath := getEnv("DB_PATH", "./data/blog.db")
+	dbPath := databasePath()
 
 	// Enhanced logging for database initialization
 	log.Printf("🔍 Database initialization starting...")

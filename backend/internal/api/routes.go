@@ -204,6 +204,7 @@ func SetupRoutes() *gin.Engine {
 				{
 					adminSystem.GET("/check-updates", CheckUpdates)
 					adminSystem.POST("/clear-cache", ClearUpdateCache)
+					adminSystem.POST("/self-update", TriggerSelfUpdate)
 				}
 
 				// AI Usage tracking
