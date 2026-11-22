@@ -7,7 +7,7 @@ import { fetchArticle, fetchSettings } from '@/lib/server-api'
 import { ArticleStructuredData, BreadcrumbStructuredData } from '@/components/seo/structured-data'
 import { getSiteUrl } from '@/lib/config'
 import { routing } from '@/i18n/routing'
-import { getArticleAvailableLocales } from '@/lib/seo-locale-utils'
+import { buildLocalizedPath, getArticleAvailableLocales } from '@/lib/seo-locale-utils'
 
 interface ArticlePageProps {
   params: Promise<{ id: string; locale: string }>
@@ -80,10 +80,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const defaultLocale = routing.defaultLocale
   const articleAvailableLocales = getArticleAvailableLocales(article)
   const contentLocale = articleAvailableLocales.includes(locale) ? locale : (article.default_lang || defaultLocale)
-  const articleUrl = contentLocale === defaultLocale
-    ? `${siteUrl}/article/${article.seo_slug || id}`
-    : `${siteUrl}/${contentLocale}/article/${article.seo_slug || id}`
-  const homeUrl = contentLocale === defaultLocale ? siteUrl : `${siteUrl}/${contentLocale}`
+  const articleUrl = `${siteUrl}${buildLocalizedPath(`/article/${article.seo_slug || id}`, contentLocale)}`
+  const homeUrl = `${siteUrl}${buildLocalizedPath('/', contentLocale)}`
   const t = await getTranslations({ locale })
 
   const breadcrumbItems = [
