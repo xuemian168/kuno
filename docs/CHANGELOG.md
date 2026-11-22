@@ -5,12 +5,13 @@ All notable changes to KUNO Blog Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.5.0] - 2026-11-22
 
 ### Added
-- **One-click update from the admin panel**: with a [Watchtower](https://github.com/nicholas-fedor/watchtower) sidecar configured (`WATCHTOWER_URL`, `WATCHTOWER_TOKEN`; see `docker-compose.watchtower.yml`), **Update now** backs up the database to `/app/data/backups/` and asks Watchtower to pull and recreate the container. KUNO itself never gets the Docker socket.
+- **One-click update from the admin panel** ([#18](https://github.com/xuemian168/kuno/pull/18)): with a [Watchtower](https://github.com/nicholas-fedor/watchtower) sidecar configured (`WATCHTOWER_URL`, `WATCHTOWER_TOKEN`; see `docker-compose.watchtower.yml`), **Update now** backs up the database to `/app/data/backups/` and asks Watchtower to pull and recreate the container. KUNO itself never gets the Docker socket.
 
 ### Fixed
+- **Google could not index most articles** ([#17](https://github.com/xuemian168/kuno/pull/17)): canonical, hreflang, x-default and sitemap URLs for the default language (`zh`) dropped the locale prefix, so they pointed at addresses that redirect (307) to `/zh/...`. All of them now use the final, locale-prefixed URL, and the conflicting hreflang `Link` header sent by the i18n middleware is gone. After upgrading, resubmit the sitemap in Google Search Console.
 - **Update check reported "up to date" when it could not reach GitHub or Docker Hub**, and showed a made-up release date, image size and changelog. It now reports the error, and every value shown comes from GitHub or Docker Hub.
 - **Image size was never shown**: it was looked up with the `v`-prefixed release tag, which does not exist on Docker Hub.
 - Pre-release tags such as `1.4.6-rc.1` could be picked up as releases by the Docker Hub fallback.
