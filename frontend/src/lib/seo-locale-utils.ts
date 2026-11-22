@@ -40,16 +40,16 @@ export function normalizeSeoLocales(
   return normalizedLocales.length > 0 ? normalizedLocales : [fallbackLocale]
 }
 
-export function buildLocalizedPath(
-  path: string,
-  locale: string,
-  defaultLocale: string = routing.defaultLocale
-): string {
+/**
+ * Build the public path for a locale.
+ *
+ * Routing is configured with `localePrefix: 'always'`, so every locale —
+ * including the default one — is served under its prefix (`/zh/...`).
+ * Unprefixed paths answer with a 307 redirect, so SEO URLs (canonical,
+ * hreflang, sitemap, JSON-LD) must always carry the prefix.
+ */
+export function buildLocalizedPath(path: string, locale: string): string {
   const normalizedPath = path === '' ? '/' : (path.startsWith('/') ? path : `/${path}`)
-
-  if (locale === defaultLocale) {
-    return normalizedPath
-  }
 
   return normalizedPath === '/' ? `/${locale}` : `/${locale}${normalizedPath}`
 }

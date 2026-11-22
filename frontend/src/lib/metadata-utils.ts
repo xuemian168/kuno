@@ -87,23 +87,24 @@ export async function generatePageMetadata(options: PageMetadataOptions): Promis
       : getSiteAvailableLocales(settings),
     routing.defaultLocale
   )
-  const defaultLocale = routing.defaultLocale
+  // seoLocales[0] is the content's primary language (site or article default)
+  const primaryLocale = seoLocales[0]
   const isCurrentLocaleIndexable = seoLocales.includes(locale)
-  const canonicalLocale = isCurrentLocaleIndexable ? locale : defaultLocale
+  const canonicalLocale = isCurrentLocaleIndexable ? locale : primaryLocale
   const shouldIndex = Boolean(robots.index && isCurrentLocaleIndexable)
   
   // Generate alternate language links including self-referential
   const languages: Record<string, string> = {}
   const canonicalPath = canonical || '/'
   seoLocales.forEach(loc => {
-    languages[loc] = `${siteUrl}${buildLocalizedPath(canonicalPath, loc, defaultLocale)}`
+    languages[loc] = `${siteUrl}${buildLocalizedPath(canonicalPath, loc)}`
   })
   
-  // x-default 始终指向默认语言版本
-  languages['x-default'] = `${siteUrl}${buildLocalizedPath(canonicalPath, defaultLocale, defaultLocale)}`
+  // x-default 指向内容的主语言版本
+  languages['x-default'] = `${siteUrl}${buildLocalizedPath(canonicalPath, primaryLocale)}`
   
   // Build canonical URL - full absolute URL is preferred for SEO
-  const fullCanonicalPath = buildLocalizedPath(canonicalPath, canonicalLocale, defaultLocale)
+  const fullCanonicalPath = buildLocalizedPath(canonicalPath, canonicalLocale)
   const fullCanonicalUrl = `${siteUrl}${fullCanonicalPath}`
 
   // Build metadata object
