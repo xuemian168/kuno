@@ -5,6 +5,11 @@ All notable changes to KUNO Blog Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-11-23
+
+### Fixed
+- **Google showed the default KUNO icon instead of the uploaded favicon, and could not index article images** ([#19](https://github.com/xuemian168/kuno/pull/19)): `robots.txt` disallowed `/api/*`, which also covers `/api/uploads/`, where the favicon, article images and `og:image` are served. It now allows `/api/uploads/`. `/favicon.ico` now serves the favicon set in the admin settings instead of always the bundled icon. Google requires a square favicon of at least 48×48 px; re-upload a larger one if yours is smaller.
+
 ## [1.5.0] - 2026-11-22
 
 ### Added

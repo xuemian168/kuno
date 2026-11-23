@@ -1,6 +1,15 @@
 import { MetadataRoute } from 'next'
 import { getApiUrl, getSiteUrl } from '@/lib/config'
 
+// Uploaded files (favicon, article images, og:image) are served under /api/uploads/
+// and must stay crawlable, or search engines show the default icon and no images.
+// The longer Allow rule wins over Disallow: /api/*.
+const CRAWLABLE_SITE_RULE = {
+  userAgent: '*',
+  allow: ['/', '/api/uploads/'],
+  disallow: ['/admin', '/admin/*', '/api/*'],
+}
+
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const siteUrl = getSiteUrl()
   
@@ -47,15 +56,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       if (settings.block_ai_training) {
         return {
           rules: [
-            {
-              userAgent: '*',
-              allow: '/',
-              disallow: [
-                '/admin',
-                '/admin/*',
-                '/api/*',
-              ],
-            },
+            CRAWLABLE_SITE_RULE,
             { userAgent: 'GPTBot', disallow: '/' },
             { userAgent: 'ChatGPT-User', disallow: '/' },
             { userAgent: 'CCBot', disallow: '/' },
@@ -75,15 +76,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   
   // Default behavior when no privacy controls are enabled
   return {
-    rules: {
-      userAgent: '*',
-      allow: '/',
-      disallow: [
-        '/admin',
-        '/admin/*',
-        '/api/*',
-      ],
-    },
+    rules: CRAWLABLE_SITE_RULE,
     sitemap: `${siteUrl}/sitemap.xml`,
   }
 }
